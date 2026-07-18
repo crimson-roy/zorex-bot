@@ -163,55 +163,69 @@ async function startBot() {
         printQRInTerminal: false
     });
 
-    // Pairing Code Login
-    if (!state.creds.registered) {
-        const code = await sock.requestPairingCode("2348059889871");
-
-        console.log("\n====================================");
-        console.log("🔑 PAIRING CODE:", code);
-        console.log("====================================\n");
-    }
-
+    
     sock.ev.on("creds.update", saveCreds);
 
     sock.ev.on("connection.update", async ({ connection, qr, lastDisconnect }) => {
 
-        console.log("Connection Update:", connection);
+    console.log("Connection Update:", connection);
 
-        if (lastDisconnect) {
-            console.log("Disconnect Reason:", lastDisconnect.error);
+    // Generate Pairing Code
+    if (connection === "connecting" && !state.creds.registered) {
+
+        try {
+
+            const code = await sock.requestPairingCode("2348059889871");
+
+            console.log("\n====================================");
+            console.log("🔑 PAIRING CODE:", code);
+            console.log("====================================\n");
+
+        } catch (err) {
+
+            console.log("⏳ Waiting for socket to be ready...");
+
         }
 
-        if (qr) {
-            console.log("📱 Scan this QR Code:");
-            qrcode.generate(qr, { small: true });
+    }
+
+    if (lastDisconnect) {
+        console.log("Disconnect Reason:", lastDisconnect.error);
+    }
+
+    if (qr) {
+        console.log("📱 Scan this QR Code:");
+        qrcode.generate(qr, { small: true });
+    }
+
+    if (connection === "open") {
+        console.log("✅ Zorex is connected to WhatsApp!");
+    }
+
+    if (connection === "close") {
+
+        const statusCode =
+            lastDisconnect?.error?.output?.statusCode;
+
+        console.log("Status Code:", statusCode);
+
+        if (statusCode === DisconnectReason.loggedOut) {
+
+            console.log("❌ WhatsApp session expired. Login required.");
+            return;
+
         }
 
-        if (connection === "open") {
-            console.log("✅ Zorex is connected to WhatsApp!");
-        }
+        console.log("🔄 Reconnecting in 5 seconds...");
 
-        if (connection === "close") {
+        setTimeout(() => {
+            startBot();
+        }, 5000);
 
-            const statusCode =
-                lastDisconnect?.error?.output?.statusCode;
-
-            console.log("Status Code:", statusCode);
-
-            if (statusCode === DisconnectReason.loggedOut) {
-                console.log("❌ WhatsApp session expired. Login required.");
-                return;
-            }
-
-            console.log("🔄 Reconnecting in 5 seconds...");
-
-            setTimeout(() => {
-                startBot();
-            }, 5000);
-        }
+    }
 
     });
-    
+
     // Listen for incoming messages
     sock.ev.on("messages.upsert", async ({ messages }) => {
 
