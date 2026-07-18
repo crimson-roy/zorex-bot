@@ -10,7 +10,8 @@ process.on("unhandledRejection", (reason) => {
 const {
     default: makeWASocket,
     useMultiFileAuthState,
-    DisconnectReason
+    DisconnectReason,
+    fetchLatestBaileysVersion
 } = require("@whiskeysockets/baileys");
 
 const qrcode = require("qrcode-terminal");
@@ -154,54 +155,63 @@ async function startBot() {
 
     const { state, saveCreds } = await useMultiFileAuthState("auth");
 
+    const { version } = await fetchLatestBaileysVersion();
+
     const sock = makeWASocket({
-        auth: state
+        version,
+        auth: state,
+        printQRInTerminal: false
     });
+
+    // Pairing Code Login
+    if (!state.creds.registered) {
+        const code = await sock.requestPairingCode("2348059889871");
+
+        console.log("\n====================================");
+        console.log("🔑 PAIRING CODE:", code);
+        console.log("====================================\n");
+    }
 
     sock.ev.on("creds.update", saveCreds);
 
     sock.ev.on("connection.update", async ({ connection, qr, lastDisconnect }) => {
 
-    console.log("Connection Update:", connection);
+        console.log("Connection Update:", connection);
 
-    if (lastDisconnect) {
-        console.log("Disconnect Reason:", lastDisconnect.error);
-    }
+        if (lastDisconnect) {
+            console.log("Disconnect Reason:", lastDisconnect.error);
+        }
 
-    if (qr) {
-        console.log("📱 Scan this QR Code:");
-        qrcode.generate(qr, { small: true });
-    }
+        if (qr) {
+            console.log("📱 Scan this QR Code:");
+            qrcode.generate(qr, { small: true });
+        }
 
-    if (connection === "open") {
-        console.log("✅ Zorex is connected to WhatsApp!");
-    }
+        if (connection === "open") {
+            console.log("✅ Zorex is connected to WhatsApp!");
+        }
 
-    if (connection === "close") {
+        if (connection === "close") {
 
-        const statusCode =
-            lastDisconnect?.error?.output?.statusCode;
+            const statusCode =
+                lastDisconnect?.error?.output?.statusCode;
 
-        console.log("Status Code:", statusCode);
+            console.log("Status Code:", statusCode);
 
-        if (statusCode !== DisconnectReason.loggedOut) {
+            if (statusCode === DisconnectReason.loggedOut) {
+                console.log("❌ WhatsApp session expired. Login required.");
+                return;
+            }
 
             console.log("🔄 Reconnecting in 5 seconds...");
 
             setTimeout(() => {
                 startBot();
             }, 5000);
-
-        } else {
-
-            console.log("❌ Logged out from WhatsApp.");
-
         }
 
-    }
-
-});
-
+    });
+    
     // Listen for incoming messages
     sock.ev.on("messages.upsert", async ({ messages }) => {
 
