@@ -1,3 +1,12 @@
+// Prevent bot from crashing on unexpected errors
+process.on("uncaughtException", (err) => {
+    console.error("💥 UNCAUGHT EXCEPTION:", err);
+});
+
+process.on("unhandledRejection", (reason) => {
+    console.error("💥 UNHANDLED REJECTION:", reason);
+});
+
 const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -6,13 +15,16 @@ const {
 
 const qrcode = require("qrcode-terminal");
 const fs = require("fs");
+
 const {
     economyCommands
 } = require("./commands/economy");
+
 const { shopCommands } = require("./commands/shop");
 const { inviteCommands } = require("./commands/invite");
 const { gambleCommands } = require("./commands/gamble");
 const { groupCommands } = require("./commands/group");
+
 const {
     moderationWatcher
 } = require("./commands/moderation");
