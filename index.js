@@ -160,29 +160,47 @@ async function startBot() {
 
     sock.ev.on("creds.update", saveCreds);
 
-    sock.ev.on("connection.update", ({ connection, qr, lastDisconnect }) => {
+    sock.ev.on("connection.update", async ({ connection, qr, lastDisconnect }) => {
 
-        if (qr) {
-            console.log("📱 Scan this QR Code:");
-            qrcode.generate(qr, { small: true });
-        }
+    console.log("Connection Update:", connection);
 
-        if (connection === "open") {
-            console.log("✅ Zorex is connected to WhatsApp!");
-        }
+    if (lastDisconnect) {
+        console.log("Disconnect Reason:", lastDisconnect.error);
+    }
 
-        if (connection === "close") {
+    if (qr) {
+        console.log("📱 Scan this QR Code:");
+        qrcode.generate(qr, { small: true });
+    }
 
-            const shouldReconnect =
-                lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+    if (connection === "open") {
+        console.log("✅ Zorex is connected to WhatsApp!");
+    }
 
-            if (shouldReconnect) {
+    if (connection === "close") {
+
+        const statusCode =
+            lastDisconnect?.error?.output?.statusCode;
+
+        console.log("Status Code:", statusCode);
+
+        if (statusCode !== DisconnectReason.loggedOut) {
+
+            console.log("🔄 Reconnecting in 5 seconds...");
+
+            setTimeout(() => {
                 startBot();
-            }
+            }, 5000);
+
+        } else {
+
+            console.log("❌ Logged out from WhatsApp.");
 
         }
 
-    });
+    }
+
+});
 
     // Listen for incoming messages
     sock.ev.on("messages.upsert", async ({ messages }) => {
