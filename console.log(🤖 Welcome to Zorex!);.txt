@@ -1,0 +1,3 @@
+console.log("🤖 Welcome to Zorex!");
+console.log("Starting bot...");
+console.log("Everything is working!");
