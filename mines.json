@@ -1,0 +1,154 @@
+{
+    "204552246693986@lid": {
+        "userId": "204552246693986@lid",
+        "bet": 27389,
+        "mines": 1,
+        "board": [
+            [
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                }
+            ],
+            [
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 1
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 1
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 1
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                }
+            ],
+            [
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 1
+                },
+                {
+                    "mine": true,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 1
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                }
+            ],
+            [
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 1
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 1
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 1
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                }
+            ],
+            [
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                },
+                {
+                    "mine": false,
+                    "revealed": false,
+                    "adjacent": 0
+                }
+            ]
+        ],
+        "mineLocations": [
+            {
+                "row": 2,
+                "col": 2
+            }
+        ],
+        "safeOpened": 0,
+        "safeRemaining": 24,
+        "multiplier": 1,
+        "startedAt": 1784472699018
+    }
+}
