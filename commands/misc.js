@@ -22,6 +22,27 @@ function isOwner(userId) {
     return loadOwners().includes(userId);
 }
 
+// Checks the sender's REAL WhatsApp admin/superadmin status in this group
+async function isGroupAdmin(sock, groupId, userId) {
+
+    try {
+
+        const metadata = await sock.groupMetadata(groupId);
+        const participant = metadata.participants.find(p => p.id === userId);
+
+        return !!participant && (
+            participant.admin === "admin" ||
+            participant.admin === "superadmin"
+        );
+
+    } catch (err) {
+
+        return false;
+
+    }
+
+}
+
 
 // ---------- .rich — leaderboard of richest users (wallet + bank) ----------
 async function richCommand(sock, msg) {
@@ -68,9 +89,11 @@ async function openGroup(sock, msg) {
         }, { quoted: msg });
     }
 
-    if (!isOwner(sender)) {
+    const allowed = isOwner(sender) || await isGroupAdmin(sock, groupId, sender);
+
+    if (!allowed) {
         return await sock.sendMessage(groupId, {
-            text: `❌ You don't have permission to use this command.`
+            text: `❌ Only group admins can use this command.`
         }, { quoted: msg });
     }
 
@@ -105,9 +128,11 @@ async function closeGroup(sock, msg) {
         }, { quoted: msg });
     }
 
-    if (!isOwner(sender)) {
+    const allowed = isOwner(sender) || await isGroupAdmin(sock, groupId, sender);
+
+    if (!allowed) {
         return await sock.sendMessage(groupId, {
-            text: `❌ You don't have permission to use this command.`
+            text: `❌ Only group admins can use this command.`
         }, { quoted: msg });
     }
 
