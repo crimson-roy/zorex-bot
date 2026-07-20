@@ -203,7 +203,7 @@ Bid with:
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(item.video),
             caption,
-            gifPlayback: false
+            gifPlayback: trues
         }, { quoted: msg });
 
     } else if (item.image && fs.existsSync(item.image)) {
@@ -374,7 +374,7 @@ async function endAuction(sock) {
         await sock.sendMessage(groupId, {
             video: fs.readFileSync(item.video),
             caption,
-            gifPlayback: false,
+            gifPlayback: true,
             mentions: [winner]
         });
 

@@ -95,7 +95,7 @@ async function sendCardDisplay(sock, msg, cardId, card, owners, extraText = "") 
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(card.video),
             caption,
-            gifPlayback: false,
+            gifPlayback: true,
             mentions: block.mentions
         }, { quoted: msg });
 
