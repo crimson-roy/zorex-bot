@@ -1,5 +1,8 @@
 const fs = require("fs");
 
+const { resetUserCooldown, resetAllCooldowns } = require("./cooldown");
+const { resetUserDailyLimit, resetAllDailyLimits } = require("./dailylimit");
+
 const OWNERS_FILE = "./owners.json";
 const USERS_FILE = "./users.json";
 
@@ -474,6 +477,362 @@ ${role}`,
 
 
 } // closes .setrole
+
+
+
+
+    /*
+        RESET COOLDOWN
+        Only Lord Crimson can use this
+    */
+
+else if (text.startsWith(".resetcd")) {
+
+
+    if (sender !== "164317513175043@lid") {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`❌ Only Lord Crimson can use this command.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const args =
+        text
+        .replace(".resetcd", "")
+        .trim();
+
+
+    // .resetcd all — wipe every cooldown for every user
+    if (args.toLowerCase() === "all") {
+
+        const cleared = resetAllCooldowns();
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`🔄 All cooldowns reset.
+
+🧹 Cleared entries: ${cleared}`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const context =
+        msg.message?.extendedTextMessage?.contextInfo;
+
+
+    let target = sender; // default: reset your own
+
+
+    if (context?.participant) {
+
+        target = context.participant;
+
+    }
+
+    else if (
+        context?.mentionedJid &&
+        context.mentionedJid.length > 0
+    ) {
+
+        target = context.mentionedJid[0];
+
+    }
+
+
+    const cleared = resetUserCooldown(target);
+
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text:
+`🔄 Cooldown Reset
+
+👤 User:
+@${target.split("@")[0]}
+
+🧹 Cleared entries: ${cleared}`,
+            mentions:[
+                target
+            ]
+        },
+        {
+            quoted: msg
+        }
+    );
+
+
+} // closes .resetcd
+
+
+
+
+    /*
+        RESET DAILY LIMIT
+        Only Lord Crimson can use this
+    */
+
+else if (text.startsWith(".resetdl")) {
+
+
+    if (sender !== "164317513175043@lid") {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`❌ Only Lord Crimson can use this command.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const args =
+        text
+        .replace(".resetdl", "")
+        .trim();
+
+
+    // .resetdl all — wipe every daily limit for every user
+    if (args.toLowerCase() === "all") {
+
+        const cleared = resetAllDailyLimits();
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`🔄 All daily limits reset.
+
+🧹 Cleared entries: ${cleared}`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const context =
+        msg.message?.extendedTextMessage?.contextInfo;
+
+
+    let target = sender; // default: reset your own
+
+
+    if (context?.participant) {
+
+        target = context.participant;
+
+    }
+
+    else if (
+        context?.mentionedJid &&
+        context.mentionedJid.length > 0
+    ) {
+
+        target = context.mentionedJid[0];
+
+    }
+
+
+    const cleared = resetUserDailyLimit(target);
+
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text:
+`🔄 Daily Limit Reset
+
+👤 User:
+@${target.split("@")[0]}
+
+🧹 Cleared entries: ${cleared}`,
+            mentions:[
+                target
+            ]
+        },
+        {
+            quoted: msg
+        }
+    );
+
+
+} // closes .resetdl
+
+
+
+
+    /*
+        RESET BALANCE
+        Removes 80% of a user's total money (wallet + bank)
+        Only Lord Crimson can use this
+    */
+
+else if (text.startsWith(".resetbal")) {
+
+
+    if (sender !== "164317513175043@lid") {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`❌ Only Lord Crimson can use this command.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const args =
+        text
+        .replace(".resetbal", "")
+        .trim();
+
+
+    const users = loadUsers();
+
+
+    // Shrinks wallet + bank by 80% each (keeps ratio, removes 80% of total)
+    function slashBalance(user) {
+
+        user.wallet = Math.floor(user.wallet * 0.2);
+        user.bank = Math.floor(user.bank * 0.2);
+
+    }
+
+
+    // .resetbal all — hit every registered user
+    if (args.toLowerCase() === "all") {
+
+        let affected = 0;
+
+        for (const id of Object.keys(users)) {
+
+            slashBalance(users[id]);
+            affected++;
+
+        }
+
+        saveUsers(users);
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`💥 Balance Reset
+
+🌍 Scope: All users
+
+🧹 Users affected: ${affected}
+
+Each user lost 80% of their total Crescents.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const context =
+        msg.message?.extendedTextMessage?.contextInfo;
+
+
+    let target = sender; // default: reset your own
+
+
+    if (context?.participant) {
+
+        target = context.participant;
+
+    }
+
+    else if (
+        context?.mentionedJid &&
+        context.mentionedJid.length > 0
+    ) {
+
+        target = context.mentionedJid[0];
+
+    }
+
+
+    if (!users[target]) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`⚠️ That user is not registered.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    slashBalance(users[target]);
+
+    saveUsers(users);
+
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text:
+`💥 Balance Reset
+
+👤 User:
+@${target.split("@")[0]}
+
+💳 New Wallet:
+${users[target].wallet.toLocaleString()} 🌙
+
+🏦 New Bank:
+${users[target].bank.toLocaleString()} 🌙
+
+They lost 80% of their total Crescents.`,
+            mentions:[
+                target
+            ]
+        },
+        {
+            quoted: msg
+        }
+    );
+
+
+} // closes .resetbal
 
 
 } // closes ownerCommands

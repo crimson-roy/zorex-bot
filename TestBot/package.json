@@ -1,10 +1,10 @@
 {
-  "name": "zorex-bot",
+  "name": "testbot",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
@@ -12,9 +12,6 @@
   "type": "commonjs",
   "dependencies": {
     "@whiskeysockets/baileys": "^7.0.0-rc13",
-    "axios": "^1.18.1",
-    "fast-speedtest-api": "^0.3.2",
-    "link-preview-js": "^3.2.0",
     "qrcode-terminal": "^0.12.0"
   }
 }

@@ -2,6 +2,7 @@ const fs = require("fs");
 
 const SHOP_FILE = "./shop.json";
 const USERS_FILE = "./users.json";
+const COLLECTION_FILE = "./collection.json";
 
 
 function loadShop() {
@@ -42,6 +43,134 @@ function saveUsers(users) {
 }
 
 
+function loadCollection() {
+
+    if (!fs.existsSync(COLLECTION_FILE)) {
+        fs.writeFileSync(COLLECTION_FILE, "{}");
+    }
+
+    return JSON.parse(
+        fs.readFileSync(
+            COLLECTION_FILE,
+            "utf8"
+        )
+    );
+
+}
+
+
+function saveCollection(collection) {
+
+    fs.writeFileSync(
+        COLLECTION_FILE,
+        JSON.stringify(
+            collection,
+            null,
+            4
+        )
+    );
+
+}
+
+
+// ---------- Builds the .shop menu text straight from shop.json ----------
+// Bank items (type: "bank") go under BANK UPGRADES, everything else goes
+// under UTILITIES. Add/edit/remove an item in shop.json and this menu
+// updates automatically — no code changes ever needed again.
+function buildShopMenu() {
+
+    const shop = loadShop();
+
+    const bankItems = [];
+    const utilityItems = [];
+
+    for (const id in shop) {
+
+        const item = shop[id];
+
+        if (item.type === "bank") {
+
+            bankItems.push(
+
+`🏦 ${item.name}
+💰 Price: ${item.price.toLocaleString()} 🌙
+➕ Capacity: +${item.capacity.toLocaleString()} 🌙
+🆔 ID: ${id}`
+
+            );
+
+        } else {
+
+            utilityItems.push(
+
+`🛠️ ${item.name}
+💰 Price: ${item.price.toLocaleString()} 🌙
+🆔 ID: ${id}`
+
+            );
+
+        }
+
+    }
+
+    const bankSection =
+        bankItems.length > 0
+        ? bankItems.join("\n\n")
+        : "Coming soon......";
+
+    const utilitySection =
+        utilityItems.length > 0
+        ? utilityItems.join("\n\n")
+        : "Coming soon......";
+
+    return (
+`🌙 *WELCOME TO ZOREX SHOP* 🛒
+
+Feel free to look around and choose anything you want.
+
+As long as you have enough Crescents 🌙 to pay, the item is yours.
+
+━━━━━━━━━━━━━━━
+
+🏦 *BANK UPGRADES*
+
+━━━━━━━━━━━━━━━
+
+${bankSection}
+
+━━━━━━━━━━━━━━━
+
+🛠️ *UTILITIES*
+
+━━━━━━━━━━━━━━━
+
+${utilitySection}
+
+━━━━━━━━━━━━━━━
+
+🛒 *HOW TO BUY*
+
+━━━━━━━━━━━━━━━
+
+.shop buy <item_ID>
+
+Example:
+
+.shop buy 500k
+
+For multiple purchases:
+
+.shop buy <item_ID> <amount>
+
+Example:
+
+.shop buy lottery_ticket 5
+
+Powered by Zorex AI 🤖`
+    );
+
+}
+
 
 async function shopCommands(sock, msg, text) {
 
@@ -76,189 +205,86 @@ Use:
 
     /*
         SHOP MENU
+        Generated live from shop.json — always in sync.
     */
 
     if (text === ".shop") {
 
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text:
-`🌙 *WELCOME TO ZOREX SHOP* 🛒
-
-Feel free to look around and choose anything you want.
-
-As long as you have enough Crescents 🌙 to pay, the item is yours.
-
-━━━━━━━━━━━━━━━
-
-🏦 *BANK UPGRADES*
-
-━━━━━━━━━━━━━━━
-
-🏦 Bank +500K
-💰 Price: 100,000 🌙
-➕ Capacity: +500,000 🌙
-
-🏦 Bank +3M
-💰 Price: 600,000 🌙
-➕ Capacity: +3,000,000 🌙
-
-🏦 Bank +10M
-💰 Price: 2,000,000 🌙
-➕ Capacity: +10,000,000 🌙
-
-🏦 Bank +50M
-💰 Price: 10,000,000 🌙
-➕ Capacity: +50,000,000 🌙
-
-🏦 Bank +100M
-💰 Price: 20,000,000 🌙
-➕ Capacity: +100,000,000 🌙
-
-🏦 Bank +500M
-💰 Price: 100,000,000 🌙
-➕ Capacity: +500,000,000 🌙
-
-🏦 Bank +1B
-💰 Price: 200,000,000 🌙
-➕ Capacity: +1,000,000,000 🌙
-
-🏦 Bank +5B
-💰 Price: 1,000,000,000 🌙
-➕ Capacity: +5,000,000,000 🌙
-
-🏦 Bank +10B
-💰 Price: 2,000,000,000 🌙
-➕ Capacity: +10,000,000,000 🌙
-
-🏦 Bank +100B
-💰 Price: 20,000,000,000 🌙
-➕ Capacity: +100,000,000,000 🌙
-
-🏦 Bank +500B
-💰 Price: 100,000,000,000 🌙
-➕ Capacity: +500,000,000,000 🌙
-
-🏦 Bank +1T
-💰 Price: 200,000,000,000 🌙
-➕ Capacity: +1,000,000,000,000 🌙
-
-━━━━━━━━━━━━━━━
-
-🛠️ *UTILITIES*
-
-━━━━━━━━━━━━━━━
-
-🎫 Lottery Tickets
-Coming soon......
-
-🎁 Gifts
-Coming soon......
-
-🎨 Cosmetics
-Coming soon......
-
-━━━━━━━━━━━━━━━
-
-🎰 *LOTTERY*
-
-━━━━━━━━━━━━━━━
-
-Coming soon......
-
-━━━━━━━━━━━━━━━
-
-🛒 *HOW TO BUY*
-
-━━━━━━━━━━━━━━━
-
-.shop buy <item_ID>
-
-Example:
-
-.shop buy 500k
-
-For multiple purchases:
-
-.shop buy <item_ID> <amount>
-
-Example:
-
-.shop buy ticket 5
-
-Powered by Zorex AI 🤖`
-        },
-        {
-            quoted: msg
-        }
-    );
-
-}
-
-else if (text.startsWith(".shop buy")) {
-
-    const args = text.split(" ");
-
-    const itemId = args[2];
-
-    let quantity = Number(args[3]);
-
-    if (!quantity) quantity = 1;
-
-    const shop = loadShop();
-
-    const item = shop[itemId];
-
-    if (!item) {
-
         return await sock.sendMessage(
             msg.key.remoteJid,
             {
-                text:
+                text: buildShopMenu()
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+    else if (text.startsWith(".shop buy")) {
+
+        const args = text.split(" ");
+
+        const itemId = args[2];
+
+        let quantity = Number(args[3]);
+
+        if (!quantity) quantity = 1;
+
+        const shop = loadShop();
+
+        const item = shop[itemId];
+
+        if (!item) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
 `❌ Item not found.
 
 Use:
 .shop
 
 to view available items.`
-            },
-            {
-                quoted: msg
-            }
-        );
+                },
+                {
+                    quoted: msg
+                }
+            );
 
-    }
+        }
 
-    if (quantity <= 0 || isNaN(quantity)) {
+        if (quantity <= 0 || isNaN(quantity)) {
 
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
 `⚠️ Invalid quantity.`
-            },
-            {
-                quoted: msg
-            }
-        );
+                },
+                {
+                    quoted: msg
+                }
+            );
 
-    }
+        }
 
-    if (users[sender].bankLimit === undefined) {
+        if (users[sender].bankLimit === undefined) {
 
-        users[sender].bankLimit = 100000;
+            users[sender].bankLimit = 100000;
 
-    }
+        }
 
-    const totalPrice = item.price * quantity;
+        const totalPrice = item.price * quantity;
 
-    if (users[sender].wallet < totalPrice) {
+        if (users[sender].wallet < totalPrice) {
 
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
 `❌ Not enough Crescents.
 
 💰 Required:
@@ -266,28 +292,60 @@ ${totalPrice.toLocaleString()} 🌙
 
 💳 Wallet:
 ${users[sender].wallet.toLocaleString()} 🌙`
-            },
-            {
-                quoted: msg
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+        users[sender].wallet -= totalPrice;
+
+        let resultLines = "";
+
+        if (item.type === "bank") {
+
+            users[sender].bankLimit += item.capacity * quantity;
+
+            resultLines =
+`🏦 New Bank Capacity:
+${users[sender].bankLimit.toLocaleString()} 🌙`;
+
+        } else {
+
+            // Non-bank items go straight into the collection instead
+            const collection = loadCollection();
+
+            if (!collection[sender]) collection[sender] = [];
+
+            for (let i = 0; i < quantity; i++) {
+
+                collection[sender].push({
+                    id: itemId,
+                    name: item.name,
+                    type: item.type,
+                    obtainedFrom: "shop",
+                    obtainedAt: Date.now()
+                });
+
             }
-        );
 
-    }
+            saveCollection(collection);
 
-    users[sender].wallet -= totalPrice;
+            resultLines =
+`📦 Added to your collection.
 
-    if (item.type === "bank") {
+Use .col to view it.`;
 
-        users[sender].bankLimit += item.capacity * quantity;
+        }
 
-    }
+        saveUsers(users);
 
-    saveUsers(users);
-
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text:
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
 `✅ *Purchase Successful!*
 
 🛒 Item:
@@ -299,17 +357,16 @@ ${quantity}
 💰 Paid:
 ${totalPrice.toLocaleString()} 🌙
 
-🏦 New Bank Capacity:
-${users[sender].bankLimit.toLocaleString()} 🌙
+${resultLines}
 
 Powered by Zorex AI 🤖`
-        },
-        {
-            quoted: msg
-        }
-    );
+            },
+            {
+                quoted: msg
+            }
+        );
 
-}
+    }
 
 }
 

@@ -26,23 +26,14 @@ const {
 const { shopCommands } = require("./commands/shop");
 const { inviteCommands } = require("./commands/invite");
 const { minesCommands } = require("./commands/mines");
+const { blackjackCommands } = require("./commands/blackjack");
+const { aviatorCommands } = require("./commands/aviator");
 const { gambleCommands } = require("./commands/gamble");
 const { groupCommands } = require("./commands/group");
-const { cardCommands } = require("./commands/card");
 
 const {
     moderationWatcher
 } = require("./commands/moderation");
-
-const {
-    importAuctionItem,
-    startAuction,
-    placeBid,
-    endAuction,
-    forceEndAuction,
-    viewCollection,
-    useLuckyCharm
-} = require("./commands/auction");
 
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = "./owners.json";
@@ -142,7 +133,6 @@ function saveGames(games) {
 
 }
 const axios = require("axios");
-const { truncate } = require("fs/promises");
 const USERS_FILE = "./users.json";
 console.log("Using users file:", require("path").resolve(USERS_FILE));
 
@@ -170,18 +160,21 @@ async function startBot() {
 
     console.log("🚀 Starting Zorex WhatsApp connection...");
 
-    // Anything timestamped before this moment is history, not a live command
-    const startTime = Math.floor(Date.now() / 1000);
-
     const { state, saveCreds } =
         await useMultiFileAuthState("auth");
 
 
-    const sock = makeWASocket({
-    auth: state,
-    printQRInTerminal: true,
-    syncFullHistory: false
+   const sock = makeWASocket({
+    auth: state
 });
+
+        browser: [
+            "Ubuntu",
+            "Chrome",
+            "20.0.04"
+        ]
+
+    });
 
 
     sock.ev.on(
@@ -299,18 +292,11 @@ async function startBot() {
 
 
     // Listen for incoming messages
-    sock.ev.on("messages.upsert", async ({ messages, type }) => {
+    sock.ev.on("messages.upsert", async ({ messages }) => {
 
         const msg = messages[0];
 
         if (!msg.message) return;
-
-        // Ignore anything that isn't a live, real-time message —
-        // history sync replays come through with a different type
-        if (type !== "notify") return;
-
-        // Extra safety net: ignore anything timestamped before the bot started
-        if (msg.messageTimestamp && msg.messageTimestamp < startTime) return;
 
         await moderationWatcher(sock, msg);
 
@@ -475,25 +461,20 @@ My Lord Crimson
 
         const start = Date.now();
 
-        await axios.get(
-            "https://speed.cloudflare.com/__down?bytes=1000000",
-            {
-                responseType: "arraybuffer",
-                timeout: 15000
-            }
-        );
+        await axios.get("https://speed.cloudflare.com/__down?bytes=1000000", {
+            responseType: "arraybuffer",
+            timeout: 15000
+        });
 
         const end = Date.now();
 
         const seconds = (end - start) / 1000;
         const speed = (1 / seconds).toFixed(2);
 
-
         await sock.sendMessage(
             msg.key.remoteJid,
             {
-                text:
-`⚡ *ZOREX NETWORK TEST*
+                text: `⚡ *ZOREX NETWORK TEST*
 
 📡 Network Speed: ${speed} Mbps
 
@@ -504,20 +485,14 @@ My Lord Crimson
             }
         );
 
-
     } catch (error) {
 
-        console.log(
-            "TEST ERROR:",
-            error.message
-        );
-
+        console.log("TEST ERROR:", error.message);
 
         await sock.sendMessage(
             msg.key.remoteJid,
             {
-                text:
-`⚠️ Network test failed.
+                text: `⚠️ Network test failed.
 
 🤖 Zorex is still running.`
             },
@@ -845,18 +820,6 @@ Example:
         );
 
     }
-
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text: `I know exactly who you are.
-You're *${user.bio}*
-🤖 That's the bio you trusted me to remember.`
-        },
-        {
-            quoted: msg
-        }
-    );
 
 } else if (text === ".profile") {
 
@@ -1638,10 +1601,7 @@ ${game.lastLetter}
 } else if (
     text.startsWith(".setrole") ||
     text.startsWith(".addowner") ||
-    text.startsWith(".removeowner") ||
-    text.startsWith(".resetcd") ||
-    text.startsWith(".resetdl") ||
-    text.startsWith(".resetbal")
+    text.startsWith(".removeowner")
 ) {
 
     await startOwner(sock, msg, text);
@@ -1657,20 +1617,6 @@ ${game.lastLetter}
 ) {
 
         await groupCommands(
-        sock,
-        msg,
-        text
-    );
-
-} else if (
-    text.startsWith(".mines") ||
-    text.startsWith(".shovel") ||
-    text === ".cashout"
-) {
-
-    console.log("➡️ Routing to mines.js");
-
-    await minesCommands(
         sock,
         msg,
         text
@@ -1710,11 +1656,8 @@ ${game.lastLetter}
     text.startsWith(".cf") ||
     text.startsWith(".casino") ||
     text.startsWith(".dice") ||
-    text.startsWith(".mines") ||
-    text.startsWith(".aviator") ||
     text.startsWith(".slots") ||
     text.startsWith(".roulette") ||
-    text.startsWith(".bj") ||
     text.startsWith(".poker")
 
 ) {
@@ -1725,6 +1668,36 @@ ${game.lastLetter}
         text
     );
 
+    } else if (
+
+    text.startsWith(".bj") ||
+    text.startsWith(".hit") ||
+    text.startsWith(".stand") ||
+    text.startsWith(".double")
+
+) {
+
+    await blackjackCommands(
+        sock,
+        msg,
+        text
+    );
+
+} else if (
+    text.startsWith(".mines") ||
+    text.startsWith(".shovel") ||
+    text === ".cashout"
+) {
+
+    console.log("➡️ Routing to mines.js");
+
+    await minesCommands(
+        sock,
+        msg,
+        text
+    );
+
+
 } else if (
 
     text === ".shop" ||
@@ -1733,46 +1706,6 @@ ${game.lastLetter}
 ) {
 
     await shopCommands(sock, msg, text);
-
-} else if (
-
-    text.startsWith(".importauction") ||
-    text.startsWith(".auctionstart") ||
-    text.startsWith(".auctionbid") ||
-    text === ".auctionend" ||
-    text.startsWith(".col")
-
-) {
-
-    if (text.startsWith(".importauction")) {
-
-        await importAuctionItem(sock, msg, text);
-
-    } else if (text.startsWith(".auctionstart")) {
-
-        await startAuction(sock, msg, text);
-
-    } else if (text.startsWith(".auctionbid")) {
-
-        await placeBid(sock, msg, text);
-
-    } else if (text === ".auctionend") {
-
-        await forceEndAuction(sock, msg);
-
-    } else if (text.startsWith(".col")) {
-
-        await viewCollection(sock, msg, text);
-
-    }
-
-} else if (text.startsWith(".use")) {
-
-    await useLuckyCharm(sock, msg, text);
-
-} else if (text.startsWith(".cs")) {
-
-    await cardCommands(sock, msg, text);
 
 } else if (text === ".menu") {
 
@@ -1870,10 +1803,8 @@ ROY AI SYSTEM
         }
     );
 
-    }
+}
 
     });
-
-}
 
 startBot();

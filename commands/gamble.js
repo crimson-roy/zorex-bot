@@ -1,17 +1,46 @@
 const fs = require("fs");
+const { checkCooldown, setCooldown } = require("./cooldown");
+const { checkDailyLimit, incrementDailyPlay } = require("./dailylimit");
 
 const USERS_FILE = "./users.json";
+const MINES_FILE = "./mines.json";
+const COLLECTION_FILE = "./collection.json";
+const activeMinesGames = {};
 
+const COOLDOWN_MS = 30000; // 30 seconds
+
+function loadMines() {
+
+    if (!fs.existsSync(MINES_FILE)) {
+        fs.writeFileSync(MINES_FILE, "{}");
+    }
+
+    return JSON.parse(
+        fs.readFileSync(
+            MINES_FILE,
+            "utf8"
+        )
+    );
+
+}
+
+function saveMines(mines) {
+
+    fs.writeFileSync(
+        MINES_FILE,
+        JSON.stringify(
+            mines,
+            null,
+            4
+        )
+    );
+
+}
 
 function loadUsers() {
 
     if (!fs.existsSync(USERS_FILE)) {
-
-        fs.writeFileSync(
-            USERS_FILE,
-            "{}"
-        );
-
+        fs.writeFileSync(USERS_FILE, "{}");
     }
 
     return JSON.parse(
@@ -27,6 +56,32 @@ function saveUsers(users) {
         USERS_FILE,
         JSON.stringify(
             users,
+            null,
+            4
+        )
+    );
+
+}
+
+// ---------- Lucky Charm collection helpers ----------
+function loadCollection() {
+
+    if (!fs.existsSync(COLLECTION_FILE)) {
+        fs.writeFileSync(COLLECTION_FILE, "{}");
+    }
+
+    return JSON.parse(
+        fs.readFileSync(COLLECTION_FILE, "utf8")
+    );
+
+}
+
+function saveCollection(data) {
+
+    fs.writeFileSync(
+        COLLECTION_FILE,
+        JSON.stringify(
+            data,
             null,
             4
         )
@@ -67,6 +122,32 @@ async function gambleCommands(sock, msg, text) {
 
     const users = loadUsers();
 
+    // Lucky Charm expiry — if the 60s window passed with no .casino play,
+    // silently return the charm to their collection. No message sent.
+    if (
+        users[sender]?.luckyCharmActive &&
+        Date.now() >= users[sender].luckyCharmActive.expiresAt
+    ) {
+
+        delete users[sender].luckyCharmActive;
+
+        const collection = loadCollection();
+
+        if (!collection[sender]) collection[sender] = [];
+
+        collection[sender].push({
+            id: "luckycharm",
+            name: "Lucky Charm",
+            type: "luck",
+            obtainedFrom: "auction",
+            obtainedAt: Date.now()
+        });
+
+        saveCollection(collection);
+        saveUsers(users);
+
+    }
+
     // GAMBLING HUB
 if (text === ".gamble") {
 
@@ -75,6 +156,7 @@ if (text === ".gamble") {
             wallet: 0,
             bank: 0
         };
+
 
     return await sock.sendMessage(
         msg.key.remoteJid,
@@ -91,43 +173,101 @@ ${user.bank.toLocaleString()} 🌙
 
 🎮 *AVAILABLE GAMES*
 
-🎰 Casino
+
+🎰 *Casino*
+
 .casino <amount>
 
-🪙 Coin Flip
+- Double or nothing
+- 60% win chance
+- 2x payout
+
+
+🪙 *Coin Flip*
+
 .cf heads/tails <amount>
 
-🎡 Roulette
+- 50/50 chance
+- 2x payout
+
+
+🎡 *Roulette*
+
 .roulette red/black <amount>
 
-🎲 Dice
+- Predict red or black
+- 50/50 chance
+- 2x payout
+
+
+🎲 *Dice*
+
 .dice <number/odd/even> <amount>
 
-🎰 Slots
+- Roll two dice
+- Higher risk = higher reward
+
+
+🎰 *Slots*
+
 .slots <amount>
 
-🃏 Blackjack
+- Match symbols to win
+- 2x - 7x payouts
+
+
+🃏 *Blackjack*
+
 .bj <amount>
 .bj all
 
-🎴 Poker
+- Challenge the dealer
+- Get closer to 21 without busting
+- Use .hit, .stand, or .double
+- Beat the dealer to win
+
+
+🎴 *Poker*
+
 .poker <amount>
 
-💣 Mines
+- Video poker with card holds
+- Hold your best cards and redraw
+- Royal Flush pays the biggest rewards
+
+
+💣 *Mines*
+
 .mines <amount>
 
-💰 Bet
+- Pick safe tiles
+- Avoid hidden mines
+- Higher risk = higher rewards
+
+
+💰 *Betting*
+
 .bet
 
-✈️ Aviator
+- Coming soon
+
+
+✈️ *Aviator*
+
 .aviator <amount>
 
+- Crash game
+- Cash out before it crashes
 
-🌙 Money Commands
+
+🌙 *Money Commands*
 
 .bal
-.dep
-.wd
+.dep <amount>
+.wd <amount>
+
+
+⏳ All games share a 30s cooldown between plays.
 
 
 Powered by Zorex AI 🤖`
@@ -154,6 +294,46 @@ else if (text.startsWith(".cf")) {
 
 Use:
 .register`
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+
+        const cfRemaining = checkCooldown(sender, "cf", COOLDOWN_MS);
+
+        if (cfRemaining) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`⏳ Slow down! Try again in ${Math.ceil(cfRemaining / 1000)}s.`
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+
+        const cfLimit = checkDailyLimit(sender, "cf");
+
+        if (cfLimit) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`📅 Daily limit reached for Coin Flip.
+
+Used: ${cfLimit.used}/${cfLimit.limit}
+
+Come back tomorrow!`
                 },
                 {
                     quoted: msg
@@ -244,6 +424,9 @@ ${users[sender].wallet.toLocaleString()} 🌙`
             sender,
             bet
         );
+
+        setCooldown(sender, "cf");
+        incrementDailyPlay(sender, "cf");
 
 
         let result;
@@ -349,6 +532,46 @@ Use:
     }
 
 
+    const casinoRemaining = checkCooldown(sender, "casino", COOLDOWN_MS);
+
+    if (casinoRemaining) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`⏳ Slow down! Try again in ${Math.ceil(casinoRemaining / 1000)}s.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const casinoLimit = checkDailyLimit(sender, "casino");
+
+    if (casinoLimit) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`📅 Daily limit reached for Casino.
+
+Used: ${casinoLimit.used}/${casinoLimit.limit}
+
+Come back tomorrow!`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
     const input =
         text.replace(".casino", "").trim();
 
@@ -405,10 +628,30 @@ ${users[sender].wallet.toLocaleString()} 🌙`
         bet
     );
 
+    setCooldown(sender, "casino");
+    incrementDailyPlay(sender, "casino");
 
-    // 70% win chance
-    const win =
-        Math.random() * 100 < 70;
+
+    // Lucky Charm = guaranteed win for this one play, otherwise flat 60%
+    let win;
+    let charmUsed = false;
+
+    if (
+        users[sender].luckyCharmActive &&
+        Date.now() < users[sender].luckyCharmActive.expiresAt
+    ) {
+
+        win = true;
+        charmUsed = true;
+
+        delete users[sender].luckyCharmActive;
+        saveUsers(users);
+
+    } else {
+
+        win = Math.random() * 100 < 60;
+
+    }
 
 
     if (win) {
@@ -432,7 +675,7 @@ ${bet.toLocaleString()} 🌙
 
 
 🎲 Result:
-WIN 🎉
+WIN 🎉${charmUsed ? "\n\n🍀 Lucky Charm activated!" : ""}
 
 
 🏆 Prize:
@@ -493,6 +736,46 @@ ${users[sender].wallet.toLocaleString()} 🌙`
 
 Use:
 .register`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const rouletteRemaining = checkCooldown(sender, "roulette", COOLDOWN_MS);
+
+    if (rouletteRemaining) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`⏳ Slow down! Try again in ${Math.ceil(rouletteRemaining / 1000)}s.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const rouletteLimit = checkDailyLimit(sender, "roulette");
+
+    if (rouletteLimit) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`📅 Daily limit reached for Roulette.
+
+Used: ${rouletteLimit.used}/${rouletteLimit.limit}
+
+Come back tomorrow!`
             },
             {
                 quoted: msg
@@ -589,6 +872,9 @@ ${users[sender].wallet.toLocaleString()} 🌙`
         sender,
         bet
     );
+
+    setCooldown(sender, "roulette");
+    incrementDailyPlay(sender, "roulette");
 
 
     // 50/50 chance
@@ -954,134 +1240,6 @@ ${users[sender].wallet.toLocaleString()} 🌙`
 
     }
 
-    // GAMBLING HUB
-if (text === ".gamble") {
-
-    const user =
-        users[sender] || {
-            wallet: 0,
-            bank: 0
-        };
-
-
-    return await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text:
-`🎰 *ZOREX GAMBLING HUB* 🎰
-
-💰 Wallet:
-${user.wallet.toLocaleString()} 🌙
-
-🏦 Bank:
-${user.bank.toLocaleString()} 🌙
-
-
-🎮 *AVAILABLE GAMES*
-
-
-🎰 *Casino*
-
-.casino <amount>
-
-• Double or nothing
-• 70% win chance
-• 2x payout
-
-
-🪙 *Coin Flip*
-
-.cf heads/tails <amount>
-
-• 50/50 chance
-• 2x payout
-
-
-🎡 *Roulette*
-
-.roulette red/black <amount>
-
-• Predict red or black
-• 50/50 chance
-• 2x payout
-
-
-🎲 *Dice*
-
-.dice <number/odd/even> <amount>
-
-• Roll two dice
-• Higher risk = higher reward
-
-
-🎰 *Slots*
-
-.slots <amount>
-
-• Match symbols to win
-• 2x - 7x payouts
-
-
-🃏 *Blackjack*
-
-.bj <amount>
-.bj all
-
-• Challenge the dealer
-• Get closer to 21 without busting
-• Use .hit, .stand, or .double
-• Beat the dealer to win
-
-
-🎴 *Poker*
-
-.poker <amount>
-
-• Video poker with card holds
-• Hold your best cards and redraw
-• Royal Flush pays the biggest rewards
-
-
-💣 *Mines*
-
-.mines <amount>
-
-• Pick safe tiles
-• Avoid hidden mines
-• Higher risk = higher rewards
-
-
-💰 *Betting*
-
-.bet
-
-• Coming soon
-
-
-✈️ *Aviator*
-
-.aviator <amount>
-
-• Crash game
-• Cash out before it crashes
-
-
-🌙 *Money Commands*
-
-.bal
-.dep <amount>
-.wd <amount>
-
-
-Powered by Zorex AI 🤖`
-        },
-        {
-            quoted: msg
-        }
-    );
-
-}
-
     // SLOTS
 } else if (text.startsWith(".slots")) {
 
@@ -1096,6 +1254,46 @@ Powered by Zorex AI 🤖`
 
 Use:
 .register`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const slotsRemaining = checkCooldown(sender, "slots", COOLDOWN_MS);
+
+    if (slotsRemaining) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`⏳ Slow down! Try again in ${Math.ceil(slotsRemaining / 1000)}s.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const slotsLimit = checkDailyLimit(sender, "slots");
+
+    if (slotsLimit) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`📅 Daily limit reached for Slots.
+
+Used: ${slotsLimit.used}/${slotsLimit.limit}
+
+Come back tomorrow!`
             },
             {
                 quoted: msg
@@ -1162,6 +1360,9 @@ ${users[sender].wallet.toLocaleString()} 🌙`
         bet
     );
 
+    setCooldown(sender, "slots");
+    incrementDailyPlay(sender, "slots");
+
 
     const symbols = [
         "🍒",
@@ -1179,7 +1380,8 @@ ${users[sender].wallet.toLocaleString()} 🌙`
     let multiplier = 0;
 
 
-    if (roll < 30) {
+    // 40% chance: total loss
+    if (roll < 40) {
 
         let a =
             symbols[
@@ -1232,7 +1434,8 @@ ${users[sender].wallet.toLocaleString()} 🌙`
     }
 
 
-    else if (roll < 70) {
+    // 42% chance: double (2x)
+    else if (roll < 82) {
 
 
         const symbol =
@@ -1271,7 +1474,8 @@ ${users[sender].wallet.toLocaleString()} 🌙`
     }
 
 
-    else if (roll < 95) {
+    // 16% chance: triple (3x)
+    else if (roll < 98) {
 
 
         const symbol =
@@ -1290,6 +1494,7 @@ ${users[sender].wallet.toLocaleString()} 🌙`
     }
 
 
+    // 2% chance: jackpot (7x)
     else {
 
 

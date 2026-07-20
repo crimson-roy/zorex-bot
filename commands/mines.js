@@ -1,5 +1,9 @@
 const fs = require("fs");
 const path = require("path");
+const { checkCooldown, setCooldown } = require("./cooldown");
+const { checkDailyLimit, incrementDailyPlay } = require("./dailylimit");
+
+const COOLDOWN_MS = 30000; // 30 seconds
 
 // ======================================
 // ZOREX MINES CONFIG
@@ -902,6 +906,52 @@ Use:
     }
 
     // ==========================
+    // COOLDOWN CHECK
+    // ==========================
+
+    const minesRemaining = checkCooldown(sender, "mines", COOLDOWN_MS);
+
+    if (minesRemaining) {
+
+        return await sock.sendMessage(
+            from,
+            {
+                text:
+`⏳ Slow down! Try again in ${Math.ceil(minesRemaining / 1000)}s.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+    // ==========================
+    // DAILY LIMIT CHECK
+    // ==========================
+
+    const minesLimit = checkDailyLimit(sender, "mines");
+
+    if (minesLimit) {
+
+        return await sock.sendMessage(
+            from,
+            {
+                text:
+`📅 Daily limit reached for Mines.
+
+Used: ${minesLimit.used}/${minesLimit.limit}
+
+Come back tomorrow!`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+    // ==========================
     // VALIDATE MINES
     // ==========================
 
@@ -992,6 +1042,9 @@ ${users[sender].wallet.toLocaleString()} 🌙`
     users[sender].wallet -= bet;
 
     saveUsers(users);
+
+    setCooldown(sender, "mines");
+    incrementDailyPlay(sender, "mines");
 
     // ==========================
     // CREATE GAME

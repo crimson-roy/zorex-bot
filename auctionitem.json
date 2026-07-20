@@ -1,0 +1,15 @@
+{
+    "mysterybox": {
+        "name": "Mystery Box",
+        "type": "mystery"
+    },
+    "luckycharm": {
+        "name": "Lucky Charm",
+        "type": "luck"
+    },
+    "59e04c5d": {
+        "name": "Aqua",
+        "type": "card",
+        "video": "./aqua.mp4"
+    }
+}

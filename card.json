@@ -1,0 +1,11 @@
+{
+  "59e04c5d": {
+    "name": "Aqua",
+    "series": "KonoSuba: God's Blessing on This Wonderful World!",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "video": "./aqua.mp4"
+  }
+}
