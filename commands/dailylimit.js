@@ -136,10 +136,30 @@ function resetAllDailyLimits() {
 
 }
 
+// Always returns current status, capped or not — used by .mydls
+function getDailyStatus(userId, command) {
+
+    const limits = loadLimits();
+    const key = `${command}:${userId}`;
+    const entry = limits[key];
+    const today = todayKey();
+    const limit = getLimit(command);
+
+    let used = 0;
+
+    if (entry && entry.date === today) {
+        used = entry.count;
+    }
+
+    return { used, limit };
+
+}
+
 module.exports = {
     checkDailyLimit,
     incrementDailyPlay,
     getLimit,
     resetUserDailyLimit,
-    resetAllDailyLimits
+    resetAllDailyLimits,
+    getDailyStatus
 };

@@ -35,6 +35,15 @@ const {
 } = require("./commands/moderation");
 
 const {
+    richCommand,
+    openGroup,
+    closeGroup,
+    inviteCommand,
+    myCooldownsCommand,
+    myDailyLimitsCommand
+} = require("./commands/misc");
+
+const {
     importAuctionItem,
     startAuction,
     placeBid,
@@ -1773,6 +1782,30 @@ ${game.lastLetter}
 } else if (text.startsWith(".cs")) {
 
     await cardCommands(sock, msg, text);
+
+} else if (text === ".rich") {
+
+    await richCommand(sock, msg);
+
+} else if (text === ".open") {
+
+    await openGroup(sock, msg);
+
+} else if (text === ".close") {
+
+    await closeGroup(sock, msg);
+
+} else if (text === ".invite") {
+
+    await inviteCommand(sock, msg);
+
+} else if (text === ".mycds") {
+
+    await myCooldownsCommand(sock, msg);
+
+} else if (text === ".mydls") {
+
+    await myDailyLimitsCommand(sock, msg);
 
 } else if (text === ".menu") {
 

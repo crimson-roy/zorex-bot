@@ -7,5 +7,50 @@
     "valueMax": 1500000,
     "type": "card",
     "video": "./aqua.mp4"
+  },
+  "e71a1077": {
+    "name": "Gojo Satoru",
+    "series": "Jujutsu Kaisen",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "video": "./gojo.mp4"
+  },
+  "3dbc1b5d": {
+    "name": "Yuki",
+    "series": "Chaos Zero Nightmare",
+    "tier": "C",
+    "valueMin": 50000,
+    "valueMax": 100000,
+    "type": "card",
+    "image": "./yuki_czn.jpg"
+  },
+  "2e74b086": {
+    "name": "Yuki",
+    "series": "Monster Musume no Iru Nichijou",
+    "tier": "R",
+    "valueMin": 200000,
+    "valueMax": 350000,
+    "type": "card",
+    "image": "./yuki_monmusu.jpg"
+  },
+  "27cea9b9": {
+    "name": "Yuki",
+    "series": "IDOLiSH7",
+    "tier": "R",
+    "valueMin": 200000,
+    "valueMax": 350000,
+    "type": "card",
+    "image": "./yuki_idolish7.jpg"
+  },
+  "df2eb585": {
+    "name": "Yuki",
+    "series": "Mazoku",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./yuki_mazoku.jpg"
   }
 }
