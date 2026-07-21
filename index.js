@@ -904,14 +904,24 @@ Use:
     const user = users[userId];
 
     // Try to fetch their real WhatsApp profile picture — falls back to the
-    // default Zorex image if they don't have one set or it can't be fetched
+    // default Zorex image if they don't have one set, it can't be fetched,
+    // or the fetch hangs for more than 5 seconds
     let profileImage;
 
     try {
-        const ppUrl = await sock.profilePictureUrl(userId, "image");
+
+        const ppUrl = await Promise.race([
+            sock.profilePictureUrl(userId, "image"),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("pp fetch timeout")), 5000))
+        ]);
+
         profileImage = { url: ppUrl };
+
     } catch (err) {
+
+        console.log("Profile picture fetch failed/timed out:", err.message);
         profileImage = fs.readFileSync("./zorex.jpg");
+
     }
 
     const statusLabel = user.partner
@@ -1839,10 +1849,6 @@ ${game.lastLetter}
 
     await digCommand(sock, msg);
 
-} else if (text.startsWith(".marry")) {
-
-    await marryCommand(sock, msg);
-
 } else if (text === ".marryaccept") {
 
     await marryAcceptCommand(sock, msg);
@@ -1854,6 +1860,10 @@ ${game.lastLetter}
 } else if (text === ".divorce") {
 
     await divorceCommand(sock, msg);
+
+} else if (text.startsWith(".marry")) {
+
+    await marryCommand(sock, msg);
 
 } else if (text === ".rich") {
 
