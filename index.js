@@ -67,6 +67,16 @@ const {
     divorceCommand
 } = require("./commands/marry");
 
+const { dailyCommand } = require("./commands/daily");
+const { workCommand } = require("./commands/work");
+
+const {
+    blackjackCommand,
+    hitCommand,
+    standCommand,
+    doubleCommand
+} = require("./commands/blackjack");
+
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = "./owners.json";
 
@@ -1764,7 +1774,6 @@ ${game.lastLetter}
     text.startsWith(".aviator") ||
     text.startsWith(".slots") ||
     text.startsWith(".roulette") ||
-    text.startsWith(".bj") ||
     text.startsWith(".poker")
 
 ) {
@@ -1783,6 +1792,34 @@ ${game.lastLetter}
 ) {
 
     await shopCommands(sock, msg, text);
+
+} else if (text === ".invite") {
+
+    await inviteCommand(sock, msg);
+
+} else if (text === ".daily") {
+
+    await dailyCommand(sock, msg);
+
+} else if (text.startsWith(".work")) {
+
+    await workCommand(sock, msg, text);
+
+} else if (text.startsWith(".bj")) {
+
+    await blackjackCommand(sock, msg, text);
+
+} else if (text === ".hit") {
+
+    await hitCommand(sock, msg);
+
+} else if (text === ".stand") {
+
+    await standCommand(sock, msg);
+
+} else if (text === ".double") {
+
+    await doubleCommand(sock, msg);
 
 } else if (
 
@@ -1876,10 +1913,6 @@ ${game.lastLetter}
 } else if (text === ".close") {
 
     await closeGroup(sock, msg);
-
-} else if (text === ".invite") {
-
-    await inviteCommand(sock, msg);
 
 } else if (text === ".mycds") {
 

@@ -113,6 +113,19 @@ function chance(percent) {
 
 }
 
+const DIVIDER = "▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️";
+
+// Shared not-registered message, same style as economy.js
+function notRegisteredMessage() {
+    return `╭━━━━ ⚠️ 𝗥𝗘𝗚𝗜𝗦𝗧𝗥𝗔𝗧𝗜𝗢𝗡 ━━━━╮
+👤 Please register your account. ✨
+────── 📝 𝗙𝗢𝗥𝗠𝗔𝗧 ──────
+⌨️ .register YOUR_NAME
+────── 💡 𝗘𝗫𝗔𝗠𝗣𝗟𝗘 ──────
+🔥 .register Crimson Roy
+╰━━━━━━━━━━━━━━━━━━━━━━━╯`;
+}
+
 async function gambleCommands(sock, msg, text) {
 
     const sender =
@@ -188,7 +201,7 @@ ${user.bank.toLocaleString()} 🌙
 .cf heads/tails <amount>
 
 - 50/50 chance
-- 2x payout
+- 1.85x payout
 
 
 🎡 *Roulette*
@@ -288,16 +301,8 @@ else if (text.startsWith(".cf")) {
 
             return await sock.sendMessage(
                 msg.key.remoteJid,
-                {
-                    text:
-`❌ You don't have a Zorex profile yet.
-
-Use:
-.register`
-                },
-                {
-                    quoted: msg
-                }
+                { text: notRegisteredMessage() },
+                { quoted: msg }
             );
 
         }
@@ -444,11 +449,13 @@ if (chance(50)) {
 
         if (result === choice) {
 
+            // 1.85x payout instead of a flat 2x
+            const prize = Math.floor(bet * 1.85);
 
             creditWallet(
                 users,
                 sender,
-                bet * 2
+                prize
             );
 
 
@@ -456,22 +463,12 @@ if (chance(50)) {
                 msg.key.remoteJid,
                 {
                     text:
-`🪙 *Zorex Coin Flip*
-
-🎯 Choice:
-${choice.toUpperCase()}
-
-🪙 Result:
-${result.toUpperCase()}
-
-
-🎉 YOU WON!
-
-💰 Prize:
-+${(bet * 2).toLocaleString()} 🌙
-
-Wallet:
-${users[sender].wallet.toLocaleString()} 🌙`
+`🪙 *ZOREX COIN FLIP*
+${DIVIDER}
+🎯 Choice: 《${choice.toUpperCase()}》
+🪙 Result: 《${result.toUpperCase()}》
+🎉 WIN — 《+${prize.toLocaleString()}》🌙
+${DIVIDER}`
                 },
                 {
                     quoted: msg
@@ -486,22 +483,12 @@ ${users[sender].wallet.toLocaleString()} 🌙`
                 msg.key.remoteJid,
                 {
                     text:
-`🪙 *Zorex Coin Flip*
-
-🎯 Choice:
-${choice.toUpperCase()}
-
-🪙 Result:
-${result.toUpperCase()}
-
-
-💀 YOU LOST!
-
-💸 Lost:
-${bet.toLocaleString()} 🌙
-
-Wallet:
-${users[sender].wallet.toLocaleString()} 🌙`
+`🪙 *ZOREX COIN FLIP*
+${DIVIDER}
+🎯 Choice: 《${choice.toUpperCase()}》
+🪙 Result: 《${result.toUpperCase()}》
+💀 LOSS — 《-${bet.toLocaleString()}》🌙
+${DIVIDER}`
                 },
                 {
                     quoted: msg
@@ -517,16 +504,8 @@ ${users[sender].wallet.toLocaleString()} 🌙`
 
         return await sock.sendMessage(
             msg.key.remoteJid,
-            {
-                text:
-`❌ You don't have a Zorex profile yet.
-
-Use:
-.register`
-            },
-            {
-                quoted: msg
-            }
+            { text: notRegisteredMessage() },
+            { quoted: msg }
         );
 
     }
@@ -656,11 +635,12 @@ ${users[sender].wallet.toLocaleString()} 🌙`
 
     if (win) {
 
+        const prize = bet * 2;
 
         creditWallet(
             users,
             sender,
-            bet * 2
+            prize
         );
 
 
@@ -668,22 +648,11 @@ ${users[sender].wallet.toLocaleString()} 🌙`
             msg.key.remoteJid,
             {
                 text:
-`🎰 *Zorex Casino*
-
-💰 Bet:
-${bet.toLocaleString()} 🌙
-
-
-🎲 Result:
-WIN 🎉${charmUsed ? "\n\n🍀 Lucky Charm activated!" : ""}
-
-
-🏆 Prize:
-+${(bet * 2).toLocaleString()} 🌙
-
-
-💳 Wallet:
-${users[sender].wallet.toLocaleString()} 🌙`
+`🎰 *ZOREX CASINO*
+${DIVIDER}
+🎲 Result: WIN 🎉${charmUsed ? " 🍀" : ""}
+🏆 Prize: 《+${prize.toLocaleString()}》🌙
+${DIVIDER}`
             },
             {
                 quoted: msg
@@ -698,22 +667,11 @@ ${users[sender].wallet.toLocaleString()} 🌙`
             msg.key.remoteJid,
             {
                 text:
-`🎰 *Zorex Casino*
-
-💰 Bet:
-${bet.toLocaleString()} 🌙
-
-
-🎲 Result:
-LOSS ❌
-
-
-💸 Lost:
-${bet.toLocaleString()} 🌙
-
-
-💳 Wallet:
-${users[sender].wallet.toLocaleString()} 🌙`
+`🎰 *ZOREX CASINO*
+${DIVIDER}
+🎲 Result: LOSS ❌
+💸 Lost: 《-${bet.toLocaleString()}》🌙
+${DIVIDER}`
             },
             {
     quoted: msg
@@ -730,16 +688,8 @@ ${users[sender].wallet.toLocaleString()} 🌙`
 
         return await sock.sendMessage(
             msg.key.remoteJid,
-            {
-                text:
-`❌ You don't have a Zorex profile yet.
-
-Use:
-.register`
-            },
-            {
-                quoted: msg
-            }
+            { text: notRegisteredMessage() },
+            { quoted: msg }
         );
 
     }
@@ -893,11 +843,12 @@ ${users[sender].wallet.toLocaleString()} 🌙`
 
     if (result === choice) {
 
+        const prize = bet * 2;
 
         creditWallet(
             users,
             sender,
-            bet * 2
+            prize
         );
 
 
@@ -905,24 +856,12 @@ ${users[sender].wallet.toLocaleString()} 🌙`
             msg.key.remoteJid,
             {
                 text:
-`🎡 *Zorex Roulette*
-
-🎯 Choice:
-${choice.toUpperCase()}
-
-🎡 Result:
-${result.toUpperCase()}
-
-
-🎉 YOU WON!
-
-
-💰 Prize:
-+${(bet * 2).toLocaleString()} 🌙
-
-
-💳 Wallet:
-${users[sender].wallet.toLocaleString()} 🌙`
+`🎡 *ZOREX ROULETTE*
+${DIVIDER}
+🎯 Choice: 《${choice.toUpperCase()}》
+🎡 Result: 《${result.toUpperCase()}》
+🎉 WIN — 《+${prize.toLocaleString()}》🌙
+${DIVIDER}`
             },
             {
                 quoted: msg
@@ -937,24 +876,12 @@ ${users[sender].wallet.toLocaleString()} 🌙`
             msg.key.remoteJid,
             {
                 text:
-`🎡 *Zorex Roulette*
-
-🎯 Choice:
-${choice.toUpperCase()}
-
-🎡 Result:
-${result.toUpperCase()}
-
-
-💀 YOU LOST!
-
-
-💸 Lost:
-${bet.toLocaleString()} 🌙
-
-
-💳 Wallet:
-${users[sender].wallet.toLocaleString()} 🌙`
+`🎡 *ZOREX ROULETTE*
+${DIVIDER}
+🎯 Choice: 《${choice.toUpperCase()}》
+🎡 Result: 《${result.toUpperCase()}》
+💀 LOSS — 《-${bet.toLocaleString()}》🌙
+${DIVIDER}`
             },
             {
                 quoted: msg
@@ -971,16 +898,8 @@ ${users[sender].wallet.toLocaleString()} 🌙`
 
         return await sock.sendMessage(
             msg.key.remoteJid,
-            {
-                text:
-`❌ You don't have a Zorex profile yet.
-
-Use:
-.register`
-            },
-            {
-                quoted: msg
-            }
+            { text: notRegisteredMessage() },
+            { quoted: msg }
         );
 
     }
@@ -1184,23 +1103,11 @@ ${users[sender].wallet.toLocaleString()} 🌙`
             msg.key.remoteJid,
             {
                 text:
-`🎲 *Zorex Dice*
-
-🎲 Dice:
-${dice1} + ${dice2}
-
-🎯 Result:
-${result}
-
-
-🎉 YOU WON!
-
-💰 Prize:
-+${payout.toLocaleString()} 🌙
-
-
-💳 Wallet:
-${users[sender].wallet.toLocaleString()} 🌙`
+`🎲 *ZOREX DICE*
+${DIVIDER}
+🎲 Roll: 《${dice1} + ${dice2} = ${result}》
+🎉 WIN — 《+${payout.toLocaleString()}》🌙
+${DIVIDER}`
             },
             {
                 quoted: msg
@@ -1215,23 +1122,11 @@ ${users[sender].wallet.toLocaleString()} 🌙`
             msg.key.remoteJid,
             {
                 text:
-`🎲 *Zorex Dice*
-
-🎲 Dice:
-${dice1} + ${dice2}
-
-🎯 Result:
-${result}
-
-
-💀 YOU LOST!
-
-💸 Lost:
-${bet.toLocaleString()} 🌙
-
-
-💳 Wallet:
-${users[sender].wallet.toLocaleString()} 🌙`
+`🎲 *ZOREX DICE*
+${DIVIDER}
+🎲 Roll: 《${dice1} + ${dice2} = ${result}》
+💀 LOSS — 《-${bet.toLocaleString()}》🌙
+${DIVIDER}`
             },
             {
                 quoted: msg
@@ -1248,16 +1143,8 @@ ${users[sender].wallet.toLocaleString()} 🌙`
 
         return await sock.sendMessage(
             msg.key.remoteJid,
-            {
-                text:
-`❌ You don't have a Zorex profile yet.
-
-Use:
-.register`
-            },
-            {
-                quoted: msg
-            }
+            { text: notRegisteredMessage() },
+            { quoted: msg }
         );
 
     }
@@ -1525,17 +1412,11 @@ ${users[sender].wallet.toLocaleString()} 🌙`
             msg.key.remoteJid,
             {
                 text:
-`🎰 *Zorex Slots*
-
+`🎰 *ZOREX SLOTS*
+${DIVIDER}
 ${slotResult}
-
-🎉 YOU WON!
-
-💰 Prize:
-+${prize.toLocaleString()} 🌙
-
-💳 Wallet:
-${users[sender].wallet.toLocaleString()} 🌙`
+🎉 WIN — 《+${prize.toLocaleString()}》🌙
+${DIVIDER}`
             },
             {
                 quoted: msg
@@ -1550,17 +1431,11 @@ ${users[sender].wallet.toLocaleString()} 🌙`
             msg.key.remoteJid,
             {
                 text:
-`🎰 *Zorex Slots*
-
+`🎰 *ZOREX SLOTS*
+${DIVIDER}
 ${slotResult}
-
-💀 YOU LOST!
-
-💸 Lost:
-${bet.toLocaleString()} 🌙
-
-💳 Wallet:
-${users[sender].wallet.toLocaleString()} 🌙`
+💀 LOSS — 《-${bet.toLocaleString()}》🌙
+${DIVIDER}`
             },
             {
                 quoted: msg
