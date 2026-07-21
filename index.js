@@ -50,8 +50,14 @@ const {
     endAuction,
     forceEndAuction,
     viewCollection,
+    viewInventory,
     useLuckyCharm
 } = require("./commands/auction");
+
+const { crimeCommand } = require("./commands/crime");
+const { robCommand } = require("./commands/rob");
+const { begCommand } = require("./commands/beg");
+const { fishCommand } = require("./commands/fish");
 
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = "./owners.json";
@@ -1749,7 +1755,8 @@ ${game.lastLetter}
     text.startsWith(".auctionstart") ||
     text.startsWith(".auctionbid") ||
     text === ".auctionend" ||
-    text.startsWith(".col")
+    text.startsWith(".col") ||
+    text.startsWith(".inv")
 
 ) {
 
@@ -1773,6 +1780,10 @@ ${game.lastLetter}
 
         await viewCollection(sock, msg, text);
 
+    } else if (text.startsWith(".inv")) {
+
+        await viewInventory(sock, msg, text);
+
     }
 
 } else if (text.startsWith(".use")) {
@@ -1782,6 +1793,22 @@ ${game.lastLetter}
 } else if (text.startsWith(".cs")) {
 
     await cardCommands(sock, msg, text);
+
+} else if (text === ".crime") {
+
+    await crimeCommand(sock, msg);
+
+} else if (text.startsWith(".rob")) {
+
+    await robCommand(sock, msg);
+
+} else if (text === ".beg") {
+
+    await begCommand(sock, msg);
+
+} else if (text === ".fish") {
+
+    await fishCommand(sock, msg);
 
 } else if (text === ".rich") {
 
@@ -1843,6 +1870,10 @@ ROY AI SYSTEM
 │ ✦ .daily
 │ ✦ .work
 │ ✦ .shop
+│ ✦ .crime
+│ ✦ .rob
+│ ✦ .beg
+│ ✦ .fish
 ╰────────────────────╯
 
 ╭─═🏢 ROY EMPIRE 🏢═─╮
@@ -1886,6 +1917,12 @@ ROY AI SYSTEM
 │ ✦ .setbio
 │ ✦ .rank
 │ ✦ .leaderboard
+╰────────────────────╯
+
+╭─═📦 COLLECTION 📦═─╮
+│ ✦ .col
+│ ✦ .inv
+│ ✦ .cs
 ╰────────────────────╯
 
 ╭─═👑 OWNER 👑═─╮

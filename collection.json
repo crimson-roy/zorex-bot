@@ -8,36 +8,6 @@
             "video": "./aqua.mp4",
             "obtainedFrom": "auction",
             "obtainedAt": 1784514598374
-        },
-        {
-            "id": "gun",
-            "name": "Gun",
-            "type": "collectible",
-            "obtainedFrom": "shop",
-            "obtainedAt": 1784514753808
-        },
-        {
-            "id": "fishing_rod",
-            "name": "Fishing Rod",
-            "type": "collectible",
-            "obtainedFrom": "shop",
-            "obtainedAt": 1784514766787
-        },
-        {
-            "id": "shovel",
-            "name": "Shovel",
-            "type": "collectible",
-            "obtainedFrom": "shop",
-            "obtainedAt": 1784514772978
-        },
-        {
-            "id": "mysterybox",
-            "name": "Mystery Box",
-            "type": "mystery",
-            "image": null,
-            "video": null,
-            "obtainedFrom": "auction",
-            "obtainedAt": 1784515027147
         }
     ],
     "44620616589409@lid": [

@@ -7,6 +7,7 @@ const CARD_FILE = "./card.json";
 const USERS_FILE = "./users.json";
 const OWNERS_FILE = "./owners.json";
 const COLLECTION_FILE = "./collection.json";
+const INVENTORY_FILE = "./inventory.json";
 
 const { resetUserCooldown } = require("./cooldown");
 const { resetUserDailyLimit } = require("./dailylimit");
@@ -44,6 +45,9 @@ function saveUsers(data) { saveJSON(USERS_FILE, data); }
 
 function loadCollection() { return loadJSON(COLLECTION_FILE, {}); }
 function saveCollection(data) { saveJSON(COLLECTION_FILE, data); }
+
+function loadInventory() { return loadJSON(INVENTORY_FILE, {}); }
+function saveInventory(data) { saveJSON(INVENTORY_FILE, data); }
 
 function loadOwners() { return loadJSON(OWNERS_FILE, ["2348036391250@s.whatsapp.net"]); }
 function isOwner(userId) { return loadOwners().includes(userId); }
@@ -203,7 +207,7 @@ Bid with:
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(item.video),
             caption,
-            gifPlayback: trues
+            gifPlayback: true
         }, { quoted: msg });
 
     } else if (item.image && fs.existsSync(item.image)) {
@@ -330,9 +334,9 @@ async function endAuction(sock) {
 
         users[winner].bankLimit += item.capacity;
 
-    } else {
+    } else if (item.type === "card") {
 
-        // Non-instant items (cards, cosmetics, etc.) go into the collection instead
+        // Cards go into the collection
         const collection = loadCollection();
 
         if (!collection[winner]) collection[winner] = [];
@@ -348,6 +352,25 @@ async function endAuction(sock) {
         });
 
         saveCollection(collection);
+
+    } else {
+
+        // Everything else (charms, mystery boxes, tools, etc.) goes into the inventory
+        const inventory = loadInventory();
+
+        if (!inventory[winner]) inventory[winner] = [];
+
+        inventory[winner].push({
+            id: auction.itemId,
+            name: item.name,
+            type: item.type,
+            image: item.image || null,
+            video: item.video || null,
+            obtainedFrom: "auction",
+            obtainedAt: Date.now()
+        });
+
+        saveInventory(inventory);
 
     }
 
@@ -475,11 +498,91 @@ async function viewCollection(sock, msg, text) {
 }
 
 
+// ---------- .inv — view your inventory, or .inv <number> for full detail ----------
+async function viewInventory(sock, msg, text) {
+
+    const sender = msg.key.participant || msg.key.remoteJid;
+
+    const inventory = loadInventory();
+    const items = inventory[sender] || [];
+
+    if (items.length === 0) {
+
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `🎒 Your inventory is empty.`
+        }, { quoted: msg });
+
+    }
+
+    const args = text.replace(".inv", "").trim();
+
+    // .inv <number> — show full detail for that specific item
+    if (args) {
+
+        const index = Number(args) - 1;
+
+        if (isNaN(index) || index < 0 || index >= items.length) {
+
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: `⚠️ Invalid item number.\n\nUse:\n.inv\n\nto see your inventory list first.`
+            }, { quoted: msg });
+
+        }
+
+        const item = items[index];
+
+        const detailText =
+`🎒 *Item Detail*
+
+🎁 ${item.name}
+🏷️ Type: ${item.type}${item.quantity ? `\n📦 Quantity: ${item.quantity}` : ""}
+🆔 ID: ${item.id}
+📅 Obtained: ${new Date(item.obtainedAt).toLocaleString()}`;
+
+        if (item.image && fs.existsSync(item.image)) {
+
+            return await sock.sendMessage(msg.key.remoteJid, {
+                image: fs.readFileSync(item.image),
+                caption: detailText
+            }, { quoted: msg });
+
+        }
+
+        if (item.video && fs.existsSync(item.video)) {
+
+            return await sock.sendMessage(msg.key.remoteJid, {
+                video: fs.readFileSync(item.video),
+                caption: detailText,
+                gifPlayback: true
+            }, { quoted: msg });
+
+        }
+
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: detailText
+        }, { quoted: msg });
+
+    }
+
+    // .inv — plain list
+    const list = items
+        .map((it, i) => `${i + 1}. ${it.name}${it.quantity ? ` (x${it.quantity})` : ""}`)
+        .join("\n");
+
+    return await sock.sendMessage(msg.key.remoteJid, {
+        text: `🎒 *YOUR INVENTORY*\n\n${list}\n\nType .inv <number> to view a specific item.`
+    }, { quoted: msg });
+
+}
+
+
 // ---------- .use lucky_charm ----------
-// Consumes one Lucky Charm from the user's collection and starts a 60-second
-// window during which their next .casino play is a guaranteed win (100%).
-// If the window expires unused, the charm is silently returned to their
-// collection by gamble.js — no message is sent for that.
+// Consumes one Lucky Charm and starts a 60-second window during which the
+// user's next .casino play is a guaranteed win (100%). Checks inventory.json
+// first (where non-card items now live post-split), falls back to
+// collection.json for any charm obtained before the split. If the window
+// expires unused, the charm is silently returned by gamble.js — no message
+// is sent for that.
 async function useLuckyCharm(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -492,17 +595,6 @@ async function useLuckyCharm(sock, msg, text) {
         }, { quoted: msg });
     }
 
-    const collection = loadCollection();
-    const items = collection[sender] || [];
-
-    const charmIndex = items.findIndex(it => it.id === "luckycharm");
-
-    if (charmIndex === -1) {
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ You don't have a Lucky Charm.`
-        }, { quoted: msg });
-    }
-
     const users = loadUsers();
 
     if (!users[sender]) {
@@ -511,10 +603,34 @@ async function useLuckyCharm(sock, msg, text) {
         }, { quoted: msg });
     }
 
-    // Remove one charm from collection
-    items.splice(charmIndex, 1);
-    collection[sender] = items;
-    saveCollection(collection);
+    const inventory = loadInventory();
+    const invItems = inventory[sender] || [];
+    const invIndex = invItems.findIndex(it => it.id === "luckycharm");
+
+    if (invIndex !== -1) {
+
+        invItems.splice(invIndex, 1);
+        inventory[sender] = invItems;
+        saveInventory(inventory);
+
+    } else {
+
+        // Fallback for charms obtained before the collection/inventory split
+        const collection = loadCollection();
+        const colItems = collection[sender] || [];
+        const colIndex = colItems.findIndex(it => it.id === "luckycharm");
+
+        if (colIndex === -1) {
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ You don't have a Lucky Charm.`
+            }, { quoted: msg });
+        }
+
+        colItems.splice(colIndex, 1);
+        collection[sender] = colItems;
+        saveCollection(collection);
+
+    }
 
     // Start the 60-second guaranteed-win window
     users[sender].luckyCharmActive = { expiresAt: Date.now() + 60 * 1000 };
@@ -565,5 +681,6 @@ module.exports = {
     endAuction,
     forceEndAuction,
     viewCollection,
+    viewInventory,
     useLuckyCharm
 };
