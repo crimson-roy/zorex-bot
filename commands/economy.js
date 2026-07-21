@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { getPartner } = require("./marry");
 
 const OWNERS_FILE = "./owners.json";
 
@@ -74,21 +75,25 @@ function debitWallet(users, userId, amount) {
 
 }
 
-function transferWallet(users, from, to, amount) {
+// Donations to your spouse skip the 10% tax entirely — everyone else pays it.
+// Returns { received, taxed } or null if the transfer couldn't happen.
+function donateTransfer(users, from, to, amount) {
 
-    if (amount <= 0)
-        return false;
-
-    if (users[from].wallet < amount)
-        return false;
+    if (amount <= 0) return null;
+    if (users[from].wallet < amount) return null;
 
     users[from].wallet -= amount;
 
-    users[to].wallet += amount;
+    const partner = getPartner(from, users);
+    const taxed = partner !== to;
+
+    const received = taxed ? Math.floor(amount * 0.9) : amount;
+
+    users[to].wallet += received;
 
     saveUsers(users);
 
-    return true;
+    return { received, taxed };
 
 }
 
@@ -113,6 +118,14 @@ function deposit(users, userId, amount) {
 
     user.bank += amount;
 
+    // Married couples share a bank — keep the partner's numbers matching
+    const partner = getPartner(userId, users);
+
+    if (partner && users[partner]) {
+        users[partner].bank = user.bank;
+        users[partner].bankLimit = user.bankLimit;
+    }
+
     saveUsers(users);
 
     return amount;
@@ -131,10 +144,39 @@ function withdraw(users, userId, amount) {
 
     user.wallet += amount;
 
+    // Married couples share a bank — keep the partner's numbers matching
+    const partner = getPartner(userId, users);
+
+    if (partner && users[partner]) {
+        users[partner].bank = user.bank;
+        users[partner].bankLimit = user.bankLimit;
+    }
+
     saveUsers(users);
 
     return amount;
 
+}
+
+// ---------- Shared styled message builders ----------
+
+function notRegisteredMessage() {
+    return `╭━━━━ ⚠️ 𝗥𝗘𝗚𝗜𝗦𝗧𝗥𝗔𝗧𝗜𝗢𝗡 ━━━━╮
+👤 Please register your account. ✨
+────── 📝 𝗙𝗢𝗥𝗠𝗔𝗧 ──────
+⌨️ .register YOUR_NAME
+────── 💡 𝗘𝗫𝗔𝗠𝗣𝗟𝗘 ──────
+🔥 .register Crimson Roy
+╰━━━━━━━━━━━━━━━━━━━━━━━╯`;
+}
+
+function errorBox(title, message, examples) {
+    const exampleLines = examples.map(e => `  📥 ${e}`).join("\n");
+    return `╭━━━━ ⚠️ ${title} ━━━━╮
+   ${message}
+  ─── 📝 𝖤𝖷𝖠𝖬𝖯𝖫𝖤 ───
+${exampleLines}
+╰━━━━━━━━━━━━━━━━━━━━━━━╯`;
 }
 
 async function economyCommands(sock, msg, text) {
@@ -155,14 +197,96 @@ async function economyCommands(sock, msg, text) {
 
             return await sock.sendMessage(
                 msg.key.remoteJid,
+                { text: notRegisteredMessage() },
+                { quoted: msg }
+            );
+
+        }
+
+        const user = users[sender];
+        if (user.bankLimit === undefined) {
+
+            user.bankLimit = 100000;
+
+            saveUsers(users);
+
+        }
+
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`🏧 *ACCOUNT BALANCE*
+▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️
+${user.name}:
+💰Wallet: 《${user.wallet.toLocaleString()}》🌙
+🏦Bank:    《${user.bank.toLocaleString()}》🌙
+🏛️Max Capacity 《${user.bankLimit.toLocaleString()}》🌙
+▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️▪️`
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    else if (text.startsWith(".donate")) {
+
+
+        if (!users[sender]) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: notRegisteredMessage() },
+                { quoted: msg }
+            );
+
+        }
+
+
+        const context =
+            msg.message?.extendedTextMessage?.contextInfo;
+
+
+        let target = null;
+
+
+        // Reply method
+        if (context?.participant) {
+
+            target = context.participant;
+
+        }
+
+
+        // Mention method
+        else if (
+            context?.mentionedJid &&
+            context.mentionedJid.length > 0
+        ) {
+
+            target = context.mentionedJid[0];
+
+        }
+
+
+        if (!target) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: errorBox("𝗗𝗢𝗡𝗔𝗧𝗘", "Reply to a user or mention them.", [".donate @user 5000"]) },
+                { quoted: msg }
+            );
+
+        }
+
+
+        if (!users[target]) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
                 {
                     text:
-`❌ You don't have a profile yet.
-
-Use:
-.register
-
-to create your Zorex profile 🌙`
+`⚠️ That user does not have a Zorex profile.`
                 },
                 {
                     quoted: msg
@@ -171,202 +295,77 @@ to create your Zorex profile 🌙`
 
         }
 
-        const user = users[sender];
-if (user.bankLimit === undefined) {
 
-    user.bankLimit = 100000;
+        if (target === sender) {
 
-    saveUsers(users);
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`😂 You cannot donate Crescents to yourself.`
+                },
+                {
+                    quoted: msg
+                }
+            );
 
-}
+        }
+
+
+        let args =
+            text
+            .replace(".donate", "")
+            .trim();
+
+
+        args =
+            args.replace(/@\d+/g, "").trim();
+
+
+        const amount =
+            Number(
+                args.replace(/,/g, "")
+            );
+
+
+        if (isNaN(amount) || amount <= 0) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: errorBox("𝗗𝗢𝗡𝗔𝗧𝗘", "Enter a valid amount.", [".donate @user 5000"]) },
+                { quoted: msg }
+            );
+
+        }
+
+
+        const result = donateTransfer(users, sender, target, amount);
+
+        if (!result) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`❌ You don't have enough Crescents in your wallet.`
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+
+        const taxNote = result.taxed
+            ? `\n\n🧾 10% tax applied — recipient received ${result.received.toLocaleString()} 🌙`
+            : `\n\n💍 No tax — donations to your spouse are tax-free.`;
+
 
         await sock.sendMessage(
-    msg.key.remoteJid,
-    {
-        text:
-`🌙 *ZOREX BANK*
-
-👤 Name:
-${user.name}
-
-💰 Wallet:
-${user.wallet.toLocaleString()} 🌙
-
-🏦 Bank:
-${user.bank.toLocaleString()} / ${user.bankLimit.toLocaleString()} 🌙
-
-Powered by Zorex AI 🤖`
-    },
-    {
-        quoted: msg
-    }
-);
-
-}
-
-else if (text.startsWith(".donate")) {
-
-
-    if (!users[sender]) {
-
-        return await sock.sendMessage(
             msg.key.remoteJid,
             {
                 text:
-`❌ You don't have a Zorex profile yet.
-
-Use:
-.register`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-
-    const context =
-        msg.message?.extendedTextMessage?.contextInfo;
-
-
-    let target = null;
-
-
-    // Reply method
-    if (context?.participant) {
-
-        target = context.participant;
-
-    }
-
-
-    // Mention method
-    else if (
-        context?.mentionedJid &&
-        context.mentionedJid.length > 0
-    ) {
-
-        target = context.mentionedJid[0];
-
-    }
-
-
-    if (!target) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`⚠️ Reply to a user or mention them.
-
-Example:
-
-.donate @user 5000`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-
-    if (!users[target]) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`⚠️ That user does not have a Zorex profile.`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-
-    if (target === sender) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`😂 You cannot donate Crescents to yourself.`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-
-    let args =
-        text
-        .replace(".donate", "")
-        .trim();
-
-
-    args =
-        args.replace(/@\d+/g, "").trim();
-
-
-    const amount =
-        Number(
-            args.replace(/,/g, "")
-        );
-
-
-    if (isNaN(amount) || amount <= 0) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`⚠️ Enter a valid amount.
-
-Example:
-
-.donate @user 5000`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-
-    if (
-        !transferWallet(
-            users,
-            sender,
-            target,
-            amount
-        )
-    ) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`❌ You don't have enough Crescents in your wallet.`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text:
 `🌙 *Crescent Donation Successful!*
 
 👤 From:
@@ -375,378 +374,32 @@ Example:
 🎁 To:
 @${target.split("@")[0]}
 
-💰 Amount:
-${amount.toLocaleString()} 🌙
+💰 Amount Sent:
+${amount.toLocaleString()} 🌙${taxNote}
 
 💳 Your Wallet:
 ${users[sender].wallet.toLocaleString()} 🌙
 
 Powered by Zorex AI 🤖`,
-            mentions:[
-                sender,
-                target
-            ]
-        },
-        {
-            quoted: msg
-        }
-    );
+                mentions:[
+                    sender,
+                    target
+                ]
+            },
+            {
+                quoted: msg
+            }
+        );
 
-} else if (text.startsWith(".addcrescent")) {
+    } else if (text.startsWith(".addcrescent")) {
 
-    if (!isOwner(sender)) {
+        if (!isOwner(sender)) {
 
-    return await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text:
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
 `❌ You don't have permission to use this command.`
-        },
-        {
-            quoted: msg
-        }
-    );
-
-}
-
-const context =
-    msg.message?.extendedTextMessage?.contextInfo;
-
-let target = sender;
-
-    // Reply method
-    if (context?.participant) {
-
-        target = context.participant;
-
-    }
-
-    // Mention method
-    else if (
-        context?.mentionedJid &&
-        context.mentionedJid.length > 0
-    ) {
-
-        target = context.mentionedJid[0];
-
-    }
-
-    let args =
-        text
-        .replace(".addcrescent", "")
-        .trim();
-
-    // Remove @mention from text if present
-    args =
-        args.replace(/@\d+/g, "").trim();
-
-    const amount =
-        Number(
-            args.replace(/,/g, "")
-        );
-
-    if (isNaN(amount) || amount <= 0) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`⚠️ Please enter a valid amount.
-
-Example:
-
-.addcrescent 5000`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-    if (!users[target]) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`⚠️ That user is not registered.`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-    creditWallet(
-    users,
-    target,
-    amount
-);
-
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text:
-`🌙 *Crescents Added Successfully!*
-
-👤 User:
-@${target.split("@")[0]}
-
-💰 Amount:
-+${amount.toLocaleString()} 🌙
-
-💳 New Wallet:
-${users[target].wallet.toLocaleString()} 🌙
-
-Powered by Zorex AI 🤖`,
-            mentions: [
-                target
-            ]
-                },
-        {
-            quoted: msg
-        }
-    );
-
-}
-
-else if (text.startsWith(".dep")) {
-
-    if (!users[sender]) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`❌ You don't have a profile yet.
-
-Use:
-.register`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-    let input =
-        text.replace(".dep", "").trim();
-
-    let amount;
-
-    if (input.toLowerCase() === "all") {
-
-        amount = users[sender].wallet;
-
-    } else {
-
-        amount = Number(
-            input.replace(/,/g, "")
-        );
-
-    }
-
-    if (isNaN(amount) || amount <= 0) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`⚠️ Enter a valid amount.
-
-Example:
-
-.dep 5000
-.dep all`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-    const deposited =
-        deposit(
-            users,
-            sender,
-            amount
-        );
-
-    if (!deposited) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`❌ Deposit failed.
-
-Possible reasons:
-
-• Your wallet doesn't have enough Crescents.
-• Your bank is already full.`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-    let extra = "";
-
-    if (
-        users[sender].bank ===
-        users[sender].bankLimit
-    ) {
-
-        extra =
-`\n\n🏦 Your bank is now full.`;
-
-    }
-
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text:
-`🏦 Deposit Successful!
-
-💰 Deposited:
-${deposited.toLocaleString()} 🌙
-
-💳 Wallet:
-${users[sender].wallet.toLocaleString()} 🌙
-
-🏦 Bank:
-${users[sender].bank.toLocaleString()} / ${users[sender].bankLimit.toLocaleString()} 🌙${extra}
-
-Powered by Zorex AI 🤖`
-        },
-        {
-            quoted: msg
-        }
-    );
-
-}
-
-else if (text.startsWith(".wd")) {
-
-    if (!users[sender]) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`❌ You don't have a profile yet.
-
-Use:
-.register`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-    let input =
-        text.replace(".wd", "").trim();
-
-    let amount;
-
-    if (input.toLowerCase() === "all") {
-
-        amount = users[sender].bank;
-
-    } else {
-
-        amount = Number(
-            input.replace(/,/g, "")
-        );
-
-    }
-
-    if (isNaN(amount) || amount <= 0) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`⚠️ Enter a valid amount.
-
-Example:
-
-.wd 5000
-.wd all`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-    const withdrawn =
-        withdraw(
-            users,
-            sender,
-            amount
-        );
-
-    if (!withdrawn) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`❌ You don't have enough Crescents in your bank.`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text:
-`🏦 Withdrawal Successful!
-
-💰 Withdrawn:
-${withdrawn.toLocaleString()} 🌙
-
-💳 Wallet:
-${users[sender].wallet.toLocaleString()} 🌙
-
-🏦 Bank:
-${users[sender].bank.toLocaleString()} / ${users[sender].bankLimit.toLocaleString()} 🌙
-
-Powered by Zorex AI 🤖`
-        },
-        {
-            quoted: msg
-        }
-    );
-
-}
-  
-  else if (text.startsWith(".removecrescent")) {
-
-    if (
-        sender !== "2348036391250@s.whatsapp.net" &&
-        sender !== "164317513175043@lid"
-    ) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`❌ Only Lord Crimson can use this command.`
             },
             {
                 quoted: msg
@@ -760,60 +413,182 @@ Powered by Zorex AI 🤖`
 
     let target = sender;
 
-    if (context?.participant) {
+        // Reply method
+        if (context?.participant) {
 
-        target = context.participant;
+            target = context.participant;
 
-    }
+        }
 
-    else if (
-        context?.mentionedJid &&
-        context.mentionedJid.length > 0
-    ) {
+        // Mention method
+        else if (
+            context?.mentionedJid &&
+            context.mentionedJid.length > 0
+        ) {
 
-        target = context.mentionedJid[0];
+            target = context.mentionedJid[0];
 
-    }
+        }
 
-    let args =
-        text
-        .replace(".removecrescent", "")
-        .trim();
+        let args =
+            text
+            .replace(".addcrescent", "")
+            .trim();
 
-    args =
-        args.replace(/@\d+/g, "").trim();
+        // Remove @mention from text if present
+        args =
+            args.replace(/@\d+/g, "").trim();
 
-    const amount =
-        Number(
-            args.replace(/,/g, "")
-        );
+        const amount =
+            Number(
+                args.replace(/,/g, "")
+            );
 
-    if (isNaN(amount) || amount <= 0) {
+        if (isNaN(amount) || amount <= 0) {
 
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
-`⚠️ Enter a valid amount.
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: errorBox("𝗔𝗗𝗗 𝗖𝗥𝗘𝗦𝗖𝗘𝗡𝗧", "Please enter a valid amount.", [".addcrescent 5000"]) },
+                { quoted: msg }
+            );
 
-Example:
+        }
 
-.removecrescent 5000`
-            },
-            {
-                quoted: msg
-            }
-        );
+        if (!users[target]) {
 
-    }
-
-    if (!users[target]) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text:
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
 `⚠️ That user is not registered.`
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+        creditWallet(
+        users,
+        target,
+        amount
+    );
+
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`🌙 *Crescents Added Successfully!*
+
+👤 User:
+@${target.split("@")[0]}
+
+💰 Amount:
++${amount.toLocaleString()} 🌙
+
+💳 New Wallet:
+${users[target].wallet.toLocaleString()} 🌙
+
+Powered by Zorex AI 🤖`,
+                mentions: [
+                    target
+                ]
+                    },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+    else if (text.startsWith(".dep")) {
+
+        if (!users[sender]) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: notRegisteredMessage() },
+                { quoted: msg }
+            );
+
+        }
+
+        let input =
+            text.replace(".dep", "").trim();
+
+        let amount;
+
+        if (input.toLowerCase() === "all") {
+
+            amount = users[sender].wallet;
+
+        } else {
+
+            amount = Number(
+                input.replace(/,/g, "")
+            );
+
+        }
+
+        if (isNaN(amount) || amount <= 0) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: errorBox("𝗦𝗬𝗦𝗧𝗘𝗠 𝗘𝗥𝗥𝗢𝗥", "Enter a valid amount to proceed.", [".dep 5000", ".dep all"]) },
+                { quoted: msg }
+            );
+
+        }
+
+        const deposited =
+            deposit(
+                users,
+                sender,
+                amount
+            );
+
+        if (!deposited) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`❌ Deposit failed.
+
+Possible reasons:
+
+• Your wallet doesn't have enough Crescents.
+• Your bank is already full.`
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+        let extra = "";
+
+        if (
+            users[sender].bank ===
+            users[sender].bankLimit
+        ) {
+
+            extra =
+`\n🏦 Your bank is now full.`;
+
+        }
+
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`💳Deposit Successful
+¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+💱 Deposited: 《${deposited.toLocaleString()}》🌙
+💰Wallet: 《${users[sender].wallet.toLocaleString()}》🌙
+🏦Bank: 《${users[sender].bank.toLocaleString()}/${users[sender].bankLimit.toLocaleString()}》🌙${extra}`
             },
             {
                 quoted: msg
@@ -822,42 +597,198 @@ Example:
 
     }
 
-    let remaining = amount;
+    else if (text.startsWith(".wd")) {
 
-    // Remove from bank first
-    if (users[target].bank >= remaining) {
+        if (!users[sender]) {
 
-        users[target].bank -= remaining;
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: notRegisteredMessage() },
+                { quoted: msg }
+            );
 
-        remaining = 0;
+        }
 
-    } else {
+        let input =
+            text.replace(".wd", "").trim();
 
-        remaining -= users[target].bank;
+        let amount;
 
-        users[target].bank = 0;
+        if (input.toLowerCase() === "all") {
 
-    }
+            amount = users[sender].bank;
 
-    // Whatever remains comes from wallet
-    if (remaining > 0) {
+        } else {
 
-        debitWallet(
-            users,
-            target,
-            remaining
+            amount = Number(
+                input.replace(/,/g, "")
+            );
+
+        }
+
+        if (isNaN(amount) || amount <= 0) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: errorBox("𝗦𝗬𝗦𝗧𝗘𝗠 𝗘𝗥𝗥𝗢𝗥", "Enter a valid amount to proceed.", [".wd 5000", ".wd all"]) },
+                { quoted: msg }
+            );
+
+        }
+
+        const withdrawn =
+            withdraw(
+                users,
+                sender,
+                amount
+            );
+
+        if (!withdrawn) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`❌ You don't have enough Crescents in your bank.`
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`🏧Withdrawal Successful
+¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+💱 Withdrawn: 《${withdrawn.toLocaleString()}》🌙
+💰Wallet: 《${users[sender].wallet.toLocaleString()}》🌙
+🏦Bank: 《${users[sender].bank.toLocaleString()}/${users[sender].bankLimit.toLocaleString()}》🌙`
+            },
+            {
+                quoted: msg
+            }
         );
 
-    } else {
-
-        saveUsers(users);
-
     }
+      
+      else if (text.startsWith(".removecrescent")) {
 
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text:
+        if (
+            sender !== "2348036391250@s.whatsapp.net" &&
+            sender !== "164317513175043@lid"
+        ) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`❌ Only Lord Crimson can use this command.`
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+        const context =
+            msg.message?.extendedTextMessage?.contextInfo;
+
+        let target = sender;
+
+        if (context?.participant) {
+
+            target = context.participant;
+
+        }
+
+        else if (
+            context?.mentionedJid &&
+            context.mentionedJid.length > 0
+        ) {
+
+            target = context.mentionedJid[0];
+
+        }
+
+        let args =
+            text
+            .replace(".removecrescent", "")
+            .trim();
+
+        args =
+            args.replace(/@\d+/g, "").trim();
+
+        const amount =
+            Number(
+                args.replace(/,/g, "")
+            );
+
+        if (isNaN(amount) || amount <= 0) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: errorBox("𝗥𝗘𝗠𝗢𝗩𝗘 𝗖𝗥𝗘𝗦𝗖𝗘𝗡𝗧", "Enter a valid amount.", [".removecrescent 5000"]) },
+                { quoted: msg }
+            );
+
+        }
+
+        if (!users[target]) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`⚠️ That user is not registered.`
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+        let remaining = amount;
+
+        // Remove from bank first
+        if (users[target].bank >= remaining) {
+
+            users[target].bank -= remaining;
+
+            remaining = 0;
+
+        } else {
+
+            remaining -= users[target].bank;
+
+            users[target].bank = 0;
+
+        }
+
+        // Whatever remains comes from wallet
+        if (remaining > 0) {
+
+            debitWallet(
+                users,
+                target,
+                remaining
+            );
+
+        } else {
+
+            saveUsers(users);
+
+        }
+
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
 `🌙 *Crescents Removed Successfully!*
 
 👤 User:
@@ -873,20 +804,20 @@ ${users[target].wallet.toLocaleString()} 🌙
 ${users[target].bank.toLocaleString()} / ${users[target].bankLimit.toLocaleString()} 🌙
 
 Powered by Zorex AI 🤖`,
-            mentions: [
-                target
-            ]
-        },
-        {
-            quoted: msg
-        }
-   
-    );
+                mentions: [
+                    target
+                ]
+            },
+            {
+                quoted: msg
+            }
+       
+        );
 
-
-}
 
     }
+
+        }
 
 module.exports = {
     economyCommands

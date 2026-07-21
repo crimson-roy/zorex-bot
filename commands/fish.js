@@ -1,18 +1,40 @@
 const { checkCooldown, setCooldown } = require("./cooldown");
 const { loadInventory, saveInventory } = require("./inventory");
+const { getPartner } = require("./marry");
+const fs = require("fs");
 
+const USERS_FILE = "./users.json";
 const COOLDOWN_MS = 120000; // 2 minutes
 
 const FISH_VALUE = 5000;
 const GOLDEN_FISH_VALUE = 15000;
 
+function loadUsers() {
+    if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "{}");
+    return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+}
+
 function randomAmount(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// Checks the user's own inventory first, then their married partner's —
+// married couples share tool access.
 function hasFishingRod(userId, inventory) {
+
     const items = inventory[userId] || [];
-    return items.some(it => it.id === "fishing_rod");
+    if (items.some(it => it.id === "fishing_rod")) return true;
+
+    const users = loadUsers();
+    const partner = getPartner(userId, users);
+
+    if (partner) {
+        const partnerItems = inventory[partner] || [];
+        return partnerItems.some(it => it.id === "fishing_rod");
+    }
+
+    return false;
+
 }
 
 // Adds quantity to an existing stackable item, or creates a new stack entry

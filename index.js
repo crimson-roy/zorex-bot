@@ -58,6 +58,14 @@ const { crimeCommand } = require("./commands/crime");
 const { robCommand } = require("./commands/rob");
 const { begCommand } = require("./commands/beg");
 const { fishCommand } = require("./commands/fish");
+const { digCommand } = require("./commands/dig");
+
+const {
+    marryCommand,
+    marryAcceptCommand,
+    marryDeclineCommand,
+    divorceCommand
+} = require("./commands/marry");
 
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = "./owners.json";
@@ -602,7 +610,11 @@ Example:
 
         games: 0,
         wins: 0,
-        losses: 0
+        losses: 0,
+
+        partner: null,
+        maritalStatus: "single",
+        marriageCount: 0
 
     };
 
@@ -611,15 +623,13 @@ Example:
     await sock.sendMessage(
         msg.key.remoteJid,
         {
-            text: `🎉 Registration Successful!
-
-👤 Name: ${username}
-
-🌙 Welcome Bonus:
-+500,000 Crescents
-
-Welcome to Zorex!
-
+            text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
+   🎉 𝗥𝗘𝗚𝗜𝗦𝗧𝗥𝗔𝗧𝗜𝗢𝗡 𝗦𝗨𝗖𝗖𝗘𝗦𝗦𝗙𝗨𝗟 🎉
+╰━━━━━━━━━━━━━━━━━━━━━━━╯
+  » Name    : ${username}
+  » Bonus   : 《500,000》🌙
+━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ Welcome to Zorex!
 Type .profile to view your account.`
         },
         {
@@ -893,34 +903,49 @@ Use:
 
     const user = users[userId];
 
+    // Try to fetch their real WhatsApp profile picture — falls back to the
+    // default Zorex image if they don't have one set or it can't be fetched
+    let profileImage;
+
+    try {
+        const ppUrl = await sock.profilePictureUrl(userId, "image");
+        profileImage = { url: ppUrl };
+    } catch (err) {
+        profileImage = fs.readFileSync("./zorex.jpg");
+    }
+
+    const statusLabel = user.partner
+        ? (user.maritalStatus === "re-married" ? "Re-married" : "Married")
+        : (user.maritalStatus === "divorced" ? "Divorced" : "Single");
+
+    const partnerLine = user.partner
+        ? `💍 Status  : ${statusLabel} to @${user.partner.split("@")[0]}`
+        : `💍 Status  : ${statusLabel}`;
+
     await sock.sendMessage(
         msg.key.remoteJid,
         {
-            image: fs.readFileSync("./zorex.jpg"),
-            caption: `
-╔══════✦『 ZOREX PROFILE 』✦══════╗
-
-👤 Name    : ${user.name}
-🎂 Age     : ${user.age}
-👑 Role    : ${user.role}
-🏰 Guild   : ${user.guild}
-⭐ Level   : ${user.level}
-🏆 Rank    : ${user.rank}
-
-╠═══════『 BIO 』═══════╣
-📝 ${user.bio}
-
-╠══════『 WALLET 』══════╣
-💰 Wallet : ${user.wallet.toLocaleString()} 🌙
-
-╠══════『 STATS 』═══════╣
-🎮 Games  : ${user.games}
-🏅 Wins   : ${user.wins}
-❌ Losses : ${user.losses}
-
-╚══════════════════════════════╝
-⚡ Powered by Zorex AI
-`
+            image: profileImage,
+            caption: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
+             𝖹𝖮𝖱𝖤𝖷 𝖯𝖱𝖮𝖥𝖨𝖫𝖤
+╰━━━━━━━━━━━━━━━━━━━━━━━╯
+  » Name    : ${user.name}
+  » Age     : ${user.age}
+  » Role    : ${user.role}
+  » Guild   : ${user.guild}
+  » Level   : ${user.level}
+  » Rank    : ${user.rank}
+  » ${partnerLine}
+  » Bio     : ${user.bio}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  » Wallet  : ${user.wallet.toLocaleString()} 🌙
+━━━━━━━━━━━━━━━━━━━━━━━━━
+  » Games   : ${user.games}
+  » Wins    : ${user.wins}
+  » Losses  : ${user.losses}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ Powered by Zorex AI`,
+            mentions: user.partner ? [user.partner] : []
         },
         {
             quoted: msg
@@ -1809,6 +1834,26 @@ ${game.lastLetter}
 } else if (text === ".fish") {
 
     await fishCommand(sock, msg);
+
+} else if (text === ".dig") {
+
+    await digCommand(sock, msg);
+
+} else if (text.startsWith(".marry")) {
+
+    await marryCommand(sock, msg);
+
+} else if (text === ".marryaccept") {
+
+    await marryAcceptCommand(sock, msg);
+
+} else if (text === ".marrydecline") {
+
+    await marryDeclineCommand(sock, msg);
+
+} else if (text === ".divorce") {
+
+    await divorceCommand(sock, msg);
 
 } else if (text === ".rich") {
 
