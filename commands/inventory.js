@@ -1,95 +1,85 @@
 const fs = require("fs");
-const { loadInventory } = require("./inventory");
 
-const TYPE_ICONS = {
-    collectible: "🧰",
-    mystery: "🎁",
-    consumable: "🧪",
-    tool: "🛠️"
-};
+const COLLECTION_FILE = "./collection.json";
+const INVENTORY_FILE = "./inventory.json";
 
-function formatDate(ts) {
-    if (!ts) return "Unknown";
-    return new Date(ts).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric"
-    });
+function loadCollection() {
+    if (!fs.existsSync(COLLECTION_FILE)) fs.writeFileSync(COLLECTION_FILE, "{}");
+    return JSON.parse(fs.readFileSync(COLLECTION_FILE, "utf8"));
 }
 
-// ---------- .inv / .inv <number> ----------
-async function invCommand(sock, msg, text) {
+function loadInventory() {
+    if (!fs.existsSync(INVENTORY_FILE)) fs.writeFileSync(INVENTORY_FILE, "{}");
+    return JSON.parse(fs.readFileSync(INVENTORY_FILE, "utf8"));
+}
 
-    const sender = msg.key.participant || msg.key.remoteJid;
+function saveCollection(data) {
+    fs.writeFileSync(COLLECTION_FILE, JSON.stringify(data, null, 4));
+}
+
+function saveInventory(data) {
+    fs.writeFileSync(INVENTORY_FILE, JSON.stringify(data, null, 4));
+}
+
+// Routes an item to the right file based on its type.
+// Cards -> collection.json. Everything else (collectible, mystery, etc.) -> inventory.json.
+function addItem(userId, item) {
+
+    if (item.type === "card") {
+
+        const collection = loadCollection();
+        if (!collection[userId]) collection[userId] = [];
+        collection[userId].push(item);
+        saveCollection(collection);
+        return "collection";
+
+    } else {
+
+        const inventory = loadInventory();
+        if (!inventory[userId]) inventory[userId] = [];
+        inventory[userId].push(item);
+        saveInventory(inventory);
+        return "inventory";
+
+    }
+
+}
+
+// Removes a single item by id from whichever file it's in (used for trading/using/selling items)
+function removeItem(userId, itemId) {
+
+    const collection = loadCollection();
     const inventory = loadInventory();
-    const items = inventory[sender] || [];
 
-    if (items.length === 0) {
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `📭 Your inventory is empty.`
-        }, { quoted: msg });
+    const collectionItems = collection[userId] || [];
+    const collectionIndex = collectionItems.findIndex(it => it.id === itemId);
+
+    if (collectionIndex !== -1) {
+        const [removed] = collectionItems.splice(collectionIndex, 1);
+        collection[userId] = collectionItems;
+        saveCollection(collection);
+        return removed;
     }
 
-    const arg = text.replace(".inv", "").trim();
+    const inventoryItems = inventory[userId] || [];
+    const inventoryIndex = inventoryItems.findIndex(it => it.id === itemId);
 
-    // ---- .inv <number> — show a single item's detail ----
-    if (arg) {
-
-        const index = parseInt(arg, 10) - 1;
-
-        if (isNaN(index) || index < 0 || index >= items.length) {
-            return await sock.sendMessage(msg.key.remoteJid, {
-                text: `⚠️ Invalid number. Use .inv to see valid item numbers (1-${items.length}).`
-            }, { quoted: msg });
-        }
-
-        const item = items[index];
-        const icon = TYPE_ICONS[item.type] || "📦";
-
-        const detailText =
-`${icon} *${item.name}*
-🏷️ Type: ${item.type}
-📥 From: ${item.obtainedFrom || "Unknown"}
-📅 Obtained: ${formatDate(item.obtainedAt)}
-🆔 #${item.id}`;
-
-        if (item.image && fs.existsSync(item.image)) {
-            return await sock.sendMessage(msg.key.remoteJid, {
-                image: fs.readFileSync(item.image),
-                caption: detailText
-            }, { quoted: msg });
-        }
-
-        if (item.video && fs.existsSync(item.video)) {
-            return await sock.sendMessage(msg.key.remoteJid, {
-                video: fs.readFileSync(item.video),
-                caption: detailText,
-                gifPlayback: true
-            }, { quoted: msg });
-        }
-
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: detailText
-        }, { quoted: msg });
-
+    if (inventoryIndex !== -1) {
+        const [removed] = inventoryItems.splice(inventoryIndex, 1);
+        inventory[userId] = inventoryItems;
+        saveInventory(inventory);
+        return removed;
     }
 
-    // ---- .inv — list all items ----
-    const lines = items.map((item, i) => {
-        const icon = TYPE_ICONS[item.type] || "📦";
-        return `${i + 1}. ${icon} ${item.name}`;
-    });
-
-    const text_out =
-`🎒 *YOUR INVENTORY* (${items.length})
-${lines.join("\n")}
-────────────
-💡 Use .inv <number> to view an item`;
-
-    return await sock.sendMessage(msg.key.remoteJid, {
-        text: text_out
-    }, { quoted: msg });
+    return null;
 
 }
 
-module.exports = { invCommand };
+module.exports = {
+    loadCollection,
+    loadInventory,
+    saveCollection,
+    saveInventory,
+    addItem,
+    removeItem
+};
