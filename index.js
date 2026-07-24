@@ -1,3 +1,4 @@
+require("dotenv").config();
 // Prevent bot from crashing on unexpected errors
 process.on("uncaughtException", (err) => {
     console.error("💥 UNCAUGHT EXCEPTION:", err);
@@ -59,6 +60,9 @@ const { robCommand } = require("./commands/rob");
 const { begCommand } = require("./commands/beg");
 const { fishCommand } = require("./commands/fish");
 const { digCommand } = require("./commands/dig");
+const { chloeCommand } = require("./commands/chloe");
+const { memCommand } = require("./commands/mem");
+const { relationCommand } = require("./commands/relation");
 
 const {
     marryCommand,
@@ -421,6 +425,8 @@ Please behave yourself. 💙`
         msg.message.extendedTextMessage?.text;
 
     if (!text) return;
+
+await handleMessage(sock, msg);
 
     console.log("Message:", text);
 
@@ -1783,6 +1789,13 @@ ${game.lastLetter}
         msg,
         text
     );
+
+   } else if (text.startsWith(".relation")) {
+    await relationCommand(sock, msg);
+}
+
+else if (text.startsWith(".mem")) {
+    await memCommand(sock, msg);
 
 } else if (
 
