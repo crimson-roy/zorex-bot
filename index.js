@@ -13,7 +13,8 @@ process.on("unhandledRejection", (reason) => {
 const {
     default: makeWASocket,
     useMultiFileAuthState,
-    DisconnectReason
+    DisconnectReason,
+    jidNormalizedUser
 } = require("@whiskeysockets/baileys");
 
 const qrcode = require("qrcode-terminal");
@@ -60,7 +61,11 @@ const { robCommand } = require("./commands/rob");
 const { begCommand } = require("./commands/beg");
 const { fishCommand } = require("./commands/fish");
 const { digCommand } = require("./commands/dig");
-const { chloeCommand } = require("./commands/chloe");
+
+// Chloe (AI companion) — handleMessage decides on its own whether to reply.
+// setBotJid lets us hand her the bot's real WhatsApp id once Baileys connects,
+// since there is no reliable env var for it.
+const { handleMessage: handleChloeMessage, setBotJid } = require("./commands/chloe");
 const { memCommand } = require("./commands/mem");
 const { relationCommand } = require("./commands/relation");
 
@@ -274,6 +279,22 @@ async function startBot() {
                     "✅ Zorex is connected to WhatsApp!"
                 );
 
+                // Hand Chloe the bot's real JID now that we're connected,
+                // instead of relying on a BOT_JID env var that doesn't exist.
+                try {
+
+                    const botJid = jidNormalizedUser(sock.user.id);
+
+                    setBotJid(botJid);
+
+                    console.log("🤖 Chloe BOT_JID set to:", botJid);
+
+                } catch (err) {
+
+                    console.error("⚠️ Failed to set Chloe BOT_JID:", err.message);
+
+                }
+
             }
 
 
@@ -351,6 +372,12 @@ async function startBot() {
 
         await moderationWatcher(sock, msg);
 
+        // Chloe gets first look at every live, non-history message — before any
+        // prefix-command routing. handleMessage decides internally whether she
+        // should actually reply (chaton/chatoff state, name mention, tag, reply,
+        // or explicit ".chloe <msg>"), so this is always safe to call.
+        await handleChloeMessage(sock, msg);
+
         const context =
             msg.message?.extendedTextMessage?.contextInfo;
 
@@ -425,8 +452,6 @@ Please behave yourself. 💙`
         msg.message.extendedTextMessage?.text;
 
     if (!text) return;
-
-await handleMessage(sock, msg);
 
     console.log("Message:", text);
 

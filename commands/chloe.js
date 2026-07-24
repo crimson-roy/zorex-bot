@@ -23,7 +23,16 @@ const { MAIN_OWNER } = require('../config');
 
 const OWNERS_FILE = './owners.json';
 const BOT_NAME = 'chloe';
-const BOT_JID = process.env.BOT_JID; // the bot's own WhatsApp id, for detecting @mentions and "replied to me"
+
+// The bot's own WhatsApp id, for detecting @mentions and "replied to me".
+// There is no reliable env var for this — Baileys only knows it once the
+// socket actually connects. index.js calls setBotJid() from its
+// connection.update handler ("open") with the real, normalized JID.
+let BOT_JID = process.env.BOT_JID || null;
+
+function setBotJid(jid) {
+  BOT_JID = jid;
+}
 
 // Same owner check used elsewhere in the codebase (owner.js) — MAIN_OWNER
 // from config, plus anyone added via .addowner into owners.json. Group
@@ -158,4 +167,4 @@ async function handleMessage(sock, msg) {
   }
 }
 
-module.exports = { handleMessage };
+module.exports = { handleMessage, setBotJid };
