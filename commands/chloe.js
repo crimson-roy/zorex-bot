@@ -75,6 +75,7 @@ function isTagged(msg) {
 
 function isReplyToBot(msg) {
   const ctx = getContextInfo(msg);
+  console.log(JSON.stringify(getContextInfo(msg), null, 2));
   // Baileys puts the quoted sender in ctx.participant for group chats
   return !!ctx.quotedMessage && BOT_JID && ctx.participant === BOT_JID;
 }
@@ -121,6 +122,10 @@ async function handleMessage(sock, msg) {
 
   const active = memory.isActive(chatId);
 
+  console.log("[CHLOE] Active:", active);
+console.log("[CHLOE] BOT_JID:", BOT_JID);
+console.log("[CHLOE] Text:", text);
+
   // Explicit summon (e.g. ".chloe <message>") always works, active or not.
   const summonMatch = text.match(/^\.chloe\s+([\s\S]+)/i);
   const isExplicitSummon = !!summonMatch;
@@ -133,7 +138,15 @@ async function handleMessage(sock, msg) {
     effectiveText = summonMatch[1].trim();
   } else if (active) {
     // While .chaton is active: reply on name mention, @tag, or reply-to-her-message.
-    shouldReply = isNameMentioned(text) || isTagged(msg) || isReplyToBot(msg);
+    const byName = isNameMentioned(text);
+const byTag = isTagged(msg);
+const byReply = isReplyToBot(msg);
+
+console.log("[CHLOE] Name:", byName);
+console.log("[CHLOE] Tag:", byTag);
+console.log("[CHLOE] Reply:", byReply);
+
+shouldReply = byName || byTag || byReply;
   }
 
   if (!shouldReply) {
