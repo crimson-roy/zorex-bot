@@ -34,9 +34,6 @@ function setBotJid(jid) {
   BOT_JID = jid;
 }
 
-console.log("🤖 BOT_JID (normalized):", botJid);
-console.log("🤖 sock.user (raw):", JSON.stringify(sock.user));
-
 // Same owner check used elsewhere in the codebase (owner.js) — MAIN_OWNER
 // from config, plus anyone added via .addowner into owners.json. Group
 // admin status is NOT enough on its own — admins are not automatically
@@ -126,8 +123,8 @@ async function handleMessage(sock, msg) {
   const active = memory.isActive(chatId);
 
   console.log("[CHLOE] Active:", active);
-console.log("[CHLOE] BOT_JID:", BOT_JID);
-console.log("[CHLOE] Text:", text);
+  console.log("[CHLOE] BOT_JID:", BOT_JID);
+  console.log("[CHLOE] Text:", text);
 
   // Explicit summon (e.g. ".chloe <message>") always works, active or not.
   const summonMatch = text.match(/^\.chloe\s+([\s\S]+)/i);
@@ -142,14 +139,14 @@ console.log("[CHLOE] Text:", text);
   } else if (active) {
     // While .chaton is active: reply on name mention, @tag, or reply-to-her-message.
     const byName = isNameMentioned(text);
-const byTag = isTagged(msg);
-const byReply = isReplyToBot(msg);
+    const byTag = isTagged(msg);
+    const byReply = isReplyToBot(msg);
 
-console.log("[CHLOE] Name:", byName);
-console.log("[CHLOE] Tag:", byTag);
-console.log("[CHLOE] Reply:", byReply);
+    console.log("[CHLOE] Name:", byName);
+    console.log("[CHLOE] Tag:", byTag);
+    console.log("[CHLOE] Reply:", byReply);
 
-shouldReply = byName || byTag || byReply;
+    shouldReply = byName || byTag || byReply;
   }
 
   if (!shouldReply) {
