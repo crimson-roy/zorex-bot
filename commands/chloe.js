@@ -34,6 +34,9 @@ function setBotJid(jid) {
   BOT_JID = jid;
 }
 
+console.log("🤖 BOT_JID (normalized):", botJid);
+console.log("🤖 sock.user (raw):", JSON.stringify(sock.user));
+
 // Same owner check used elsewhere in the codebase (owner.js) — MAIN_OWNER
 // from config, plus anyone added via .addowner into owners.json. Group
 // admin status is NOT enough on its own — admins are not automatically
