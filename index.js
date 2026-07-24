@@ -279,15 +279,19 @@ async function startBot() {
                     "✅ Zorex is connected to WhatsApp!"
                 );
 
-                // Hand Chloe the bot's real JID now that we're connected,
+                // Hand Chloe the bot's real JID(s) now that we're connected,
                 // instead of relying on a BOT_JID env var that doesn't exist.
+                // WhatsApp's LID system means @mentions and reply-participant
+                // fields can come back in either the phone-number JID format
+                // or the LID JID format — Chloe needs to recognize both.
                 try {
 
                     const botJid = jidNormalizedUser(sock.user.id);
+                    const botLid = sock.user.lid ? jidNormalizedUser(sock.user.lid) : null;
 
-                    setBotJid(botJid);
+                    setBotJid([botJid, botLid]);
 
-                    console.log("🤖 Chloe BOT_JID set to:", botJid);
+                    console.log("🤖 Chloe BOT_JIDs set to:", botJid, botLid);
 
                 } catch (err) {
 
