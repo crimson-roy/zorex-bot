@@ -69,6 +69,14 @@ const { handleMessage: handleChloeMessage, setBotJid } = require("./commands/chl
 const { memCommand } = require("./commands/mem");
 const { relationCommand } = require("./commands/relation");
 
+// School slide deck browser (.slides) and AI document summarizer (.teach) —
+// both share course-folder lookup logic from lib/slidesHelper.js.
+const { slidesCommand } = require("./commands/slides");
+const { teachCommand } = require("./commands/teach");
+
+// Group-wide @everyone tag — doesn't require the bot to be an admin.
+const { tagAllCommand } = require("./commands/tagall");
+
 const {
     marryCommand,
     marryAcceptCommand,
@@ -1470,6 +1478,10 @@ ${board}
         }
     );
 
+    } else if (text === ".tagall") {
+
+    await tagAllCommand(sock, msg);
+
     } else if (text === ".wcg start") {
 
     await startWCG(sock, msg);
@@ -1908,6 +1920,14 @@ else if (text.startsWith(".mem")) {
 
     await cardCommands(sock, msg, text);
 
+} else if (text.startsWith(".teach")) {
+
+    await teachCommand(sock, msg, text);
+
+} else if (text.startsWith(".slides")) {
+
+    await slidesCommand(sock, msg, text);
+
 } else if (text === ".crime") {
 
     await crimeCommand(sock, msg);
@@ -2037,6 +2057,7 @@ ROY AI SYSTEM
 │ ✦ .tovid
 │ ✦ .ping
 │ ✦ .test
+│ ✦ .tagall
 ╰────────────────────╯
 
 ╭─═👤 PROFILE 👤═─╮
@@ -2053,6 +2074,11 @@ ROY AI SYSTEM
 │ ✦ .col
 │ ✦ .inv
 │ ✦ .cs
+╰────────────────────╯
+
+╭─═📖 SCHOOL 📖═─╮
+│ ✦ .slides
+│ ✦ .teach
 ╰────────────────────╯
 
 ╭─═👑 OWNER 👑═─╮
