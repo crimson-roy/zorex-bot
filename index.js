@@ -10,12 +10,13 @@ process.on("unhandledRejection", (reason) => {
     console.error("💥 UNHANDLED REJECTION:", reason);
 });
 
-const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    DisconnectReason,
-    jidNormalizedUser
-} = require("@whiskeysockets/baileys");
+// Baileys 6.8+/7.x is ESM-only, so it can no longer be loaded with a plain
+// require() from this CommonJS project. Instead we kick off a dynamic
+// import() immediately below and populate these bindings once it resolves
+// (see the bootstrap IIFE at the very bottom of this file, which awaits the
+// import and only THEN calls startBot()). Everything else in this file is
+// unchanged and still uses these as plain variables.
+let makeWASocket, useMultiFileAuthState, DisconnectReason, jidNormalizedUser;
 
 const qrcode = require("qrcode-terminal");
 const readline = require("readline");
@@ -443,9 +444,12 @@ async function startBot() {
         await useMultiFileAuthState("auth");
 
 
+    // printQRInTerminal was removed in Baileys 7 (it's been a no-op/deprecated
+    // for a while before that too). QR codes now only arrive via the `qr`
+    // field on the "connection.update" event below, which we already handle
+    // manually with qrcode-terminal, so no behavior is lost here.
     const sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true,
     syncFullHistory: false
 });
 
@@ -2236,4 +2240,20 @@ ROY AI SYSTEM
 
 }
 
-startBot();
+// Bootstrap: Baileys 7.x ships as ESM-only, so it can't be require()'d from
+// this CommonJS project. We dynamic-import() it once here, populate the
+// module-scoped bindings declared at the top of this file, and only then
+// start the bot. This is the officially recommended way to consume an
+// ESM-only package from CommonJS without converting the whole project.
+(async () => {
+
+    ({
+        default: makeWASocket,
+        useMultiFileAuthState,
+        DisconnectReason,
+        jidNormalizedUser
+    } = await import("@whiskeysockets/baileys"));
+
+    startBot();
+
+})();

@@ -1,6 +1,12 @@
-const { downloadMediaMessage } = require("@whiskeysockets/baileys");
+// Baileys 7.x is ESM-only, so it can't be require()'d from this CommonJS
+// file. We kick off a dynamic import() once here (cached by Node — every
+// await below after the first resolves instantly) and pull
+// downloadMediaMessage out of it inside startVV().
+const baileysImport = import("@whiskeysockets/baileys");
 
 async function startVV(sock, msg) {
+
+    const { downloadMediaMessage } = await baileysImport;
 
     const chatId = msg.key.remoteJid;
 
@@ -55,7 +61,12 @@ async function startVV(sock, msg) {
             "buffer",
             {},
             {
-                logger: console
+                logger: console,
+                // Recommended in Baileys 7 so a failed/expired media fetch can
+                // be retried via a fresh re-upload request instead of just
+                // failing outright. Purely additive — doesn't change behavior
+                // on the normal success path.
+                reuploadRequest: sock.updateMediaMessage
             }
         );
 

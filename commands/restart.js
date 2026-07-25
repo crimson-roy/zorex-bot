@@ -10,8 +10,13 @@
 // See: https://docs.railway.com/deployments/restart-policy
 
 const fs = require("fs");
-const { jidNormalizedUser } = require("@whiskeysockets/baileys");
 const { MAIN_OWNER } = require("../config");
+
+// Baileys 7.x is ESM-only, so it can't be require()'d from this CommonJS
+// file. We kick off a dynamic import() once here (cached by Node — every
+// await below after the first resolves instantly) and pull jidNormalizedUser
+// out of it wherever it's needed.
+const baileysImport = import("@whiskeysockets/baileys");
 
 const OWNERS_FILE = "./owners.json";
 
@@ -19,9 +24,11 @@ const OWNERS_FILE = "./owners.json";
 // can come back as either a phone-number JID or a LID-format JID, so both the
 // sender and MAIN_OWNER need to be normalized before comparing, otherwise the
 // check can silently fail even for the real owner.
-function isOwner(userId) {
+async function isOwner(userId) {
 
     if (!userId) return false;
+
+    const { jidNormalizedUser } = await baileysImport;
 
     const normalized = jidNormalizedUser(userId);
 
@@ -43,7 +50,7 @@ async function restartCommand(sock, msg) {
     const chatId = msg.key.remoteJid;
     const userId = msg.key.participant || msg.key.remoteJid;
 
-    if (!isOwner(userId)) {
+    if (!(await isOwner(userId))) {
         return await sock.sendMessage(chatId, {
             text: `⚠️ Only my owner can restart me.`
         }, { quoted: msg });
