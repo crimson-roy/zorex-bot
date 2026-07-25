@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { prepareVideo } = require("../lib/videoHelper");
 
 const CARD_FILE = "./card.json";
 const COLLECTION_FILE = "./collection.json";
@@ -92,8 +93,24 @@ async function sendCardDisplay(sock, msg, cardId, card, owners, extraText = "") 
 
     if (card.video && fs.existsSync(card.video)) {
 
+        // Convert to a WhatsApp-friendly 720x1280 vertical MP4 first (cached
+        // after the first conversion, so repeat sends of the same card are
+        // instant). Falls back to the original file if conversion fails,
+        // so a broken/missing FFmpeg never breaks the card display entirely.
+        let videoPath = card.video;
+
+        try {
+
+            videoPath = await prepareVideo(card.video);
+
+        } catch (err) {
+
+            console.error("⚠️ prepareVideo failed, sending original file:", err.message);
+
+        }
+
         await sock.sendMessage(msg.key.remoteJid, {
-            video: fs.readFileSync(card.video),
+            video: fs.readFileSync(videoPath),
             caption,
             gifPlayback: true,
             mentions: block.mentions
