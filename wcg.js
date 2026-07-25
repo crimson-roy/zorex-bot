@@ -4,7 +4,7 @@ const { isValidWord } = require("./words");
 const WCG_FILE = "./wcg.json";
 
 const JOIN_TIME_MS = 60000;  // time allowed to join before the game auto-starts
-const TURN_TIME_MS = 20000;  // time allowed per turn (old code had 7000ms — too short to type a word)
+const TURN_TIME_MS = 20000;  // time allowed per turn
 
 function loadWCG() {
     if (!fs.existsSync(WCG_FILE)) fs.writeFileSync(WCG_FILE, "{}");
@@ -50,7 +50,9 @@ async function startWCG(sock, msg) {
         turn: null,
         lastLetter: null,
         usedWords: [],
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        joinDeadline: Date.now() + JOIN_TIME_MS,   // persisted so a restart can recover
+        turnDeadline: null
     };
 
     saveWCG(wcg);
@@ -122,6 +124,8 @@ async function beginRound(sock, groupId) {
     game.turn = game.players[0];      // turn order = the order people joined in
     game.lastLetter = randomLetter();
     game.usedWords = [];
+    game.joinDeadline = null;
+    game.turnDeadline = Date.now() + TURN_TIME_MS;
 
     saveWCG(wcg);
 
@@ -130,11 +134,12 @@ async function beginRound(sock, groupId) {
         mentions: game.players
     });
 
-    startTurnTimer(sock, groupId, game.turn);
+    startTurnTimer(sock, groupId, game.turn, TURN_TIME_MS);
 }
 
 // ---------- Per-turn timer ----------
-function startTurnTimer(sock, groupId, expectedPlayer) {
+// delayMs lets resumeWCG() re-arm with a shorter remaining window after a restart.
+function startTurnTimer(sock, groupId, expectedPlayer, delayMs = TURN_TIME_MS) {
 
     setTimeout(async () => {
 
@@ -144,8 +149,14 @@ function startTurnTimer(sock, groupId, expectedPlayer) {
         if (!game || game.status !== "active") return;
         if (game.turn !== expectedPlayer) return; // they already answered in time
 
+        // Capture rotation order BEFORE removing the eliminated player, otherwise
+        // indexOf(game.turn) in advanceOrFinish would return -1 and reset turn
+        // order back to player[0] instead of continuing the rotation.
+        const oldPlayers = game.players;
+        const eliminatedIndex = oldPlayers.indexOf(expectedPlayer);
         const eliminated = expectedPlayer;
-        game.players = game.players.filter(id => id !== eliminated);
+
+        game.players = oldPlayers.filter(id => id !== eliminated);
         saveWCG(wcg);
 
         await sock.sendMessage(groupId, {
@@ -153,13 +164,16 @@ function startTurnTimer(sock, groupId, expectedPlayer) {
             mentions: [eliminated]
         });
 
-        await advanceOrFinish(sock, groupId);
+        await advanceOrFinish(sock, groupId, { previousIndex: eliminatedIndex, previousOrder: oldPlayers });
 
-    }, TURN_TIME_MS);
+    }, delayMs);
 }
 
 // ---------- Move to next player, or declare a winner ----------
-async function advanceOrFinish(sock, groupId) {
+// opts.previousIndex / opts.previousOrder are only passed by the timeout path,
+// where game.turn has already been removed from game.players and can no longer
+// be used to locate "next" via indexOf.
+async function advanceOrFinish(sock, groupId, opts = {}) {
 
     const wcg = loadWCG();
     const game = wcg[groupId];
@@ -185,10 +199,21 @@ async function advanceOrFinish(sock, groupId) {
         });
     }
 
-    const currentIndex = game.players.indexOf(game.turn);
-    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % game.players.length;
-    game.turn = game.players[nextIndex];
+    let nextPlayer;
 
+    if (opts.previousOrder) {
+        // Timeout path: continue rotation from where the eliminated player sat.
+        const nextIdxInOld = (opts.previousIndex + 1) % opts.previousOrder.length;
+        nextPlayer = opts.previousOrder[nextIdxInOld];
+    } else {
+        // Correct-answer path: game.turn is still a member of game.players.
+        const currentIndex = game.players.indexOf(game.turn);
+        const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % game.players.length;
+        nextPlayer = game.players[nextIndex];
+    }
+
+    game.turn = nextPlayer;
+    game.turnDeadline = Date.now() + TURN_TIME_MS;
     saveWCG(wcg);
 
     await sock.sendMessage(groupId, {
@@ -196,7 +221,7 @@ async function advanceOrFinish(sock, groupId) {
         mentions: [game.turn]
     });
 
-    startTurnTimer(sock, groupId, game.turn);
+    startTurnTimer(sock, groupId, game.turn, TURN_TIME_MS);
 }
 
 // ---------- Handles a plain-text message that might be a WCG move ----------
@@ -266,10 +291,48 @@ async function handleWCGMessage(sock, msg, text) {
     return true;
 }
 
+// ---------- Call once after your socket connects, e.g. in index.js on
+// 'connection.update' -> connection === 'open'. Re-arms timers for any
+// game that was mid-flight when the process last exited (crash, deploy,
+// or .restart), instead of leaving that group permanently stuck. ----------
+async function resumeWCG(sock) {
+
+    const wcg = loadWCG();
+    let changed = false;
+
+    for (const groupId of Object.keys(wcg)) {
+        const game = wcg[groupId];
+
+        if (game.status === "waiting") {
+            const remaining = (game.joinDeadline || 0) - Date.now();
+            if (remaining <= 0) {
+                await beginRound(sock, groupId); // join window already passed, resolve now
+            } else {
+                setTimeout(() => beginRound(sock, groupId), remaining);
+            }
+        } else if (game.status === "active") {
+            const remaining = (game.turnDeadline || 0) - Date.now();
+            if (remaining <= 0) {
+                // Deadline already passed while the bot was down — eliminate now.
+                startTurnTimer(sock, groupId, game.turn, 0);
+            } else {
+                startTurnTimer(sock, groupId, game.turn, remaining);
+            }
+        } else {
+            // Unknown/stale status left over from an old version of the file — drop it.
+            delete wcg[groupId];
+            changed = true;
+        }
+    }
+
+    if (changed) saveWCG(wcg);
+}
+
 module.exports = {
     loadWCG,
     saveWCG,
     startWCG,
     joinWCG,
-    handleWCGMessage
+    handleWCGMessage,
+    resumeWCG
 };

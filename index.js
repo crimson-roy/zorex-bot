@@ -49,7 +49,6 @@ const {
     importAuctionItem,
     startAuction,
     placeBid,
-    endAuction,
     forceEndAuction,
     viewCollection,
     viewInventory,
@@ -94,6 +93,16 @@ const {
     doubleCommand
 } = require("./commands/blackjack");
 
+// Trivia game — triviaCommand starts/manages a round, triviaAnswer is fed
+// EVERY incoming message (no prefix needed) so players can answer with a
+// bare A / B / C / D. trivia.js owns its own per-group game state, so it is
+// what actually prevents two rounds running at once in the same chat.
+const { triviaCommand, triviaAnswer } = require("./commands/trivia");
+
+// .restart — owners only. See commands/restart.js for why this must exit
+// with a non-zero code for Railway's restart policy to bring it back up.
+const { restartCommand } = require("./commands/restart");
+
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = "./owners.json";
 
@@ -111,6 +120,7 @@ const {
 
 const GAMES_FILE = "./games.json";
 const WCG_FILE = "./wcg.json";
+const COMMAND_STATE_FILE = "./commandState.json";
 
 function loadWCG() {
 
@@ -129,6 +139,161 @@ function saveWCG(wcg) {
         WCG_FILE,
         JSON.stringify(wcg, null, 4)
     );
+
+}
+
+// Moved out of the ".wcg join" handler — these were previously re-declared
+// on every single message that matched ".wcg join", which is wasteful and
+// makes them impossible to reuse from anywhere else. Behavior is unchanged.
+function wcgTurnTimer(sock, groupId) {
+
+    setTimeout(async () => {
+
+        const wcg = loadWCG();
+
+        const game = wcg[groupId];
+
+
+        if (!game) return;
+
+
+        if (game.status !== "active") return;
+
+
+        const player = game.turn;
+
+
+        // check if still their turn
+        if (game.turn !== player) return;
+
+
+
+        // remove player
+
+        game.players = game.players.filter(
+            id => id !== player
+        );
+
+
+
+        saveWCG(wcg);
+
+
+
+        await sock.sendMessage(
+            groupId,
+            {
+                text:
+`⏰ Time's up!
+
+@${player.split("@")[0]} did not submit a word.
+
+❌ You have been eliminated.`,
+
+                mentions:[
+                    player
+                ]
+            }
+        );
+
+
+
+        checkWCGWinner(sock, groupId);
+
+
+    },7000);
+
+}
+
+async function checkWCGWinner(sock, groupId){
+
+    const wcg = loadWCG();
+
+    const game = wcg[groupId];
+
+
+    if(!game) return;
+
+
+
+    if(game.players.length === 1){
+
+
+        const winner = game.players[0];
+
+
+        await sock.sendMessage(
+            groupId,
+            {
+                text:
+`🏆 *WORLD CHAIN GAME OVER!*
+
+
+👑 Winner:
+
+@${winner.split("@")[0]}
+
+Congratulations 🎉`,
+
+                mentions:[
+                    winner
+                ]
+            }
+        );
+
+
+        delete wcg[groupId];
+
+        saveWCG(wcg);
+
+        return;
+
+    }
+
+
+
+    // next player
+
+    const currentIndex =
+    game.players.indexOf(game.turn);
+
+
+    const nextIndex =
+    (currentIndex + 1) % game.players.length;
+
+
+    game.turn =
+    game.players[nextIndex];
+
+
+    saveWCG(wcg);
+
+
+
+    await sock.sendMessage(
+        groupId,
+        {
+            text:
+`🎮 Next Player:
+
+@${game.turn.split("@")[0]}
+
+
+Start with:
+
+${game.lastLetter}
+
+⏳ You have 7 seconds.`,
+
+            mentions:[
+                game.turn
+            ]
+        }
+    );
+
+
+    wcgTurnTimer(sock, groupId);
+
 
 }
 
@@ -191,8 +356,59 @@ function saveGames(games) {
     );
 
 }
+
+// Per-chat command toggle — powers .commandoff / .commandon. Keyed by
+// remoteJid (works for both groups and DMs), value `true` means disabled.
+function loadCommandState() {
+
+    if (!fs.existsSync(COMMAND_STATE_FILE)) {
+        fs.writeFileSync(COMMAND_STATE_FILE, "{}");
+    }
+
+    return JSON.parse(fs.readFileSync(COMMAND_STATE_FILE, "utf8"));
+
+}
+
+function saveCommandState(state) {
+
+    fs.writeFileSync(
+        COMMAND_STATE_FILE,
+        JSON.stringify(state, null, 4),
+        "utf8"
+    );
+
+}
+
+// Owner list — MAIN_OWNER from config.js is always trusted; owners.json
+// holds any additional owners added via .addowner (see commands/owner.js).
+// Used to gate sensitive commands like .restart.
+function loadOwners() {
+
+    if (!fs.existsSync(OWNERS_FILE)) {
+        fs.writeFileSync(OWNERS_FILE, "[]");
+    }
+
+    return JSON.parse(fs.readFileSync(OWNERS_FILE, "utf8"));
+
+}
+
+function isOwner(userId) {
+
+    if (!userId) return false;
+
+    const normalized = jidNormalizedUser(userId);
+
+    if (MAIN_OWNER && normalized === jidNormalizedUser(MAIN_OWNER)) {
+        return true;
+    }
+
+    const owners = loadOwners();
+
+    return owners.includes(normalized);
+
+}
+
 const axios = require("axios");
-const { truncate } = require("fs/promises");
 const USERS_FILE = "./users.json";
 console.log("Using users file:", require("path").resolve(USERS_FILE));
 
@@ -467,6 +683,24 @@ Please behave yourself. 💙`
 
     console.log("Message:", text);
 
+    // Trivia gets first shot at every message — before the command toggle
+    // gate and before the big if/else chain — so players can answer with a
+    // bare A / B / C / D and don't need the "." prefix. triviaAnswer() is a
+    // no-op if there's no active round in this chat, so this is safe to call
+    // unconditionally.
+    await triviaAnswer(sock, msg, text);
+
+    const chatId = msg.key.remoteJid;
+
+    const commandState = loadCommandState();
+    const commandsDisabled = commandState[chatId] === true;
+
+    // While disabled, every prefixed command is ignored except the one
+    // command that turns them back on.
+    if (commandsDisabled && text.startsWith(".") && text !== ".commandon") {
+        return;
+    }
+
     if (
         msg.key.remoteJid.endsWith("@g.us") &&
         isCrimsonMentioned
@@ -603,6 +837,52 @@ My Lord Crimson
         );
 
     }
+
+    } else if (text === ".restart") {
+
+    await restartCommand(sock, msg);
+
+    } else if (text === ".commandoff") {
+
+    const state = loadCommandState();
+
+    state[msg.key.remoteJid] = true;
+
+    saveCommandState(state);
+
+    await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text: `🔇 Commands have been disabled in this chat.
+
+Use .commandon to re-enable them.`
+        },
+        {
+            quoted: msg
+        }
+    );
+
+    } else if (text === ".commandon") {
+
+    const state = loadCommandState();
+
+    state[msg.key.remoteJid] = false;
+
+    saveCommandState(state);
+
+    await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text: `🔊 Commands have been re-enabled in this chat.`
+        },
+        {
+            quoted: msg
+        }
+    );
+
+    } else if (text.startsWith(".trivia")) {
+
+    await triviaCommand(sock, msg, text);
 
     } else if (text.startsWith(".register")) {
 
@@ -1590,157 +1870,6 @@ ${game.players.map(
             quoted: msg
         }
     );
-    function wcgTurnTimer(sock, groupId) {
-
-    setTimeout(async () => {
-
-        const wcg = loadWCG();
-
-        const game = wcg[groupId];
-
-
-        if (!game) return;
-
-
-        if (game.status !== "active") return;
-
-
-        const player = game.turn;
-
-
-        // check if still their turn
-        if (game.turn !== player) return;
-
-
-
-        // remove player
-
-        game.players = game.players.filter(
-            id => id !== player
-        );
-
-
-
-        saveWCG(wcg);
-
-
-
-        await sock.sendMessage(
-            groupId,
-            {
-                text:
-`⏰ Time's up!
-
-@${player.split("@")[0]} did not submit a word.
-
-❌ You have been eliminated.`,
-
-                mentions:[
-                    player
-                ]
-            }
-        );
-
-
-
-        checkWCGWinner(sock, groupId);
-
-
-    },7000);
-
-}
-
-async function checkWCGWinner(sock, groupId){
-
-    const wcg = loadWCG();
-
-    const game = wcg[groupId];
-
-
-    if(!game) return;
-
-
-
-    if(game.players.length === 1){
-
-
-        const winner = game.players[0];
-
-
-        await sock.sendMessage(
-            groupId,
-            {
-                text:
-`🏆 *WORLD CHAIN GAME OVER!*
-
-
-👑 Winner:
-
-@${winner.split("@")[0]}
-
-Congratulations 🎉`,
-
-                mentions:[
-                    winner
-                ]
-            }
-        );
-
-
-        delete wcg[groupId];
-
-        saveWCG(wcg);
-
-        return;
-
-    }
-
-
-
-    // next player
-
-    const currentIndex =
-    game.players.indexOf(game.turn);
-
-
-    const nextIndex =
-    (currentIndex + 1) % game.players.length;
-
-
-    game.turn =
-    game.players[nextIndex];
-
-
-    saveWCG(wcg);
-
-
-
-    await sock.sendMessage(
-        groupId,
-        {
-            text:
-`🎮 Next Player:
-
-@${game.turn.split("@")[0]}
-
-
-Start with:
-
-${game.lastLetter}
-
-⏳ You have 7 seconds.`,
-
-            mentions:[
-                game.turn
-            ]
-        }
-    );
-
-
-    wcgTurnTimer(sock, groupId);
-
-
-}
 
 } else if (
     text.startsWith(".setrole") ||
@@ -1817,11 +1946,14 @@ ${game.lastLetter}
     text.startsWith(".cf") ||
     text.startsWith(".casino") ||
     text.startsWith(".dice") ||
-    text.startsWith(".mines") ||
     text.startsWith(".aviator") ||
     text.startsWith(".slots") ||
     text.startsWith(".roulette") ||
     text.startsWith(".poker")
+
+    // Note: ".mines" was previously listed here too, duplicating the mines
+    // block above (that earlier branch always won, so this was dead code).
+    // Removed to avoid the duplicate route.
 
 ) {
 
@@ -2085,6 +2217,8 @@ ROY AI SYSTEM
 │ ✦ .owner
 │ ✦ .restart
 │ ✦ .broadcast
+│ ✦ .commandoff
+│ ✦ .commandon
 ╰────────────────────╯
 
 ⚡ ZOREX AI
