@@ -59,7 +59,9 @@ const {
 const { crimeCommand } = require("./commands/crime");
 const { robCommand } = require("./commands/rob");
 const { begCommand } = require("./commands/beg");
-const { fishCommand } = require("./commands/fish");
+const { fishCommand, sellCommand } = require("./commands/fish");
+const { companyCommand, companyCreateCommand, companyUpgradeCommand } = require("./commands/company");
+const { investCommand, assetsCommand } = require("./commands/invest");
 const { digCommand } = require("./commands/dig");
 
 // Chloe (AI companion) — handleMessage decides on its own whether to reply.
@@ -1095,6 +1097,30 @@ Example:
             quoted: msg
         }
     );
+
+} else if (text.startsWith(".companycreate")) {
+
+    await companyCreateCommand(sock, msg, text);
+
+} else if (text.startsWith(".companyupgrade")) {
+
+    await companyUpgradeCommand(sock, msg, text);
+
+} else if (text === ".company") {
+
+    await companyCommand(sock, msg);
+
+} else if (text.startsWith(".sell")) {
+
+    await sellCommand(sock, msg, text);
+
+} else if (text === ".invest" || text.startsWith(".invest ")) {
+
+    await investCommand(sock, msg, text);
+
+} else if (text === ".assets") {
+
+    await assetsCommand(sock, msg);
 
     } else if (text === ".age") {
 

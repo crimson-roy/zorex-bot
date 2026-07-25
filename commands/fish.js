@@ -9,9 +9,24 @@ const COOLDOWN_MS = 120000; // 2 minutes
 const FISH_VALUE = 5000;
 const GOLDEN_FISH_VALUE = 15000;
 
+// Items .sell knows how to price. Add more entries here later (e.g. from
+// dig.js) if other resources should become sellable too.
+const SELLABLE = {
+    fish: { name: "Fish", value: FISH_VALUE, emoji: "🐟" },
+    golden_fish: { name: "Golden Fish", value: GOLDEN_FISH_VALUE, emoji: "🐠" }
+};
+
 function loadUsers() {
     if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "{}");
     return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+}
+
+function saveUsers(users) {
+    fs.writeFileSync(
+        USERS_FILE,
+        JSON.stringify(users, null, 4),
+        "utf8"
+    );
 }
 
 function randomAmount(min, max) {
@@ -132,4 +147,97 @@ You reeled in a Golden Fish! 🐠✨
 
 }
 
-module.exports = { fishCommand };
+// ---------- .sell <item> <amount|all> — e.g. .sell fish 3 / .sell golden_fish all ----------
+async function sellCommand(sock, msg, text) {
+
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const users = loadUsers();
+
+    if (!users[sender]) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ You are not registered.\n\nUse:\n\n.register YOUR_NAME`
+        }, { quoted: msg });
+    }
+
+    const args = text.replace(".sell", "").trim().split(/\s+/).filter(Boolean);
+    const itemId = (args[0] || "").toLowerCase();
+    const amountArg = args[1];
+
+    const item = SELLABLE[itemId];
+
+    if (!item) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text:
+`⚠️ Usage:
+
+.sell fish AMOUNT
+.sell golden_fish AMOUNT
+
+Or sell everything you have:
+
+.sell fish all
+.sell golden_fish all`
+        }, { quoted: msg });
+    }
+
+    const inventory = loadInventory();
+    const items = inventory[sender] || [];
+    const stack = items.find(it => it.id === itemId);
+    const owned = stack ? (stack.quantity || 0) : 0;
+
+    if (owned <= 0) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ You don't have any ${item.name} to sell.`
+        }, { quoted: msg });
+    }
+
+    if (!amountArg) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Specify an amount.\n\nExample:\n\n.sell ${itemId} 3\n.sell ${itemId} all\n\n📦 You have: ${owned} ${item.name}`
+        }, { quoted: msg });
+    }
+
+    let amount;
+
+    if (amountArg.toLowerCase() === "all") {
+        amount = owned;
+    } else {
+        amount = Number(amountArg);
+    }
+
+    if (!Number.isInteger(amount) || amount <= 0) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Enter a valid whole number amount, or "all".`
+        }, { quoted: msg });
+    }
+
+    if (amount > owned) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ You only have ${owned} ${item.name} — can't sell ${amount}.`
+        }, { quoted: msg });
+    }
+
+    const total = amount * item.value;
+
+    stack.quantity -= amount;
+
+    if (stack.quantity <= 0) {
+        inventory[sender] = items.filter(it => it.id !== itemId);
+    }
+
+    saveInventory(inventory);
+
+    users[sender].wallet += total;
+    saveUsers(users);
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        text:
+`${item.emoji} *SOLD!*
+» Item    : ${item.name} x${amount}
+» Earned  : ${total.toLocaleString()} 🌙
+» Wallet  : ${users[sender].wallet.toLocaleString()} 🌙`
+    }, { quoted: msg });
+
+}
+
+module.exports = { fishCommand, sellCommand };
