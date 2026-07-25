@@ -19,6 +19,7 @@ const memory = require('../lib/chloeMemory');
 const { callAI } = require('../lib/aiClient');
 const { judgeExchange } = require('../lib/relationshipEngine');
 const { recordExchange, getRelationship, getTier } = require('../lib/relationshipStore');
+const { pickSticker } = require('../lib/chloeStickers');
 const { MAIN_OWNER } = require('../config');
 
 const OWNERS_FILE = './owners.json';
@@ -61,11 +62,28 @@ const TIER_INSTRUCTIONS = {
     "yourself with them. Emojis are frequent and expressive.",
 };
 
+// Instructs the AI to silently tag its own emotional tone at the end of
+// each reply, so we can pick a matching sticker without a second API call.
+// The tag is stripped before the person ever sees it.
+const MOOD_TAG_INSTRUCTION =
+  "At the very end of your reply, on its own new line, add exactly: " +
+  "[mood: X] where X is ONE of these exact words and no others: neutral, " +
+  "happy, laughing, loving, pouty, angry, sad, shy, teasing, special — " +
+  "whichever best matches your actual emotional tone in THIS reply. This " +
+  "tag is stripped before the person sees your message, so it's just for " +
+  "internal bookkeeping — always include it, every single reply, no " +
+  "exceptions, and never use a mood word outside this list.";
+
+const MOOD_TAG_REGEX = /\n?\[mood:\s*(\w+)\]\s*$/i;
+const VALID_MOODS = new Set([
+  'neutral', 'happy', 'laughing', 'loving', 'pouty', 'angry', 'sad', 'shy', 'teasing', 'special',
+]);
+
 function buildSystemPrompt(userId) {
   const rel = getRelationship(userId);
   const tier = getTier(rel.trust);
   const tierInstructions = TIER_INSTRUCTIONS[tier.key] || TIER_INSTRUCTIONS.stranger;
-  return `${CHLOE_SYSTEM_PROMPT}\n\n${tierInstructions}`;
+  return `${CHLOE_SYSTEM_PROMPT}\n\n${tierInstructions}\n\n${MOOD_TAG_INSTRUCTION}`;
 }
 
 // The bot's own WhatsApp id(s), for detecting @mentions and "replied to me".
@@ -141,12 +159,18 @@ async function handleMessage(sock, msg) {
   const chatId = msg.key.remoteJid;
   const text = extractText(msg).trim();
   const senderName = msg.pushName || 'Someone';
+  const userId = msg.key.participant || msg.key.remoteJid;
 
   if (!text) return;
 
+  // Any dot-command that isn't one of Chloe's own (.chaton/.chatoff/.chloe)
+  // belongs to another command file (economy, .relation, .mem, etc.) and
+  // must never trigger an AI reply or sticker here — even if it happens to
+  // be sent as a reply to one of Chloe's messages or mentions her name.
+  if (/^\./.test(text) && !/^\.(chaton|chatoff|chloe)\b/i.test(text)) return;
+
   // --- Toggle commands: owners only, regardless of current state ---
   if (/^\.chaton\b/i.test(text)) {
-    const userId = msg.key.participant || msg.key.remoteJid;
     if (!isOwner(userId)) {
       await sock.sendMessage(chatId, { text: '❌ Only my owners can do that.' }, { quoted: msg });
       return;
@@ -156,7 +180,6 @@ async function handleMessage(sock, msg) {
     return;
   }
   if (/^\.chatoff\b/i.test(text)) {
-    const userId = msg.key.participant || msg.key.remoteJid;
     if (!isOwner(userId)) {
       await sock.sendMessage(chatId, { text: '❌ Only my owners can do that.' }, { quoted: msg });
       return;
@@ -197,15 +220,13 @@ async function handleMessage(sock, msg) {
 
   if (!shouldReply) {
     // Still log the message to history so context isn't lost when she does chime in.
-    if (active) memory.appendMessage(chatId, 'user', text, senderName);
+    if (active) memory.appendMessage(chatId, userId, 'user', text, senderName);
     return;
   }
 
-  memory.appendMessage(chatId, 'user', effectiveText, senderName);
+  memory.appendMessage(chatId, userId, 'user', effectiveText, senderName);
 
-  const userId = msg.key.participant || msg.key.remoteJid;
-
-  const history = memory.getHistory(chatId);
+  const history = memory.getHistory(chatId, userId);
   const messagesForAI = history.map(h => ({
     role: h.role,
     content: h.senderName && h.role === 'user' ? `${h.senderName}: ${h.content}` : h.content,
@@ -213,9 +234,29 @@ async function handleMessage(sock, msg) {
 
   try {
     const systemPrompt = buildSystemPrompt(userId);
-    const reply = await callAI(systemPrompt, messagesForAI);
-    memory.appendMessage(chatId, 'assistant', reply, null);
+    const rawReply = await callAI(systemPrompt, messagesForAI);
+
+    const moodMatch = rawReply.match(MOOD_TAG_REGEX);
+    const rawMood = moodMatch ? moodMatch[1].toLowerCase() : 'neutral';
+    const mood = VALID_MOODS.has(rawMood) ? rawMood : 'neutral';
+    const reply = rawReply.replace(MOOD_TAG_REGEX, '').trim();
+
+    memory.appendMessage(chatId, userId, 'assistant', reply, null);
     await sock.sendMessage(chatId, { text: reply }, { quoted: msg });
+
+    // Follow up every reply with a sticker matching her mood + how close
+    // she is to this person, so it feels more interactive. Never blocks/
+    // undoes the text reply above if it fails or no sticker is available yet.
+    try {
+      const rel = getRelationship(userId);
+      const tier = getTier(rel.trust);
+      const stickerPath = pickSticker(tier.key, mood);
+      if (stickerPath) {
+        await sock.sendMessage(chatId, { sticker: fs.readFileSync(stickerPath) });
+      }
+    } catch (err) {
+      console.error('[chloe] sticker send failed:', err.message);
+    }
 
     // Update trust/affection based on this exchange. Fire-and-forget-ish:
     // failures here are logged but never block or undo the reply already sent.
