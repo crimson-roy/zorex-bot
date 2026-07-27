@@ -19,7 +19,7 @@ const { callAI } = require("../lib/aiClient");
 // Character budget per chunk sent to the AI in one call. Kept conservative
 // so prompt + chunk + requested summary comfortably fit smaller-context
 // models (roughly 4 chars/token, so ~6000 chars ≈ 1500 tokens of source text).
-const CHUNK_CHARS = 6000;
+const CHUNK_CHARS = 2500;
 
 // WhatsApp text messages can technically be huge, but very long single
 // messages are unwieldy to read on a phone — split the final summary into
