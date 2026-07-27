@@ -1,11 +1,15 @@
 // commands/tagall.js
 //
 // .tagall — pulls every member of the current group and @mentions them all
-// in one message. Doesn't require the bot to be a group admin; @mentions
-// are just message metadata, not a moderation action, so any member (even
-// the bot) can tag the whole group.
+// in one message. Sending the mentions doesn't require the bot itself to
+// be a group admin (@mentions are just message metadata, not a moderation
+// action).
+//
+// Permission gating for WHO can run this command lives in index.js, via
+// isOwnerOrAdmin(sock, msg), which runs BEFORE this function is ever
+// called. This file intentionally does not duplicate that check.
 
-async function tagAllCommand(sock, msg) {
+async function tagAllCommand(sock, msg, args) {
 
     const chatId = msg.key.remoteJid;
 
@@ -15,12 +19,11 @@ async function tagAllCommand(sock, msg) {
         }, { quoted: msg });
     }
 
-    let participants;
+    let groupMetadata;
 
     try {
 
-        const groupMetadata = await sock.groupMetadata(chatId);
-        participants = groupMetadata.participants.map(p => p.id);
+        groupMetadata = await sock.groupMetadata(chatId);
 
     } catch (err) {
 
@@ -31,6 +34,8 @@ async function tagAllCommand(sock, msg) {
 
     }
 
+    const participants = groupMetadata.participants.map(p => p.id);
+
     if (participants.length === 0) {
         return await sock.sendMessage(chatId, {
             text: `⚠️ No members found in this group.`
@@ -38,11 +43,11 @@ async function tagAllCommand(sock, msg) {
     }
 
     const tagLines = participants.map(p => `@${p.split("@")[0]}`).join(" ");
+    const reason = args && args.length > 0 ? args.join(" ") : null;
 
-    const text =
-`👑 *Lord Crimson summons everyone!*
-
-${tagLines}`;
+    const text = reason
+        ? `👑 *Lord Crimson summons everyone!*\n📢 Reason: *${reason}*\n\n${tagLines}`
+        : `👑 *Lord Crimson summons everyone!*\n\n${tagLines}`;
 
     await sock.sendMessage(chatId, {
         text,

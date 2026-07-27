@@ -43,7 +43,8 @@ const {
     closeGroup,
     inviteCommand,
     myCooldownsCommand,
-    myDailyLimitsCommand
+    myDailyLimitsCommand,
+    isGroupAdmin
 } = require("./commands/misc");
 
 const {
@@ -60,9 +61,13 @@ const { crimeCommand } = require("./commands/crime");
 const { robCommand } = require("./commands/rob");
 const { begCommand } = require("./commands/beg");
 const { fishCommand, sellCommand } = require("./commands/fish");
-const { companyCommand, companyCreateCommand, companyUpgradeCommand } = require("./commands/company");
-const { investCommand, assetsCommand } = require("./commands/invest");
 const { digCommand } = require("./commands/dig");
+
+// .company / .companycreate / .companyupgrade — passive-income companies
+const { companyCommand, companyCreateCommand, companyUpgradeCommand } = require("./commands/company");
+
+// .invest (buy/sell) / .assets — global market + personal portfolio
+const { investCommand, assetsCommand } = require("./commands/invest");
 
 // Chloe (AI companion) — handleMessage decides on its own whether to reply.
 // setBotJid lets us hand her the bot's real WhatsApp id once Baileys connects,
@@ -106,11 +111,27 @@ const { triviaCommand, triviaAnswer } = require("./commands/trivia");
 // with a non-zero code for Railway's restart policy to bring it back up.
 const { restartCommand } = require("./commands/restart");
 
+// .commandoff / .commandon — owners/admins only, gates the whole command
+// chain below (except itself). Permission checks live inside this module.
+const { commandOffCommand, commandOnCommand, isCommandsOff } = require("./commands/commandoff");
+
+// .trade / .tradeaccept / .tradedecline / .tradesell / .tradepay /
+// .tradecancel / .tradeinfo — peer-to-peer escrow trading. tradeCommands()
+// is the single router (see commands/trade.js), and startTradeSweeper()
+// must be called exactly once after the socket connects so the 60s request
+// timeout and 5-minute session-inactivity timeout get enforced in the
+// background (see lib/tradeTimeouts.js).
+const { tradeCommands } = require("./commands/trade");
+const { startTradeSweeper } = require("./lib/tradeTimeouts");
+
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = "./owners.json";
 
 const {
-    startWCG
+    startWCG,
+    joinWCG,
+    handleWCGMessage,
+    resumeWCG
 } = require("./wcg");
 
 const {
@@ -122,183 +143,6 @@ const {
 } = require("./vv");
 
 const GAMES_FILE = "./games.json";
-const WCG_FILE = "./wcg.json";
-const COMMAND_STATE_FILE = "./commandState.json";
-
-function loadWCG() {
-
-    if (!fs.existsSync(WCG_FILE)) {
-        fs.writeFileSync(WCG_FILE, "{}");
-    }
-
-    return JSON.parse(fs.readFileSync(WCG_FILE));
-
-}
-
-
-function saveWCG(wcg) {
-
-    fs.writeFileSync(
-        WCG_FILE,
-        JSON.stringify(wcg, null, 4)
-    );
-
-}
-
-// Moved out of the ".wcg join" handler — these were previously re-declared
-// on every single message that matched ".wcg join", which is wasteful and
-// makes them impossible to reuse from anywhere else. Behavior is unchanged.
-function wcgTurnTimer(sock, groupId) {
-
-    setTimeout(async () => {
-
-        const wcg = loadWCG();
-
-        const game = wcg[groupId];
-
-
-        if (!game) return;
-
-
-        if (game.status !== "active") return;
-
-
-        const player = game.turn;
-
-
-        // check if still their turn
-        if (game.turn !== player) return;
-
-
-
-        // remove player
-
-        game.players = game.players.filter(
-            id => id !== player
-        );
-
-
-
-        saveWCG(wcg);
-
-
-
-        await sock.sendMessage(
-            groupId,
-            {
-                text:
-`⏰ Time's up!
-
-@${player.split("@")[0]} did not submit a word.
-
-❌ You have been eliminated.`,
-
-                mentions:[
-                    player
-                ]
-            }
-        );
-
-
-
-        checkWCGWinner(sock, groupId);
-
-
-    },7000);
-
-}
-
-async function checkWCGWinner(sock, groupId){
-
-    const wcg = loadWCG();
-
-    const game = wcg[groupId];
-
-
-    if(!game) return;
-
-
-
-    if(game.players.length === 1){
-
-
-        const winner = game.players[0];
-
-
-        await sock.sendMessage(
-            groupId,
-            {
-                text:
-`🏆 *WORLD CHAIN GAME OVER!*
-
-
-👑 Winner:
-
-@${winner.split("@")[0]}
-
-Congratulations 🎉`,
-
-                mentions:[
-                    winner
-                ]
-            }
-        );
-
-
-        delete wcg[groupId];
-
-        saveWCG(wcg);
-
-        return;
-
-    }
-
-
-
-    // next player
-
-    const currentIndex =
-    game.players.indexOf(game.turn);
-
-
-    const nextIndex =
-    (currentIndex + 1) % game.players.length;
-
-
-    game.turn =
-    game.players[nextIndex];
-
-
-    saveWCG(wcg);
-
-
-
-    await sock.sendMessage(
-        groupId,
-        {
-            text:
-`🎮 Next Player:
-
-@${game.turn.split("@")[0]}
-
-
-Start with:
-
-${game.lastLetter}
-
-⏳ You have 7 seconds.`,
-
-            mentions:[
-                game.turn
-            ]
-        }
-    );
-
-
-    wcgTurnTimer(sock, groupId);
-
-
-}
 
 function checkWinner(board) {
 
@@ -360,28 +204,6 @@ function saveGames(games) {
 
 }
 
-// Per-chat command toggle — powers .commandoff / .commandon. Keyed by
-// remoteJid (works for both groups and DMs), value `true` means disabled.
-function loadCommandState() {
-
-    if (!fs.existsSync(COMMAND_STATE_FILE)) {
-        fs.writeFileSync(COMMAND_STATE_FILE, "{}");
-    }
-
-    return JSON.parse(fs.readFileSync(COMMAND_STATE_FILE, "utf8"));
-
-}
-
-function saveCommandState(state) {
-
-    fs.writeFileSync(
-        COMMAND_STATE_FILE,
-        JSON.stringify(state, null, 4),
-        "utf8"
-    );
-
-}
-
 // Owner list — MAIN_OWNER from config.js is always trusted; owners.json
 // holds any additional owners added via .addowner (see commands/owner.js).
 // Used to gate sensitive commands like .restart.
@@ -408,6 +230,24 @@ function isOwner(userId) {
     const owners = loadOwners();
 
     return owners.includes(normalized);
+
+}
+
+// Owner always passes; otherwise the sender must be a real WhatsApp
+// admin/superadmin of the group the command was sent in. Used to gate
+// .commandon / .commandoff / .tagall. In a DM (no group) only the owner
+// check applies, since there's no group admin concept there.
+async function isOwnerOrAdmin(sock, msg) {
+
+    const sender = msg.key.participant || msg.key.remoteJid;
+
+    if (isOwner(sender)) return true;
+
+    const groupId = msg.key.remoteJid;
+
+    if (!groupId.endsWith("@g.us")) return false;
+
+    return await isGroupAdmin(sock, groupId, sender);
 
 }
 
@@ -526,6 +366,24 @@ async function startBot() {
                 } catch (err) {
 
                     console.error("⚠️ Failed to set Chloe BOT_JID:", err.message);
+
+                }
+
+                // Start the trading system's timeout sweeper now that the
+                // socket is live — it needs `sock` to send expiry/timeout
+                // notices, and it must only ever be started once (guarded
+                // internally in lib/tradeTimeouts.js against duplicate
+                // calls, which matters here since "open" can theoretically
+                // fire again after a reconnect).
+                try {
+
+                    startTradeSweeper(sock);
+
+                    console.log("🔁 Trade timeout sweeper started.");
+
+                } catch (err) {
+
+                    console.error("⚠️ Failed to start trade sweeper:", err.message);
 
                 }
 
@@ -696,14 +554,18 @@ Please behave yourself. 💙`
     // unconditionally.
     await triviaAnswer(sock, msg, text);
 
-    const chatId = msg.key.remoteJid;
+    // Same idea for World Chain Game word submissions — a bare word, no
+    // prefix. handleWCGMessage() is a no-op (returns false) if there's no
+    // active WCG round in this chat, or if the sender isn't a player in it.
+    // If it DID handle the message (a real turn attempt), stop here so the
+    // word doesn't fall through into command routing below.
+    if (await handleWCGMessage(sock, msg, text)) return;
 
-    const commandState = loadCommandState();
-    const commandsDisabled = commandState[chatId] === true;
+    const chatId = msg.key.remoteJid;
 
     // While disabled, every prefixed command is ignored except the one
     // command that turns them back on.
-    if (commandsDisabled && text.startsWith(".") && text !== ".commandon") {
+    if (isCommandsOff(chatId) && text.startsWith(".") && text !== ".commandon") {
         return;
     }
 
@@ -850,41 +712,11 @@ My Lord Crimson
 
     } else if (text === ".commandoff") {
 
-    const state = loadCommandState();
-
-    state[msg.key.remoteJid] = true;
-
-    saveCommandState(state);
-
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text: `🔇 Commands have been disabled in this chat.
-
-Use .commandon to re-enable them.`
-        },
-        {
-            quoted: msg
-        }
-    );
+    await commandOffCommand(sock, msg);
 
     } else if (text === ".commandon") {
 
-    const state = loadCommandState();
-
-    state[msg.key.remoteJid] = false;
-
-    saveCommandState(state);
-
-    await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text: `🔊 Commands have been re-enabled in this chat.`
-        },
-        {
-            quoted: msg
-        }
-    );
+    await commandOnCommand(sock, msg);
 
     } else if (text.startsWith(".trivia")) {
 
@@ -1097,30 +929,6 @@ Example:
             quoted: msg
         }
     );
-
-} else if (text.startsWith(".companycreate")) {
-
-    await companyCreateCommand(sock, msg, text);
-
-} else if (text.startsWith(".companyupgrade")) {
-
-    await companyUpgradeCommand(sock, msg, text);
-
-} else if (text === ".company") {
-
-    await companyCommand(sock, msg);
-
-} else if (text.startsWith(".sell")) {
-
-    await sellCommand(sock, msg, text);
-
-} else if (text === ".invest" || text.startsWith(".invest ")) {
-
-    await investCommand(sock, msg, text);
-
-} else if (text === ".assets") {
-
-    await assetsCommand(sock, msg);
 
     } else if (text === ".age") {
 
@@ -1790,6 +1598,20 @@ ${board}
 
     } else if (text === ".tagall") {
 
+    if (!(await isOwnerOrAdmin(sock, msg))) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: `❌ Only the owner or group admins can use this command.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
     await tagAllCommand(sock, msg);
 
     } else if (text === ".wcg start") {
@@ -1798,108 +1620,7 @@ ${board}
 
 } else if (text === ".wcg join") {
 
-
-    const userId =
-    msg.key.participant || msg.key.remoteJid;
-
-
-    const groupId = msg.key.remoteJid;
-
-
-    const wcg = loadWCG();
-
-
-    const game = wcg[groupId];
-
-
-    if (!game) {
-
-        return await sock.sendMessage(
-            groupId,
-            {
-                text:
-`⚠️ There is no active World Chain Game.
-
-Use:
-
-.wcg start
-
-to create one.`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-
-    if (game.status !== "waiting") {
-
-        return await sock.sendMessage(
-            groupId,
-            {
-                text:
-`⚠️ Joining has closed.
-
-The World Chain Game has already started.`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-
-    if (game.players.includes(userId)) {
-
-        return await sock.sendMessage(
-            groupId,
-            {
-                text:
-`😂 You are already in the World Chain Game!`
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
-
-
-    game.players.push(userId);
-
-
-    saveWCG(wcg);
-
-
-    await sock.sendMessage(
-        groupId,
-        {
-            text:
-`🌍🎮 *WORLD CHAIN GAME*
-
-👤 @${userId.split("@")[0]} joined the game!
-
-
-Current Players:
-
-${game.players.map(
-(player,index)=>
-`${index + 1}. @${player.split("@")[0]}`
-).join("\n")}
-
-
-⏳ Waiting for game start...`,
-
-            mentions: game.players
-
-        },
-        {
-            quoted: msg
-        }
-    );
+    await joinWCG(sock, msg);
 
 } else if (
     text.startsWith(".setrole") ||
@@ -1965,6 +1686,17 @@ ${game.players.map(
 ) {
 
     await economyCommands(
+        sock,
+        msg,
+        text
+    );
+
+} else if (text.startsWith(".trade")) {
+
+    // Covers .trade, .tradeaccept, .tradedecline, .tradesell,
+    // .tradepay, .tradecancel, .tradeinfo — see commands/trade.js
+    // for the internal sub-command routing.
+    await tradeCommands(
         sock,
         msg,
         text
@@ -2036,6 +1768,33 @@ else if (text.startsWith(".mem")) {
 } else if (text === ".double") {
 
     await doubleCommand(sock, msg);
+
+} else if (text.startsWith(".companycreate")) {
+
+    await companyCreateCommand(sock, msg, text);
+
+} else if (text.startsWith(".companyupgrade")) {
+
+    await companyUpgradeCommand(sock, msg, text);
+
+} else if (text === ".company") {
+
+    await companyCommand(sock, msg);
+
+} else if (text.startsWith(".sell")) {
+
+    await sellCommand(sock, msg, text);
+
+// Checked here, before the ".inv" auction/inventory block below, since
+// ".invest" also starts with ".inv" and would otherwise be swallowed by
+// that check first.
+} else if (text === ".invest" || text.startsWith(".invest ")) {
+
+    await investCommand(sock, msg, text);
+
+} else if (text === ".assets") {
+
+    await assetsCommand(sock, msg);
 
 } else if (
 
