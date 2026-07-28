@@ -21,6 +21,7 @@ let makeWASocket, useMultiFileAuthState, DisconnectReason, jidNormalizedUser;
 const qrcode = require("qrcode-terminal");
 const readline = require("readline");
 const fs = require("fs");
+const { trackActivityAndMaybeSpawn } = require("./lib/activityTracker");
 
 const {
     economyCommands
@@ -129,6 +130,9 @@ const { startTradeSweeper } = require("./lib/tradeTimeouts");
 // are pure orchestration + WhatsApp sending (see each file's header comment).
 const { execute: playCommand } = require("./commands/play");
 const { execute: ytCommand } = require("./commands/yt");
+const spawn = require("./commands/spawn");
+const claim = require("./commands/claim");
+const give = require("./commands/give");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
 
@@ -1870,6 +1874,21 @@ else if (text.startsWith(".mem")) {
 } else if (text.startsWith(".rob")) {
 
     await robCommand(sock, msg);
+
+} else if (text.startsWith(".spawn")) {
+
+    const args = text.trim().split(/\s+/).slice(1);
+    await spawnCommand.execute(sock, msg, args);
+
+} else if (text.startsWith(".claim")) {
+
+    const args = text.trim().split(/\s+/).slice(1);
+    await claimCommand.execute(sock, msg, args);
+
+} else if (text.startsWith(".give")) {
+
+    const args = text.trim().split(/\s+/).slice(1);
+    await giveCommand.execute(sock, msg, args);
 
 } else if (text === ".beg") {
 

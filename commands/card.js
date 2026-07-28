@@ -248,5 +248,8 @@ module.exports = {
     loadCollection,
     findOwners,
     formatCardBlock,
-    sendCardDisplay
+    sendCardDisplay,
+    TIER_ICONS,
+    TIER_LABELS,
+    TIER_ORDER
 };
