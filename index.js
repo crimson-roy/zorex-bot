@@ -130,9 +130,9 @@ const { startTradeSweeper } = require("./lib/tradeTimeouts");
 // are pure orchestration + WhatsApp sending (see each file's header comment).
 const { execute: playCommand } = require("./commands/play");
 const { execute: ytCommand } = require("./commands/yt");
-const spawn = require("./commands/spawn");
-const claim = require("./commands/claim");
-const give = require("./commands/give");
+const spawnCommand = require("./commands/spawn");
+const claimCommand = require("./commands/claim");
+const giveCommand = require("./commands/give");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
 
