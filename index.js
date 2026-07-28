@@ -124,6 +124,14 @@ const { commandOffCommand, commandOnCommand, isCommandsOff } = require("./comman
 const { tradeCommands } = require("./commands/trade");
 const { startTradeSweeper } = require("./lib/tradeTimeouts");
 
+// .play / .yt / .ttk — media downloader commands. All Spotify/YouTube/
+// TikTok specific logic lives in bet/providers/*.js; these command modules
+// are pure orchestration + WhatsApp sending (see each file's header comment).
+const { playCommand } = require("./commands/play");
+const { ytCommand } = require("./commands/yt");
+const { execute: hbCommand } = require("./commands/hb");
+const { ttkCommand } = require("./commands/ttk");
+
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = "./owners.json";
 
@@ -1649,6 +1657,12 @@ ${board}
         text
     );
 
+} else if (text.startsWith(".hb")) {
+
+    const args = text.split(" ").slice(1);
+
+    await hbCommand(sock, msg, args);
+
 } else if (
     text.startsWith(".mines") ||
     text.startsWith(".shovel") ||
@@ -1904,6 +1918,18 @@ else if (text.startsWith(".mem")) {
 } else if (text === ".mydls") {
 
     await myDailyLimitsCommand(sock, msg);
+
+} else if (text.startsWith(".play")) {
+
+    await playCommand(sock, msg, text);
+
+} else if (text.startsWith(".yt")) {
+
+    await ytCommand(sock, msg, text);
+
+} else if (text.startsWith(".ttk")) {
+
+    await ttkCommand(sock, msg, text);
 
 } else if (text === ".menu") {
 
