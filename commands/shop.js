@@ -1,8 +1,20 @@
 const fs = require("fs");
+const dataPath = require("../lib/dataPath");
 const { loadInventory, saveInventory } = require("./inventory");
 
+// shop.json is a static catalog — nothing in this file ever writes to it,
+// so unlike users.json it doesn't need to survive a redeploy via the
+// volume. Left as a relative path on purpose (same reasoning as
+// card.json/auctionitem.json elsewhere in the bot).
 const SHOP_FILE = "./shop.json";
-const USERS_FILE = "./users.json";
+
+// users.json is real per-user state and must survive redeploys, so it's
+// routed through dataPath() — see lib/dataPath.js.
+const USERS_FILE = dataPath("users.json");
+
+// Bank-upgrade items can be bought in bulk in a single command, but not
+// unlimited — caps a single .shop buy at 100 units.
+const MAX_BANK_PURCHASE_QTY = 100;
 
 
 function loadShop() {
@@ -15,6 +27,21 @@ function loadUsers() {
 
 function saveUsers(users) {
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 4));
+}
+
+// "a"/"an" for item IDs in the "already own this" message — vowel-led IDs
+// (e.g. "energy_drink") read as "an energy_drink", everything else as "a".
+function article(word) {
+    return /^[aeiou]/i.test(word) ? "an" : "a";
+}
+
+// True if the user already holds at least one of this item in their
+// inventory. Only relevant for non-bank (tools/utilities) items — bank
+// upgrades apply directly to bankLimit and are never stored as inventory
+// entries, so they're exempt from the "already own it" rule.
+function alreadyOwnsItem(inventory, userId, itemId) {
+    const items = inventory[userId] || [];
+    return items.some(it => it.id === itemId);
 }
 
 
@@ -106,9 +133,40 @@ async function shopCommands(sock, msg, text) {
             }, { quoted: msg });
         }
 
+        const isBankItem = item.type === "bank";
+
+        // ---- Tools/utilities: ownership check FIRST, before quantity or
+        // wallet are even looked at. Owning a second one is never allowed,
+        // so if they already have it, that's the whole answer regardless
+        // of what quantity they asked for or what's in their wallet. ----
+        if (!isBankItem) {
+
+            const inventory = loadInventory();
+
+            if (alreadyOwnsItem(inventory, sender, itemId)) {
+
+                return await sock.sendMessage(msg.key.remoteJid, {
+                    text: `⚠️ You already have ${article(itemId)} ${itemId}.`
+                }, { quoted: msg });
+
+            }
+
+            // Not owned yet — a utility/tool purchase is always exactly
+            // one, regardless of any quantity argument that was passed.
+            quantity = 1;
+
+        }
+
         if (quantity <= 0 || isNaN(quantity)) {
             return await sock.sendMessage(msg.key.remoteJid, {
                 text: `⚠️ Invalid quantity.`
+            }, { quoted: msg });
+        }
+
+        // ---- Bank upgrades: capped at MAX_BANK_PURCHASE_QTY per buy. ----
+        if (isBankItem && quantity > MAX_BANK_PURCHASE_QTY) {
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: `⚠️ You can only buy up to ${MAX_BANK_PURCHASE_QTY} of "${item.name}" in a single purchase.`
             }, { quoted: msg });
         }
 
@@ -128,7 +186,7 @@ async function shopCommands(sock, msg, text) {
 
         let resultLines = "";
 
-        if (item.type === "bank") {
+        if (isBankItem) {
 
             users[sender].bankLimit += item.capacity * quantity;
 
@@ -141,6 +199,8 @@ async function shopCommands(sock, msg, text) {
 
             if (!inventory[sender]) inventory[sender] = [];
 
+            // quantity is always 1 here (enforced above), but the loop is
+            // left in place to match the original bulk-push shape.
             for (let i = 0; i < quantity; i++) {
 
                 inventory[sender].push({

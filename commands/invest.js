@@ -1,8 +1,12 @@
 const fs = require("fs");
+const dataPath = require("../lib/dataPath");
 const { loadInventory, saveInventory } = require("./inventory");
 
-const USERS_FILE = "./users.json";
-const MARKET_FILE = "./market.json";
+// PERSISTENCE FIX: both are written by this file (wallet on every buy/
+// sell, market rates on every tick) — routed through dataPath() so a
+// redeploy doesn't wipe portfolios or reset the market. See lib/dataPath.js.
+const USERS_FILE = dataPath("users.json");
+const MARKET_FILE = dataPath("market.json");
 
 // How often the market moves, and how many missed ticks we'll catch up on
 // in one go if the bot was offline for a while (prevents a huge compounding

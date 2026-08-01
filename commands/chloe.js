@@ -22,7 +22,12 @@ const { recordExchange, getRelationship, getTier } = require('../lib/relationshi
 const { pickSticker } = require('../lib/chloeStickers');
 const { MAIN_OWNER } = require('../config');
 
-const OWNERS_FILE = './owners.json';
+// PERSISTENCE FIX: owners.json is written by owner.js (.addowner/
+// .removeowner). isOwner() below only reads it, but it must resolve to the
+// same path owner.js writes to, or a newly added owner would never show up
+// here after a redeploy. See lib/dataPath.js.
+const dataPath = require('../lib/dataPath');
+const OWNERS_FILE = dataPath('owners.json');
 const BOT_NAME = 'chloe';
 
 // Tier-specific behavior instructions, appended on top of the base persona

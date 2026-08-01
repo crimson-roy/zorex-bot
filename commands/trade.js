@@ -29,13 +29,19 @@
 */
 
 const fs = require("fs");
+const dataPath = require("../lib/dataPath");
 
 const tradeState = require("../lib/tradeState");
 const escrow = require("../lib/tradeEscrow");
 const validate = require("../lib/tradeValidate");
 const messages = require("../lib/tradeMessages");
 
-const USERS_FILE = "./users.json";
+// PERSISTENCE FIX: this is a read-only load in THIS file (registration/
+// wallet checks below), but it must resolve to the same volume path
+// economy.js/company.js/daily.js etc. actually write to — otherwise trade
+// validation would be checking a stale, empty copy after a redeploy. See
+// lib/dataPath.js.
+const USERS_FILE = dataPath("users.json");
 
 // ---------- Local read-only users loader (see tradeEscrow.js integration note) ----------
 

@@ -1,5 +1,9 @@
 const fs = require("fs");
-const COOLDOWN_FILE = "./cooldown.json";
+const dataPath = require("../lib/dataPath");
+
+// PERSISTENCE FIX: routed through dataPath() so per-user cooldowns survive
+// a redeploy instead of silently resetting. See lib/dataPath.js.
+const COOLDOWN_FILE = dataPath("cooldown.json");
 
 function loadCooldowns() {
     if (!fs.existsSync(COOLDOWN_FILE)) {

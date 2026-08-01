@@ -196,6 +196,28 @@ async function fetchTikTokData(url) {
  */
 
 /**
+ * Some fields in the underlying library's response come back as either a
+ * plain string OR an array of strings, depending on which API version
+ * ('v1'/'v2'/'v3') answered the request. Indexing a string with [0] doesn't
+ * throw — it silently returns just its first character — so every place
+ * that used to do `field[0]` unconditionally is a latent bug if that field
+ * is ever a string instead of an array. This normalizes both shapes down
+ * to "the first usable string, or undefined".
+ *
+ * @param {string|string[]|undefined|null} value
+ * @returns {string|undefined}
+ */
+function firstOf(value) {
+  if (Array.isArray(value)) {
+    return value.find((v) => typeof v === 'string' && v.length > 0);
+  }
+  if (typeof value === 'string' && value.length > 0) {
+    return value;
+  }
+  return undefined;
+}
+
+/**
  * Picks the best available "no watermark" video URL from the raw
  * library result, falling back to a watermarked URL only if no clean
  * version is exposed.
@@ -205,12 +227,12 @@ async function fetchTikTokData(url) {
  */
 function pickBestVideoUrl(raw) {
   const candidates = [
-    raw.video && raw.video.playAddr && raw.video.playAddr[0],
-    raw.video && raw.video.downloadAddr,
-    Array.isArray(raw.videoHD) ? raw.videoHD[0] : raw.videoHD,
-    Array.isArray(raw.videoWatermark) ? raw.videoWatermark[0] : raw.videoWatermark,
-    raw.videoSD,
-    raw.video_url,
+    firstOf(raw.video && raw.video.playAddr),
+    firstOf(raw.video && raw.video.downloadAddr),
+    firstOf(raw.videoHD),
+    firstOf(raw.videoWatermark),
+    firstOf(raw.videoSD),
+    firstOf(raw.video_url),
   ].filter(Boolean);
 
   if (candidates.length === 0) {
@@ -241,7 +263,11 @@ function normalizeTikTokData(raw) {
   const duration = Number(durationRaw) || 0;
 
   const thumbnail =
-    (raw.video && raw.video.cover) || raw.cover || raw.thumbnail || raw.originCover || null;
+    firstOf(raw.video && raw.video.cover) ||
+    firstOf(raw.cover) ||
+    firstOf(raw.thumbnail) ||
+    firstOf(raw.originCover) ||
+    null;
 
   return {
     title,

@@ -130,9 +130,9 @@ const { startTradeSweeper } = require("./lib/tradeTimeouts");
 // are pure orchestration + WhatsApp sending (see each file's header comment).
 const { execute: playCommand } = require("./commands/play");
 const { execute: ytCommand } = require("./commands/yt");
-const spawnCommand = require("./commands/spawn");
-const claimCommand = require("./commands/claim");
-const giveCommand = require("./commands/give");
+const { execute: spawnCommand } = require("./commands/spawn");
+const { execute: claimCommand } = require("./commands/claim");
+const { giveCommand } = require("./commands/give");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
 
@@ -481,6 +481,8 @@ async function startBot() {
         // should actually reply (chaton/chatoff state, name mention, tag, reply,
         // or explicit ".chloe <msg>"), so this is always safe to call.
         await handleChloeMessage(sock, msg);
+
+        await trackActivityAndMaybeSpawn(sock, msg);   // add this line
 
         const context =
             msg.message?.extendedTextMessage?.contextInfo;
@@ -1878,17 +1880,16 @@ else if (text.startsWith(".mem")) {
 } else if (text.startsWith(".spawn")) {
 
     const args = text.trim().split(/\s+/).slice(1);
-    await spawnCommand.execute(sock, msg, args);
+    await spawnCommand(sock, msg, args);
 
 } else if (text.startsWith(".claim")) {
 
     const args = text.trim().split(/\s+/).slice(1);
-    await claimCommand.execute(sock, msg, args);
+    await claimCommand(sock, msg, args);
 
 } else if (text.startsWith(".give")) {
 
-    const args = text.trim().split(/\s+/).slice(1);
-    await giveCommand.execute(sock, msg, args);
+    await giveCommand(sock, msg, text);
 
 } else if (text === ".beg") {
 

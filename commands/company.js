@@ -1,6 +1,9 @@
 const fs = require("fs");
+const dataPath = require("../lib/dataPath");
 
-const USERS_FILE = "./users.json";
+// PERSISTENCE FIX: real per-user state, written every payout/upgrade —
+// routed through dataPath() so it survives a redeploy. See lib/dataPath.js.
+const USERS_FILE = dataPath("users.json");
 
 // ---------- Tunable economy constants ----------
 // NOTE: BASE_INCOME wasn't specified — 50,000 🌙/6h is my starting guess

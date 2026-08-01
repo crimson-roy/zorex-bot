@@ -12,13 +12,19 @@
 const fs = require("fs");
 const { MAIN_OWNER } = require("../config");
 
+// PERSISTENCE FIX: this used to be a bare relative path ("./owners.json"),
+// which lives on the container's ephemeral disk and gets wiped on every
+// redeploy. Routed through dataPath() so it persists on the attached
+// Railway Volume instead. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+
 // Baileys 7.x is ESM-only, so it can't be require()'d from this CommonJS
 // file. We kick off a dynamic import() once here (cached by Node — every
 // await below after the first resolves instantly) and pull jidNormalizedUser
 // out of it wherever it's needed.
 const baileysImport = import("@whiskeysockets/baileys");
 
-const OWNERS_FILE = "./owners.json";
+const OWNERS_FILE = dataPath("owners.json");
 
 // Mirrors the isOwner() logic already used in index.js — participant/remoteJid
 // can come back as either a phone-number JID or a LID-format JID, so both the

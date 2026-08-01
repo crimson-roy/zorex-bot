@@ -1,7 +1,8 @@
 const fs = require("fs");
+const dataPath = require("../lib/dataPath");
 
-const USERS_FILE = "./users.json";
-const PROPOSALS_FILE = "./marriageproposals.json";
+const USERS_FILE = dataPath("users.json");
+const PROPOSALS_FILE = dataPath("marriageproposals.json");
 const PROPOSAL_EXPIRY_MS = 60000; // 1 minute to respond
 
 function loadUsers() {
@@ -139,7 +140,10 @@ async function marryAcceptCommand(sock, msg) {
         }, { quoted: msg });
     }
 
-    // Merge bank + bankLimit into a single shared total on both accounts
+    // Merge bank + bankLimit into a single shared total on both accounts.
+    // NOTE: this still stores the SAME number independently on both user
+    // records rather than a true shared reference — see divorceCommand
+    // below for why that matters and how it's handled on the way out.
     const combinedBank = (users[partnerA].bank || 0) + (users[partnerB].bank || 0);
     const combinedLimit = (users[partnerA].bankLimit || 100000) + (users[partnerB].bankLimit || 100000);
 
@@ -217,6 +221,45 @@ async function divorceCommand(sock, msg) {
 
     const partner = users[sender].partner;
 
+    let splitLine = "";
+
+    if (users[partner]) {
+
+        // FIX: marryAcceptCommand stores the SAME combined bank/bankLimit
+        // number independently on both partners' records — they're
+        // MIRRORS of one shared value, not two separate contributions.
+        // That means summing them and halving the sum does NOT fix the
+        // duplication: two mirrors of 80,000 sum to 160,000, and half of
+        // that is 80,000 again — the exact same duplicate, unchanged.
+        // Averaging the two values instead recovers the true shared
+        // number (80,000), which THEN gets split in half correctly
+        // (40,000 each). Averaging (rather than just reading one side)
+        // also degrades gracefully if the two ever drifted apart — e.g.
+        // .dep/.wd touching only one partner's record since the wedding.
+        const sharedBank = Math.round(((users[sender].bank || 0) + (users[partner].bank || 0)) / 2);
+        const sharedLimit = Math.round(((users[sender].bankLimit || 0) + (users[partner].bankLimit || 0)) / 2);
+
+        // Integer division can leave 1 leftover unit on an odd shared
+        // amount — deterministically give that extra unit to whoever
+        // initiated the divorce, so the two shares always sum back to
+        // exactly the shared amount (no currency silently created or
+        // destroyed by rounding).
+        const senderBankShare = Math.ceil(sharedBank / 2);
+        const partnerBankShare = Math.floor(sharedBank / 2);
+
+        const senderLimitShare = Math.ceil(sharedLimit / 2);
+        const partnerLimitShare = Math.floor(sharedLimit / 2);
+
+        users[sender].bank = senderBankShare;
+        users[sender].bankLimit = senderLimitShare;
+
+        users[partner].bank = partnerBankShare;
+        users[partner].bankLimit = partnerLimitShare;
+
+        splitLine = `\n\n🏦 Bank split 50/50: you got ${senderBankShare.toLocaleString()} 🌙, @${partner.split("@")[0]} got ${partnerBankShare.toLocaleString()} 🌙.`;
+
+    }
+
     users[sender].partner = null;
     users[sender].marriedAt = null;
     users[sender].maritalStatus = "divorced";
@@ -230,7 +273,7 @@ async function divorceCommand(sock, msg) {
     saveUsers(users);
 
     return await sock.sendMessage(msg.key.remoteJid, {
-        text: `💔 @${sender.split("@")[0]} and @${partner.split("@")[0]} are now divorced.\n\n🏦 Your bank stays merged as-is — no automatic split.`,
+        text: `💔 @${sender.split("@")[0]} and @${partner.split("@")[0]} are now divorced.${splitLine}`,
         mentions: [sender, partner]
     }, { quoted: msg });
 

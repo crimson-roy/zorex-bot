@@ -2,9 +2,15 @@ const fs = require("fs");
 
 const { MAIN_OWNER } = require("../config");
 
-const OWNERS_FILE = "./owners.json";
+// PERSISTENCE FIX: these used to be bare relative paths ("./owners.json",
+// "./muted.json"), which live on the container's ephemeral disk and get
+// wiped on every redeploy. Routed through dataPath() so they persist on
+// the attached Railway Volume instead. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
 
-const MUTED_FILE = "./muted.json";
+const OWNERS_FILE = dataPath("owners.json");
+
+const MUTED_FILE = dataPath("muted.json");
 
 
 // Load muted users

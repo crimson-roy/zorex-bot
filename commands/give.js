@@ -9,7 +9,13 @@ const {
     sendCardDisplay
 } = require("./card.js");
 
-const COLLECTION_FILE = "./collection.json";
+// PERSISTENCE FIX: this file used to hardcode "./collection.json" for
+// writes while card.js's loadCollection() read through dataPath() — a
+// split-brain where gifted cards landed on the ephemeral container disk
+// instead of the mounted volume. Route through the same dataPath() every
+// other collection.json writer uses. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+const COLLECTION_FILE = dataPath("collection.json");
 
 
 // ---------- small helpers ----------

@@ -1,7 +1,13 @@
 const fs = require("fs");
+const dataPath = require("../lib/dataPath");
 const { QUESTIONS, CATEGORY_ALIASES } = require("../data/triviaQuestions");
 
-const TRIVIA_FILE = "./trivia.json";
+// PERSISTENCE FIX: routed through dataPath() for consistency with the rest
+// of the codebase. Lower stakes than most of the others here — a round is
+// only 30s long and isStale() already recovers gracefully if the bot
+// restarts mid-round — but there's no reason for it to be the one file
+// still writing to the ephemeral disk.
+const TRIVIA_FILE = dataPath("trivia.json");
 const ROUND_TIME_MS = 30000; // 30 seconds per round, per the spec
 
 // setTimeout handles can't survive a process restart or be stored in JSON,

@@ -1,7 +1,13 @@
 const fs = require("fs");
+const dataPath = require("../lib/dataPath");
 
-const COLLECTION_FILE = "./collection.json";
-const INVENTORY_FILE = "./inventory.json";
+// PERSISTENCE FIX: shop.js, invest.js, and card.js all depend on this
+// module for their reads/writes to these two files — if either stayed on
+// a bare relative path, purchases and card claims would silently vanish
+// on every redeploy even though the files calling this module looked
+// fixed. See lib/dataPath.js.
+const COLLECTION_FILE = dataPath("collection.json");
+const INVENTORY_FILE = dataPath("inventory.json");
 
 function loadCollection() {
     if (!fs.existsSync(COLLECTION_FILE)) fs.writeFileSync(COLLECTION_FILE, "{}");

@@ -10,16 +10,13 @@
 //   themselves, which must always be reachable so it can be turned back on.
 
 const fs = require("fs");
-const path = require("path");
 const { MAIN_OWNER } = require("../config");
+const dataPath = require("../lib/dataPath");
 
-const OWNERS_FILE = "./owners.json";
-const STORE_PATH = path.join(__dirname, "..", "data", "commandoff.json");
+const OWNERS_FILE = dataPath("owners.json");
+const STORE_PATH = dataPath("commandoff.json");
 
 function ensureStore() {
-    if (!fs.existsSync(path.dirname(STORE_PATH))) {
-        fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
-    }
     if (!fs.existsSync(STORE_PATH)) {
         fs.writeFileSync(STORE_PATH, "{}");
     }

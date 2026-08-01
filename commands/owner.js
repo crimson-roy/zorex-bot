@@ -3,8 +3,14 @@ const fs = require("fs");
 const { resetUserCooldown, resetAllCooldowns } = require("./cooldown");
 const { resetUserDailyLimit, resetAllDailyLimits } = require("./dailylimit");
 
-const OWNERS_FILE = "./owners.json";
-const USERS_FILE = "./users.json";
+// PERSISTENCE FIX: these used to be bare relative paths ("./owners.json",
+// "./users.json"), which live on the container's ephemeral disk and get
+// wiped on every redeploy. Routed through dataPath() so they persist on
+// the attached Railway Volume instead. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+
+const OWNERS_FILE = dataPath("owners.json");
+const USERS_FILE = dataPath("users.json");
 
 
 function loadOwners() {
@@ -85,16 +91,6 @@ function saveUsers(users) {
             4
         )
     );
-
-}
-
-
-// Check owner
-function isOwner(userId) {
-
-    const owners = loadOwners();
-
-    return owners.includes(userId);
 
 }
 

@@ -1,6 +1,13 @@
 const fs = require("fs");
+const dataPath = require("../lib/dataPath");
 
-const MUTED_FILE = "./muted.json";
+// PERSISTENCE FIX + SPLIT-BRAIN FIX: group.js's .mute/.unmute already
+// write muted.json through dataPath("muted.json"). This file was reading/
+// writing a hardcoded "./muted.json" instead — a DIFFERENT file whenever
+// DATA_DIR is set (Railway). That means the watcher below could fail to
+// see a mute group.js just recorded, or vice versa, independent of any
+// redeploy. Routed through dataPath() to match group.js exactly.
+const MUTED_FILE = dataPath("muted.json");
 
 function loadMuted() {
 

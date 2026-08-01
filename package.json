@@ -16,7 +16,7 @@
   "dependencies": {
     "@distube/ytdl-core": "^4.16.12",
     "@tobyg74/tiktok-api-dl": "^1.3.7",
-    "@whiskeysockets/baileys": "^7.0.0-rc13",
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
     "axios": "^1.18.1",
     "dotenv": "^17.4.2",
     "fast-speedtest-api": "^0.3.2",

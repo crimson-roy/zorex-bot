@@ -1,8 +1,17 @@
 const fs = require("fs");
 const { prepareVideo } = require("../lib/videoHelper");
 
+// PERSISTENCE FIX: collection.json is written by other command files
+// (auction.js, inventory.js) that were switched to dataPath() — this file
+// only reads it, but it must resolve to the SAME path those writers use,
+// or card.js would keep reading an empty/stale copy on the ephemeral disk
+// after a redeploy while the real data lives on the volume. card.json
+// stays a plain relative path since it's a static catalog nothing ever
+// writes to. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+
 const CARD_FILE = "./card.json";
-const COLLECTION_FILE = "./collection.json";
+const COLLECTION_FILE = dataPath("collection.json");
 
 const TIER_ICONS = {
     SSR: "👑",

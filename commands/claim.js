@@ -4,7 +4,13 @@ const { loadCollection } = require("../commands/card.js");
 const { TIER_ICONS } = require("../commands/card.js");
 const { getActiveSpawn, removeSpawn } = require("../lib/spawnManager");
 
-const COLLECTION_FILE = "./collection.json";
+// PERSISTENCE FIX: this file used to hardcode "./collection.json" for
+// writes while commands/card.js's loadCollection() read through
+// dataPath() — a split-brain where claimed cards landed on the ephemeral
+// container disk instead of the mounted volume. Route through the same
+// dataPath() every other collection.json writer uses. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+const COLLECTION_FILE = dataPath("collection.json");
 
 function saveCollection(collection) {
 

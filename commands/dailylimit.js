@@ -1,5 +1,9 @@
 const fs = require("fs");
-const LIMIT_FILE = "./dailylimit.json";
+const dataPath = require("../lib/dataPath");
+
+// PERSISTENCE FIX: routed through dataPath() so daily play counts survive
+// a redeploy. See lib/dataPath.js.
+const LIMIT_FILE = dataPath("dailylimit.json");
 
 const DEFAULT_LIMIT = 10;
 const SLOTS_LIMIT = 15;

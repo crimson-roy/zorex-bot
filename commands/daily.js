@@ -1,6 +1,9 @@
 const fs = require("fs");
+const dataPath = require("../lib/dataPath");
 
-const USERS_FILE = "./users.json";
+// PERSISTENCE FIX: routed through dataPath() — a redeploy wiping this
+// would silently break everyone's streak. See lib/dataPath.js.
+const USERS_FILE = dataPath("users.json");
 
 const BASE_REWARD = 20000;
 const STREAK_BONUS_PER_DAY = 5000;

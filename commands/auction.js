@@ -1,13 +1,22 @@
 const fs = require("fs");
 
-const AUCTION_ITEMS_FILE = "./auctionitem.json";
-const AUCTION_FILE = "./auction.json";
+// PERSISTENCE FIX: these are real, mutated-at-runtime data files — routed
+// through dataPath() so they survive a redeploy instead of living on the
+// container's ephemeral disk. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+
+const AUCTION_ITEMS_FILE = dataPath("auctionitem.json");
+const AUCTION_FILE = dataPath("auction.json");
+const USERS_FILE = dataPath("users.json");
+const OWNERS_FILE = dataPath("owners.json");
+const COLLECTION_FILE = dataPath("collection.json");
+const INVENTORY_FILE = dataPath("inventory.json");
+
+// shop.json and card.json are static catalogs — nothing in this file (or
+// anywhere else) writes to them, so they don't need the volume. Left as
+// relative paths on purpose.
 const SHOP_FILE = "./shop.json";
 const CARD_FILE = "./card.json";
-const USERS_FILE = "./users.json";
-const OWNERS_FILE = "./owners.json";
-const COLLECTION_FILE = "./collection.json";
-const INVENTORY_FILE = "./inventory.json";
 
 const { resetUserCooldown } = require("./cooldown");
 const { resetUserDailyLimit } = require("./dailylimit");

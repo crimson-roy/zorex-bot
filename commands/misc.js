@@ -2,8 +2,14 @@ const fs = require("fs");
 const { checkCooldown } = require("./cooldown");
 const { getDailyStatus } = require("./dailylimit");
 
-const USERS_FILE = "./users.json";
-const OWNERS_FILE = "./owners.json";
+// PERSISTENCE FIX: these used to be bare relative paths ("./users.json",
+// "./owners.json"), which live on the container's ephemeral disk and get
+// wiped on every redeploy. Routed through dataPath() so they persist on
+// the attached Railway Volume instead. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+
+const USERS_FILE = dataPath("users.json");
+const OWNERS_FILE = dataPath("owners.json");
 
 const COOLDOWN_MS = 30000;
 const GAMES = ["cf", "casino", "roulette", "slots"]; // games with cooldown/daily tracking
@@ -240,5 +246,6 @@ module.exports = {
     closeGroup,
     inviteCommand,
     myCooldownsCommand,
-    myDailyLimitsCommand
+    myDailyLimitsCommand,
+    isGroupAdmin
 };
