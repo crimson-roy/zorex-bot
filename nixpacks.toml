@@ -1,0 +1,5 @@
+# Tells Railway's Nixpacks build to include ffmpeg in the container.
+# Needed by providers/youtube.js (via yt-dlp) to merge separate video
+# and audio streams into a single MP4, and for audio extraction.
+[phases.setup]
+nixPkgs = ["ffmpeg"]
