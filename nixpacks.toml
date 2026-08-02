@@ -1,5 +1,28 @@
-# Tells Railway's Nixpacks build to include ffmpeg in the container.
-# Needed by providers/youtube.js (via yt-dlp) to merge separate video
-# and audio streams into a single MP4, and for audio extraction.
+# nixpacks.toml
+#
+# Adds two packages Railway's default Node build doesn't include on its own:
+#
+#   - python3 — yt-dlp-exec's postinstall script runs a python version check
+#     at `npm ci` time. Without a `python` binary present in the build
+#     container, that check fails and the whole build fails before your app
+#     ever gets deployed. (We also set YOUTUBE_DL_SKIP_PYTHON_CHECK=true as
+#     a variable in Railway, but this is the more reliable fix — it doesn't
+#     depend on that variable actually reaching the build step or being
+#     honored by this specific package.)
+#
+#   - ffmpeg — needed at RUNTIME by .yt to merge separately-downloaded video
+#     and audio streams into one file. Your local machine's ffmpeg install
+#     doesn't help here; Railway's container is a completely separate
+#     environment that needs its own copy.
+#
+# This does NOT replace nodejs_20/npm-9_x that Railway auto-detects for a
+# Node project — the '...' entry below is Nixpacks' required syntax for
+# EXTENDING the provider's own package list rather than replacing it.
+# (First version of this file omitted '...' and accidentally replaced the
+# whole list, which broke the build differently — "npm: command not
+# found" — since node/npm never got installed at all. This is fixed now.)
+# After deploying, check the build log's "setup" line — it should read
+# "nodejs_20, npm-9_x, python3, ffmpeg", not just "ffmpeg" alone.
+
 [phases.setup]
-nixPkgs = ["ffmpeg"]
+nixPkgs = ["...", "python3", "ffmpeg"]
