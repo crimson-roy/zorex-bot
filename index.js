@@ -81,6 +81,9 @@ const { relationCommand } = require("./commands/relation");
 // both share course-folder lookup logic from lib/slidesHelper.js.
 const { slidesCommand } = require("./commands/slides");
 const { teachCommand } = require("./commands/teach");
+const { deleteCommand } = require("./commands/delete");
+const { antilinkCommand, setWarningsCommand, resetWarningsCommand, checkAntilink } = require("./commands/antilink");
+const { hidetagCommand } = require("./commands/hidetag");
 
 // Group-wide @everyone tag — doesn't require the bot to be an admin.
 const { tagAllCommand } = require("./commands/tagall");
@@ -133,6 +136,8 @@ const { execute: ytCommand } = require("./commands/yt");
 const { execute: spawnCommand } = require("./commands/spawn");
 const { execute: claimCommand } = require("./commands/claim");
 const { giveCommand } = require("./commands/give");
+const { addCardCommand } = require("./commands/addcard");
+const { removeCardCommand } = require("./commands/rcard");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
 
@@ -553,13 +558,18 @@ Please behave yourself. 💙`
     const isCrimsonMentioned =
         mentioned.includes("164317513175043@lid");
 
-    const text =
+   const text =
         msg.message.conversation ||
         msg.message.extendedTextMessage?.text;
 
     if (!text) return;
 
     console.log("Message:", text);
+
+    // Antilink watcher — must run after `text` exists. Deletes the message
+    // and handles the warn/kick flow internally when a non-allowlisted
+    // link is posted; returns true if it acted, so routing stops here.
+    if (await checkAntilink(sock, msg, text)) return;
 
     // Trivia gets first shot at every message — before the command toggle
     // gate and before the big if/else chain — so players can answer with a
@@ -810,7 +820,7 @@ Example:
         {
             text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
    🎉 𝗥𝗘𝗚𝗜𝗦𝗧𝗥𝗔𝗧𝗜𝗢𝗡 𝗦𝗨𝗖𝗖𝗘𝗦𝗦𝗙𝗨𝗟 🎉
-╰━━━━━━━━━━━━━━━━━━━━━━━╯
+╰━━━━━━━━━━━━━━━━━━━━━━━╮
   » Name    : ${username}
   » Bonus   : 《500,000》🌙
 ━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1123,7 +1133,7 @@ Use:
             image: profileImage,
             caption: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
              𝖹𝖮𝖱𝖤𝖷 𝖯𝖱𝖮𝖥𝖨𝖫𝖤
-╰━━━━━━━━━━━━━━━━━━━━━━━╯
+╰━━━━━━━━━━━━━━━━━━━━━━━╮
   » Name    : ${user.name}
   » Age     : ${user.age}
   » Role    : ${user.role}
@@ -1694,6 +1704,26 @@ ${board}
         text
     );
 
+} else if (text === ".d") {
+
+    await deleteCommand(sock, msg);
+
+} else if (text.startsWith(".antilink")) {
+
+    await antilinkCommand(sock, msg, text);
+
+} else if (text.startsWith(".setwarnings")) {
+
+    await setWarningsCommand(sock, msg, text);
+
+} else if (text.startsWith(".resetwarnings")) {
+
+    await resetWarningsCommand(sock, msg, text);
+
+} else if (text.startsWith(".hidetag")) {
+
+    await hidetagCommand(sock, msg, text);
+
 } else if (
 
     text === ".bal" ||
@@ -1856,6 +1886,14 @@ else if (text.startsWith(".mem")) {
 } else if (text.startsWith(".use")) {
 
     await useLuckyCharm(sock, msg, text);
+
+} else if (text.startsWith(".addcard")) {
+
+    await addCardCommand(sock, msg, text);
+
+} else if (text.startsWith(".rcard")) {
+
+    await removeCardCommand(sock, msg, text);
 
 } else if (text.startsWith(".cs")) {
 

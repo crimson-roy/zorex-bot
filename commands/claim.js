@@ -1,7 +1,6 @@
 const fs = require("fs");
 
-const { loadCollection } = require("../commands/card.js");
-const { TIER_ICONS } = require("../commands/card.js");
+const { loadCollection, findOwners, sendCardDisplay } = require("../commands/card.js");
 const { getActiveSpawn, removeSpawn } = require("../lib/spawnManager");
 
 // PERSISTENCE FIX: this file used to hardcode "./collection.json" for
@@ -109,17 +108,43 @@ async function execute(sock, msg, args) {
     }
 
     const claimerName = msg.pushName || claimerId.split("@")[0].split(":")[0];
-    const icon = TIER_ICONS[card.tier] || "⚪";
 
-    await sock.sendMessage(chatJid, {
-        text:
+    // Show the claimed card the same way .cs/.addcard do — with its
+    // image/video, not just a text summary. This was previously
+    // text-only, which is the bug being fixed here. No literal "@number"
+    // mention tokens are used in the extra text (claimerName is plain
+    // text, not a JID), so there's no dependency on sendCardDisplay's
+    // owners-derived mentions list for this to render correctly.
+    const owners = findOwners(spawn.cardId, collection);
+
+    const extraText =
+`\n\n🎉 ${claimerName} claimed this card!
+
+Added to your collection! Use .col to view.`;
+
+    try {
+
+        await sendCardDisplay(sock, msg, spawn.cardId, card, owners, extraText);
+
+    } catch (err) {
+
+        // The claim already succeeded and was saved — a display error
+        // here should never look like the claim failed.
+        console.error("⚠️ Card display failed after successful claim:", err.message);
+
+        const icon = "🎴";
+
+        await sock.sendMessage(chatJid, {
+            text:
 `🎉 ${claimerName} claimed a card!
 ${icon} ${card.name} [${card.tier}]
 📚 ${card.series}
 🆔 #${spawn.cardId}
 
 Added to your collection! Use .col to view.`
-    }, { quoted: msg });
+        }, { quoted: msg });
+
+    }
 
 }
 

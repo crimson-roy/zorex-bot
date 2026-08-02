@@ -1,1 +1,34 @@
-{}
+{
+    "120363400951864487@g.us": {
+        "cardId": "2a70728d",
+        "card": {
+            "name": "Matsuemon Tennouji",
+            "series": "Demon Slayer: Kimetsu no Yaiba",
+            "tier": "SR",
+            "valueMin": 500000,
+            "valueMax": 800000,
+            "type": "card",
+            "image": "./matsuemon_tennouji_demon_slayer_kimetsu_no_yaiba.jpg"
+        },
+        "value": 678261,
+        "spawnedAt": 1785672020057,
+        "expiresAt": 1785679220057,
+        "groupJid": "120363400951864487@g.us"
+    },
+    "120363298022462579@g.us": {
+        "cardId": "6c54bedf",
+        "card": {
+            "name": "Rias Gremory",
+            "series": "High School DxD",
+            "tier": "SSR",
+            "valueMin": 1000000,
+            "valueMax": 1500000,
+            "type": "card",
+            "image": "./rias_gremory_high_school_dxd.jpg"
+        },
+        "value": 1404802,
+        "spawnedAt": 1785677827742,
+        "expiresAt": 1785685027742,
+        "groupJid": "120363298022462579@g.us"
+    }
+}

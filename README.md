@@ -16,7 +16,7 @@ Uses Groq — free, no credit card required (~14,400 requests/day on Llama 3.3 7
 2. Sign up / log in, create a new API key
 3. Put it in your `.env`:
 ```
-AI_API_KEY=gsk_your_actual_key_here
+AI_API_KEY=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
 AI_MODEL=llama-3.3-70b-versatile   # optional, has a default
 BOT_JID=64833370255602@lid
 ```

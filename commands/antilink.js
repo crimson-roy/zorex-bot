@@ -32,11 +32,27 @@ const WARNINGS_FILE = dataPath("linkwarnings.json");
 const DEFAULT_LIMIT = 3;
 const MAX_LIMIT = 5;
 
-// WhatsApp group invite links are always checked. SPAM_DOMAINS is an
-// extensible list for other known spam/ad domains — add more strings here
-// as needed, no other code changes required.
-const WHATSAPP_LINK_PATTERN = /chat\.whatsapp\.com\/[a-zA-Z0-9]+/i;
-const SPAM_DOMAINS = [];
+// Antilink now runs as an ALLOWLIST, not a blocklist: only links to these
+// specific platforms are permitted. Anything else that looks like a link
+// (WhatsApp invites, Facebook, Instagram, Telegram, shorteners, random
+// domains, etc.) is treated as a violation.
+//
+// Each entry matches that exact hostname AND any subdomain of it — e.g.
+// "youtube.com" also allows "www.youtube.com", "m.youtube.com", and
+// "music.youtube.com". "music.apple.com" is listed on its own (not
+// "apple.com") so only Apple Music links are allowed — apps.apple.com or
+// other apple.com subdomains are still blocked. Add more entries here as
+// needed; no other code changes required.
+const ALLOWED_DOMAINS = [
+    "tiktok.com",       // covers vm.tiktok.com, vt.tiktok.com, www.tiktok.com
+    "youtube.com",      // covers www./m./music.youtube.com
+    "youtu.be",
+    "spotify.com",      // covers open.spotify.com (the real share-link domain)
+    "soundcloud.com",   // covers on.soundcloud.com
+    "music.apple.com",  // deliberately NOT "apple.com" — only Apple Music links
+    "audiomack.com",
+    "docs.google.com"   // deliberately NOT "google.com" — only Google Docs links
+];
 
 // ---------- Owner check (same pattern as delete.js) ----------
 
@@ -169,15 +185,70 @@ function resetAllWarnings(groupId) {
 
 }
 
-// ---------- Link detection ----------
+// ---------- Link detection (allowlist model) ----------
+//
+// A "link candidate" is either:
+//   (a) anything starting with http:// or https://, no matter what follows, or
+//   (b) a bare domain-looking string (one or more "label." segments plus a
+//       TLD) that's immediately followed by a "/path" — e.g. "tiktok.com/x".
+// A bare domain with NO path (e.g. someone just typing "node.js" or
+// "socket.io" in conversation) is deliberately NOT treated as a link
+// candidate — that would false-positive on ordinary text.
+const LINK_CANDIDATE_PATTERN = /(https?:\/\/\S+)|((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\/\S*)/gi;
+
+function extractLinkCandidates(text) {
+
+    return text.match(LINK_CANDIDATE_PATTERN) || [];
+
+}
+
+// Resolves a link candidate string down to its bare hostname (lowercased,
+// "www." stripped) so it can be checked against ALLOWED_DOMAINS. Returns
+// null if the candidate isn't actually a parseable URL.
+function extractHostname(rawCandidate) {
+
+    try {
+
+        const withScheme = /^https?:\/\//i.test(rawCandidate)
+            ? rawCandidate
+            : `https://${rawCandidate}`;
+
+        return new URL(withScheme).hostname.toLowerCase().replace(/^www\./, "");
+
+    } catch (err) {
+
+        return null;
+
+    }
+
+}
+
+// A hostname is allowed if it exactly matches an ALLOWED_DOMAINS entry, or
+// is a subdomain of one (e.g. "open.spotify.com" is a subdomain of
+// "spotify.com").
+function isAllowedHostname(hostname) {
+
+    return ALLOWED_DOMAINS.some(
+        domain => hostname === domain || hostname.endsWith(`.${domain}`)
+    );
+
+}
 
 function containsLink(text) {
 
-    if (WHATSAPP_LINK_PATTERN.test(text)) return true;
+    const candidates = extractLinkCandidates(text);
 
-    const lower = text.toLowerCase();
+    for (const raw of candidates) {
 
-    return SPAM_DOMAINS.some(domain => lower.includes(domain.toLowerCase()));
+        const hostname = extractHostname(raw);
+
+        if (!hostname) continue; // not actually parseable as a URL — skip it
+
+        if (!isAllowedHostname(hostname)) return true; // not on the allowlist
+
+    }
+
+    return false; // no link candidates at all, or every one found was allowed
 
 }
 
