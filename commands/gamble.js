@@ -1,10 +1,11 @@
 const fs = require("fs");
 const { checkCooldown, setCooldown } = require("./cooldown");
 const { checkDailyLimit, incrementDailyPlay } = require("./dailylimit");
+const dataPath = require("../lib/dataPath");
 
-const USERS_FILE = "./users.json";
-const MINES_FILE = "./mines.json";
-const COLLECTION_FILE = "./collection.json";
+const USERS_FILE = dataPath("users.json");
+const MINES_FILE = dataPath("mines.json");
+const COLLECTION_FILE = dataPath("collection.json");
 const activeMinesGames = {};
 
 const COOLDOWN_MS = 30000; // 30 seconds

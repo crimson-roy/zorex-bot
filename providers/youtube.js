@@ -571,9 +571,10 @@ async function getVideo(videoId) {
 
 /**
  * Downloads the highest-quality available audio for a video, suitable
- * for sending as WhatsApp audio. No lossy re-encoding is applied — the
- * best existing audio-only stream is saved as-is (typically m4a or
- * webm/opus), preserving source quality.
+ * for sending as WhatsApp audio. Always normalized to m4a (AAC) via
+ * yt-dlp's audio-extraction postprocessor — remuxed losslessly when the
+ * source is already AAC-compatible, transcoded only when it isn't —
+ * so the output is guaranteed to be a WhatsApp-safe container/codec.
  *
  * @param {string} videoId - video ID or full YouTube URL
  * @returns {Promise<{ title: string, duration: string, thumbnail: string|null, mimeType: string, filePath: string }>}
@@ -588,7 +589,7 @@ async function downloadAudio(videoId) {
   const filePath = await downloadWithYtDlp(
     normalized.url,
     validId,
-    {},
+    { extractAudio: true, audioFormat: 'm4a' },
     'bestaudio/best'
   );
 

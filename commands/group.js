@@ -485,43 +485,25 @@ if (text.startsWith(".demote")) {
     // =====================================
     // NOT GROUP ADMIN
     // =====================================
+    // FIX: demote can never succeed on a self-target here, since the
+    // "target not currently an admin" check further down would always
+    // reject it (the sender isn't a group admin in this branch, by
+    // definition). Self-demote only makes sense once the sender IS a
+    // group admin, so that case now lives in the admin branch below
+    // instead. A non-admin sender — owner or not — is simply rejected.
 
     if (!senderIsAdmin) {
 
-        // Not owner
-        if (!senderIsOwner) {
-
-            return await sock.sendMessage(
-                groupJid,
-                {
-                    text:
+        return await sock.sendMessage(
+            groupJid,
+            {
+                text:
 "❌ You are not an admin."
-                },
-                {
-                    quoted: msg
-                }
-            );
-
-        }
-
-        // Owner but trying to demote someone else
-        if (target) {
-
-            return await sock.sendMessage(
-                groupJid,
-                {
-                    text:
-"❌ You are not an admin."
-                },
-                {
-                    quoted: msg
-                }
-            );
-
-        }
-
-        // Owner demotes himself
-        target = sender;
+            },
+            {
+                quoted: msg
+            }
+        );
 
     }
 
@@ -533,20 +515,30 @@ if (text.startsWith(".demote")) {
 
         if (!target) {
 
-            return await sock.sendMessage(
-                groupJid,
-                {
-                    text:
+            // Owner running bare .demote (no tag/reply) while they
+            // themselves are a group admin demotes themselves.
+            if (senderIsOwner) {
+
+                target = sender;
+
+            } else {
+
+                return await sock.sendMessage(
+                    groupJid,
+                    {
+                        text:
 "⚠️ Reply to or tag a user to demote."
-                },
-                {
-                    quoted: msg
-                }
-            );
+                    },
+                    {
+                        quoted: msg
+                    }
+                );
+
+            }
 
         }
 
-        if (
+        else if (
             !senderIsOwner &&
             target === sender
         ) {

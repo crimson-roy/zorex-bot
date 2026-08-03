@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { checkCooldown, setCooldown } = require("./cooldown");
 const { checkDailyLimit, incrementDailyPlay } = require("./dailylimit");
+const dataPath = require("../lib/dataPath");
 
 const COOLDOWN_MS = 30000; // 30 seconds
 
@@ -27,8 +28,8 @@ const BOOM = "💥";
 // FILE PATHS
 // ======================================
 
-const USERS_FILE = "./users.json";
-const MINES_FILE = "./mines.json";
+const USERS_FILE = dataPath("users.json");
+const MINES_FILE = dataPath("mines.json");
 
 // ======================================
 // JSON HELPERS

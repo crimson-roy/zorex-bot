@@ -23,6 +23,12 @@ const readline = require("readline");
 const fs = require("fs");
 const { trackActivityAndMaybeSpawn } = require("./lib/activityTracker");
 
+// PERSISTENCE FIX: routes owners.json / games.json / users.json through
+// the same dataPath() helper used in commands/economy.js, so they persist
+// on the attached Railway Volume instead of the container's ephemeral disk.
+// See lib/dataPath.js.
+const dataPath = require("./lib/dataPath");
+
 const {
     economyCommands
 } = require("./commands/economy");
@@ -125,6 +131,7 @@ const { commandOffCommand, commandOnCommand, isCommandsOff } = require("./comman
 // must be called exactly once after the socket connects so the 60s request
 // timeout and 5-minute session-inactivity timeout get enforced in the
 // background (see lib/tradeTimeouts.js).
+const { aiCommand } = require("./commands/ai");
 const { tradeCommands } = require("./commands/trade");
 const { startTradeSweeper } = require("./lib/tradeTimeouts");
 
@@ -142,7 +149,7 @@ const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
 
 const { MAIN_OWNER } = require("./config");
-const OWNERS_FILE = "./owners.json";
+const OWNERS_FILE = dataPath("owners.json");
 
 const {
     startWCG,
@@ -159,7 +166,7 @@ const {
     startVV
 } = require("./vv");
 
-const GAMES_FILE = "./games.json";
+const GAMES_FILE = dataPath("games.json");
 
 function checkWinner(board) {
 
@@ -269,7 +276,7 @@ async function isOwnerOrAdmin(sock, msg) {
 }
 
 const axios = require("axios");
-const USERS_FILE = "./users.json";
+const USERS_FILE = dataPath("users.json");
 console.log("Using users file:", require("path").resolve(USERS_FILE));
 
 function loadUsers() {
@@ -1620,7 +1627,7 @@ ${board}
         }
     );
 
-    } else if (text === ".tagall") {
+    } else if (text.startsWith(".tagall")) {
 
     if (!(await isOwnerOrAdmin(sock, msg))) {
 
@@ -1636,7 +1643,9 @@ ${board}
 
     }
 
-    await tagAllCommand(sock, msg);
+    const tagallArgs = text.trim().split(/\s+/).slice(1);
+
+    await tagAllCommand(sock, msg, tagallArgs);
 
     } else if (text === ".wcg start") {
 
@@ -1692,6 +1701,10 @@ ${board}
         msg,
         text
     );
+
+} else if (text.startsWith(".ai")) {
+
+    await aiCommand(sock, msg, text);
 
 } else if (
     text === ".inviteowner" ||
