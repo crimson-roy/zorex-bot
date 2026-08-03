@@ -10,12 +10,17 @@
  * to WhatsApp.
  *
  * Flow:
- *   1. If the argument is a YouTube URL, skip searching and use it
+ *   1. React ⌛ and post a status message (lib/progressIndicator.js) so
+ *      the user sees the bot working instead of going quiet until the
+ *      video arrives.
+ *   2. If the argument is a YouTube URL, skip searching and use it
  *      directly.
- *   2. Otherwise, search YouTube and take the first result.
- *   3. Download the highest practical MP4 (audio + video together).
- *   4. Send the video, then delete the temp file — success or
- *      failure.
+ *   3. Otherwise, search YouTube and take the first result.
+ *   4. Download the highest practical MP4 (audio + video together).
+ *   5. Send the video, then swap the reaction to ✅ and edit the status
+ *      message to "Task Completed" (or ❌ / "Task Failed" on any error
+ *      along the way).
+ *   6. Always clean up the temp file, success or failure.
  *
  * NOTE ON INTEGRATION: this file assumes the common Baileys-style
  * command-module shape used elsewhere in Zorex Bot — a `name` plus an
@@ -29,6 +34,7 @@
 const fs = require('fs');
 
 const youtube = require('../providers/youtube');
+const { startProgress } = require('../lib/progressIndicator');
 
 const YOUTUBE_URL_PATTERN = /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtu\.be)\/.+/i;
 
@@ -78,16 +84,25 @@ async function execute(sock, msg, args) {
     return;
   }
 
+  const isUrl = isYoutubeUrl(input);
+
+  const progress = await startProgress(
+    sock,
+    msg,
+    isUrl ? '⬇️ Downloading video...' : '🔎 Searching YouTube...'
+  );
+
   let downloadResult;
 
   try {
     let targetId = input;
 
     // Step 1: text vs URL branch.
-    if (!isYoutubeUrl(input)) {
+    if (!isUrl) {
       const results = await youtube.searchVideos(input, { limit: 1 });
 
       if (results.length === 0) {
+        await progress.fail();
         await sock.sendMessage(
           jid,
           { text: `No results found for "${input}".` },
@@ -97,6 +112,7 @@ async function execute(sock, msg, args) {
       }
 
       targetId = results[0].id;
+      await progress.update('⬇️ Downloading video...');
     }
 
     // Step 2: download the highest practical combined MP4.
@@ -112,13 +128,11 @@ async function execute(sock, msg, args) {
       },
       { quoted: msg }
     );
+
+    await progress.succeed();
   } catch (err) {
     console.error('[.yt] Failed:', err);
-    await sock.sendMessage(
-      jid,
-      { text: `Couldn't fetch that video: ${err.message}` },
-      { quoted: msg }
-    );
+    await progress.fail();
   } finally {
     // Step 4: always clean up the temp file.
     cleanupTempFile(downloadResult && downloadResult.filePath);

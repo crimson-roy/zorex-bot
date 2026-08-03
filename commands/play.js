@@ -9,14 +9,19 @@
  * talks to WhatsApp.
  *
  * Flow:
- *   1. Search Spotify for the query to resolve correct song metadata
- *      (title + artist).
- *   2. Build a "<title> <artist>" query and search YouTube with it.
- *   3. If Spotify returned nothing, fall back to searching YouTube
+ *   1. React ⌛ and post a status message (lib/progressIndicator.js) so
+ *      the user sees the bot working instead of going quiet until the
+ *      audio arrives.
+ *   2. Search Spotify for the query to resolve correct song metadata
+ *      (title + artist), updating the status message as it goes.
+ *   3. Build a "<title> <artist>" query and search YouTube with it.
+ *   4. If Spotify returned nothing, fall back to searching YouTube
  *      with the user's original query directly.
- *   4. Download the highest-quality audio-only stream from YouTube.
- *   5. Send it as WhatsApp audio.
- *   6. Always clean up the temp file, success or failure.
+ *   5. Download the highest-quality audio-only stream from YouTube.
+ *   6. Send it as WhatsApp audio, then swap the reaction to ✅ and edit
+ *      the status message to "Task Completed" (or ❌ / "Task Failed" on
+ *      any error along the way).
+ *   7. Always clean up the temp file, success or failure.
  *
  * NOTE ON INTEGRATION: this file assumes the common Baileys-style
  * command-module shape used elsewhere in Zorex Bot — a `name` plus an
@@ -33,6 +38,7 @@ const fs = require('fs');
 
 const spotify = require('../providers/spotify');
 const youtube = require('../providers/youtube');
+const { startProgress } = require('../lib/progressIndicator');
 
 /**
  * Builds the effective YouTube search query from resolved Spotify
@@ -77,6 +83,8 @@ async function execute(sock, msg, args) {
     return;
   }
 
+  const progress = await startProgress(sock, msg, '🔎 Searching Spotify...');
+
   let audioResult;
 
   try {
@@ -91,19 +99,24 @@ async function execute(sock, msg, args) {
         const track = spotifyResults[0];
         youtubeQuery = buildYoutubeQuery(track);
         caption = `🎵 ${track.name} — ${track.artists.join(', ')}`;
+        await progress.update(`🎯 Found "${track.name}" — searching YouTube...`);
+      } else {
+        // If Spotify returns nothing, youtubeQuery/caption keep the
+        // original raw query — this is the documented fallback path.
+        await progress.update('🔎 Searching YouTube...');
       }
-      // If Spotify returns nothing, youtubeQuery/caption keep the
-      // original raw query — this is the documented fallback path.
     } catch (spotifyErr) {
       // Spotify failing entirely is also a fallback trigger, not a
       // hard failure of the command.
       console.error('[.play] Spotify lookup failed, falling back to YouTube:', spotifyErr.message);
+      await progress.update('🔎 Searching YouTube...');
     }
 
     // Step 2: search YouTube using the best query we have.
     const youtubeResults = await youtube.searchVideos(youtubeQuery, { limit: 1 });
 
     if (youtubeResults.length === 0) {
+      await progress.fail();
       await sock.sendMessage(
         jid,
         { text: `No results found for "${query}".` },
@@ -115,6 +128,7 @@ async function execute(sock, msg, args) {
     const video = youtubeResults[0];
 
     // Step 3: download highest-quality audio only.
+    await progress.update('⬇️ Downloading audio...');
     audioResult = await youtube.downloadAudio(video.id);
 
     // Step 4: send as WhatsApp audio.
@@ -129,13 +143,11 @@ async function execute(sock, msg, args) {
     );
 
     await sock.sendMessage(jid, { text: caption }, { quoted: msg });
+
+    await progress.succeed();
   } catch (err) {
     console.error('[.play] Failed:', err);
-    await sock.sendMessage(
-      jid,
-      { text: `Couldn't play that track: ${err.message}` },
-      { quoted: msg }
-    );
+    await progress.fail();
   } finally {
     cleanupTempFile(audioResult && audioResult.filePath);
   }

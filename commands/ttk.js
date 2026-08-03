@@ -9,11 +9,16 @@
  * to WhatsApp. Completely separate from the YouTube command/provider.
  *
  * Flow:
- *   1. Take the raw URL argument as-is (providers/tiktok.js owns URL
+ *   1. React ⌛ and post a status message (lib/progressIndicator.js) so
+ *      the user sees the bot working instead of going quiet until the
+ *      video arrives.
+ *   2. Take the raw URL argument as-is (providers/tiktok.js owns URL
  *      validation — this file does not duplicate that logic).
- *   2. Download the video without watermark whenever possible.
- *   3. Send the video, then delete the temp file — success or
- *      failure.
+ *   3. Download the video without watermark whenever possible.
+ *   4. Send the video, then swap the reaction to ✅ and edit the status
+ *      message to "Task Completed" (or ❌ / "Task Failed" on any error
+ *      along the way).
+ *   5. Always delete the temp file — success or failure.
  *
  * NOTE ON INTEGRATION: this file assumes the common Baileys-style
  * command-module shape used elsewhere in Zorex Bot — a `name` plus an
@@ -27,6 +32,7 @@
 const fs = require('fs');
 
 const tiktok = require('../providers/tiktok');
+const { startProgress } = require('../lib/progressIndicator');
 
 /**
  * Removes a temp file if it exists, swallowing any error — cleanup
@@ -59,6 +65,8 @@ async function execute(sock, msg, args) {
     return;
   }
 
+  const progress = await startProgress(sock, msg, '⬇️ Downloading TikTok video...');
+
   let downloadResult;
 
   try {
@@ -76,13 +84,11 @@ async function execute(sock, msg, args) {
       },
       { quoted: msg }
     );
+
+    await progress.succeed();
   } catch (err) {
     console.error('[.ttk] Failed:', err);
-    await sock.sendMessage(
-      jid,
-      { text: `Couldn't fetch that TikTok: ${err.message}` },
-      { quoted: msg }
-    );
+    await progress.fail();
   } finally {
     // Step 4: always clean up the temp file.
     cleanupTempFile(downloadResult && downloadResult.filePath);
