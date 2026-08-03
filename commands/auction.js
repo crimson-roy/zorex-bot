@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { MAIN_OWNER } = require("../config");
 
 // PERSISTENCE FIX: these are real, mutated-at-runtime data files — routed
 // through dataPath() so they survive a redeploy instead of living on the
@@ -58,8 +59,19 @@ function saveCollection(data) { saveJSON(COLLECTION_FILE, data); }
 function loadInventory() { return loadJSON(INVENTORY_FILE, {}); }
 function saveInventory(data) { saveJSON(INVENTORY_FILE, data); }
 
-function loadOwners() { return loadJSON(OWNERS_FILE, ["2348036391250@s.whatsapp.net"]); }
-function isOwner(userId) { return loadOwners().includes(userId); }
+function loadOwners() {
+    return loadJSON(OWNERS_FILE, ["2348036391250@s.whatsapp.net"]);
+}
+
+function isOwner(userId) {
+    if (!userId) return false;
+
+    if (MAIN_OWNER && userId === MAIN_OWNER) {
+        return true;
+    }
+
+    return loadOwners().includes(userId);
+}
 
 let auctionTimer = null; // in-memory handle for the single global auction timer
 
