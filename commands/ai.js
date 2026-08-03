@@ -18,7 +18,10 @@
 
 const fs = require("fs");
 const path = require("path");
-const { downloadMediaMessage } = require("@whiskeysockets/baileys");
+async function getDownloadMediaMessage() {
+    const baileys = await import("@whiskeysockets/baileys");
+    return baileys.downloadMediaMessage;
+}
 
 const { callAI } = require("../lib/aiClient");
 const { callVision } = require("../lib/visionClient");
@@ -113,17 +116,29 @@ async function getQuotedMedia(sock, msg) {
         message: quoted
     };
 
-    if (quoted.imageMessage) {
-        const buffer = await downloadMediaMessage(fakeMsg, "buffer", {});
-        return { type: "image", buffer, mimeType: quoted.imageMessage.mimetype || "image/jpeg" };
-    }
+   if (quoted.imageMessage) {
+    const downloadMediaMessage = await getDownloadMediaMessage();
+    const buffer = await downloadMediaMessage(fakeMsg, "buffer", {});
 
-    if (quoted.documentMessage && (quoted.documentMessage.mimetype || "").includes("pdf")) {
-        const buffer = await downloadMediaMessage(fakeMsg, "buffer", {});
-        return { type: "pdf", buffer, mimeType: "application/pdf" };
-    }
+    return {
+        type: "image",
+        buffer,
+        mimeType: quoted.imageMessage.mimetype || "image/jpeg"
+    };
+}
 
-    return null;
+if (quoted.documentMessage && (quoted.documentMessage.mimetype || "").includes("pdf")) {
+    const downloadMediaMessage = await getDownloadMediaMessage();
+    const buffer = await downloadMediaMessage(fakeMsg, "buffer", {});
+
+    return {
+        type: "pdf",
+        buffer,
+        mimeType: "application/pdf"
+    };
+}
+
+return null;
 
 }
 
