@@ -147,7 +147,8 @@ const { addCardCommand } = require("./commands/addcard");
 const { removeCardCommand } = require("./commands/rcard");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
-const { upscleCommands } = require("./commands/upscale");
+const { upscleCommands } = require("./commands/upscle");
+const { graphicsCommands } = require("./commands/graphics");
 
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = dataPath("owners.json");
@@ -1845,9 +1846,13 @@ else if (text.startsWith(".mem")) {
 
     await companyCommand(sock, msg);
 
-    } else if (text === ".enhance" || text === ".fix" || text === ".fixquality") {
+   } else if (text === ".enhance" || text === ".fix" || text === ".fixquality") {
 
     await upscleCommands(sock, msg, text);
+
+} else if (text.startsWith(".fix ") || text.startsWith(".graph") || text === ".silhouette") {
+
+    await graphicsCommands(sock, msg, text);
 
 } else if (text.startsWith(".sell")) {
 
