@@ -68,13 +68,21 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const { downloadContentFromMessage } = await import('@whiskeysockets/baileys');
-
 const { upscaleImage } = require('../providers/upscale');
 const { startProgress } = require('../lib/progressIndicator');
 const { checkCooldown, setCooldown } = require('./cooldown');
 
-const COOLDOWN_MS = 60000; // 1 minute — protects the shared community Space from spam
+let baileys;
+
+async function getBaileys() {
+    if (!baileys) {
+        baileys = await import('@whiskeysockets/baileys');
+    }
+
+    return baileys;
+}
+
+const COOLDOWN_MS = 60000;; // 1 minute — protects the shared community Space from spam
 
 const TEMP_DIR = path.join(os.tmpdir(), 'zorex-upscle-command');
 
@@ -132,7 +140,9 @@ async function getQuotedImage(sock, msg) {
         message: quoted,
     };
 
-    const buffer = await downloadMediaMessage(fakeMsg, 'buffer', {});
+    const baileys = await getBaileys();
+    const { downloadMediaMessage } = await getBaileys();
+    const buffer = await baileys.downloadMediaMessage(fakeMsg, 'buffer', {});
     const mimeType = quoted.imageMessage.mimetype || 'image/jpeg';
 
     return { buffer, mimeType };
