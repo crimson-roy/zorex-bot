@@ -213,9 +213,9 @@ async function runUpscale(sock, msg, scale, cooldownKey, statusVerb) {
 console.log('[UPSCALE] output extension:', path.extname(outputPath));
 
         await sock.sendMessage(chatId, {
-            image: { url: outputPath },
-            mimetype: 'image/webp',
-        }, { quoted: msg });
+    image: fs.readFileSync(outputPath),
+    mimetype: 'image/webp',
+    }, { quoted: msg });
 
         await progress.succeed();
 
