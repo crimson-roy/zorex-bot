@@ -1,10 +1,17 @@
 const fs = require("fs");
-const { MAIN_OWNER } = require("../config");
 
 // PERSISTENCE FIX: these are real, mutated-at-runtime data files — routed
 // through dataPath() so they survive a redeploy instead of living on the
 // container's ephemeral disk. See lib/dataPath.js.
 const dataPath = require("../lib/dataPath");
+
+// OWNER CHECK FIX: isOwner() previously only checked owners.json, unlike
+// index.js and group.js which also always trust MAIN_OWNER from config.js.
+// It "worked" only by coincidence, because owners.json's fallback default
+// happened to match Lord Crimson's number — this breaks the moment
+// MAIN_OWNER changes or owners.json already exists without that entry.
+// Brought in line with index.js's isOwner() below.
+const { MAIN_OWNER } = require("../config");
 
 const AUCTION_ITEMS_FILE = dataPath("auctionitem.json");
 const AUCTION_FILE = dataPath("auction.json");
@@ -59,17 +66,13 @@ function saveCollection(data) { saveJSON(COLLECTION_FILE, data); }
 function loadInventory() { return loadJSON(INVENTORY_FILE, {}); }
 function saveInventory(data) { saveJSON(INVENTORY_FILE, data); }
 
-function loadOwners() {
-    return loadJSON(OWNERS_FILE, ["2348036391250@s.whatsapp.net"]);
-}
+function loadOwners() { return loadJSON(OWNERS_FILE, ["2348036391250@s.whatsapp.net"]); }
 
+// Now also always trusts MAIN_OWNER from config.js, same as index.js and
+// group.js — no longer relies solely on owners.json.
 function isOwner(userId) {
     if (!userId) return false;
-
-    if (MAIN_OWNER && userId === MAIN_OWNER) {
-        return true;
-    }
-
+    if (MAIN_OWNER && userId === MAIN_OWNER) return true;
     return loadOwners().includes(userId);
 }
 

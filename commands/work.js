@@ -1,7 +1,11 @@
 const fs = require("fs");
 const { checkCooldown, setCooldown } = require("./cooldown");
 
-const USERS_FILE = "./users.json";
+// PERSISTENCE FIX: routed through dataPath() — a redeploy wiping this
+// would silently break everyone's wallet. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+
+const USERS_FILE = dataPath("users.json");
 
 function loadUsers() {
     if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "{}");

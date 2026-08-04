@@ -2,7 +2,11 @@ const fs = require("fs");
 const { checkCooldown, setCooldown } = require("./cooldown");
 const { formatValue } = require("./misc");
 
-const USERS_FILE = "./users.json";
+// PERSISTENCE FIX: routed through dataPath() — a redeploy wiping this
+// would silently break everyone's wallet. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+
+const USERS_FILE = dataPath("users.json");
 const COOLDOWN_MS = 120000; // 2 minutes
 
 function loadUsers() {
