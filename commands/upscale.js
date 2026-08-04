@@ -209,6 +209,9 @@ async function runUpscale(sock, msg, scale, cooldownKey, statusVerb) {
         const result = await upscaleImage(inputPath, scale);
         outputPath = result.filePath;
 
+        console.log('[UPSCALE] outputPath:', outputPath);
+console.log('[UPSCALE] output extension:', path.extname(outputPath));
+
         await sock.sendMessage(chatId, {
             image: { url: outputPath },
             mimetype: 'image/webp',
