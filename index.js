@@ -147,7 +147,7 @@ const { addCardCommand } = require("./commands/addcard");
 const { removeCardCommand } = require("./commands/rcard");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
-const { upscleCommands } = require("./commands/upscle");
+const { upscleCommands } = require("./commands/upscale");
 
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = dataPath("owners.json");
