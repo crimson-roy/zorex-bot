@@ -14,6 +14,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@gradio/client": "^2.4.0",
     "@tobyg74/tiktok-api-dl": "^1.3.7",
     "@whiskeysockets/baileys": "^7.0.0-rc14",
     "axios": "^1.18.1",
