@@ -68,7 +68,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { downloadContentFromMessage } = await import('@whiskeysockets/baileys');
 
 const { upscaleImage } = require('../providers/upscale');
 const { startProgress } = require('../lib/progressIndicator');
