@@ -149,6 +149,7 @@ const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
 const { upscleCommands } = require("./commands/upscle");
 const { graphicsCommands } = require("./commands/graphics");
+const { videoUpscaleCommands } = require('./commands/videoUpscale');
 
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = dataPath("owners.json");
@@ -1853,6 +1854,9 @@ else if (text.startsWith(".mem")) {
 } else if (text.startsWith(".fix ") || text.startsWith(".graph") || text === ".silhouette") {
 
     await graphicsCommands(sock, msg, text);
+
+} else if (text.startsWith('.upscale') || text.startsWith('.fps') || text.startsWith('.bitrate')) {
+    return await videoUpscaleCommands(sock, msg, text);
 
 } else if (text.startsWith(".sell")) {
 
