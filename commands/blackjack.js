@@ -1,8 +1,15 @@
 const fs = require("fs");
 const { checkCooldown, setCooldown } = require("./cooldown");
 
-const USERS_FILE = "./users.json";
-const BJ_FILE = "./blackjack.json";
+// PERSISTENCE FIX: these used to be bare relative paths ("./users.json",
+// "./blackjack.json"), which live on the container's ephemeral disk and
+// get wiped on every redeploy. Routed through dataPath() so they persist
+// on the attached Railway Volume instead — same fix already applied in
+// economy.js/auction.js/owner.js/dig.js/rob.js. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+
+const USERS_FILE = dataPath("users.json");
+const BJ_FILE = dataPath("blackjack.json");
 
 const COOLDOWN_MS = 30000;
 

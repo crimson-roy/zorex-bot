@@ -9,6 +9,16 @@ const { resetUserDailyLimit, resetAllDailyLimits } = require("./dailylimit");
 // the attached Railway Volume instead. See lib/dataPath.js.
 const dataPath = require("../lib/dataPath");
 
+// OWNER CHECK FIX: isOwner() below previously only checked owners.json,
+// unlike auction.js (and index.js/group.js) which also always trusts
+// MAIN_OWNER from config.js. It "worked" only by coincidence, because
+// owners.json's fallback default happened to match Lord Crimson's
+// number — this breaks the moment MAIN_OWNER changes or owners.json
+// already exists without that entry. .setrole (and every other command
+// below gated by isOwner()) now checks MAIN_OWNER first, same as
+// auction.js's isOwner().
+const { MAIN_OWNER } = require("../config");
+
 const OWNERS_FILE = dataPath("owners.json");
 const USERS_FILE = dataPath("users.json");
 
@@ -37,7 +47,13 @@ function loadOwners() {
 }
 
 
+// Now also always trusts MAIN_OWNER from config.js, same as auction.js —
+// no longer relies solely on owners.json.
 function isOwner(userId) {
+
+    if (!userId) return false;
+
+    if (MAIN_OWNER && userId === MAIN_OWNER) return true;
 
     const owners = loadOwners();
 

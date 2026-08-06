@@ -4,7 +4,14 @@ const { getPartner } = require("./marry");
 const fs = require("fs");
 const { formatValue } = require("./misc");
 
-const USERS_FILE = "./users.json";
+// PERSISTENCE FIX: this used to be a bare relative path ("./users.json"),
+// which lives on the container's ephemeral disk and gets wiped on every
+// redeploy. Routed through dataPath() so it persists on the attached
+// Railway Volume instead — same fix already applied in economy.js/
+// auction.js/owner.js. See lib/dataPath.js.
+const dataPath = require("../lib/dataPath");
+
+const USERS_FILE = dataPath("users.json");
 const COOLDOWN_MS = 120000; // 2 minutes
 
 function loadUsers() {
