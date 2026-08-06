@@ -7,18 +7,20 @@
 //   node tools/importCard.js "Rem" --all
 //   node tools/importCard.js "69f4fdd0-9ca0-4dde-ab7f-81aa81f18a54"
 //
-// IMPORTANT:
-// - BOT_ID is the short ID used by Zorex (.cs <BOT_ID>)
-// - mazokuId is Mazoku's long UUID and is stored separately
-// - The importer generates the BOT_ID automatically
-// - Images are downloaded only when they do not already exist
+// Media handling:
+//   C / R / S / SR  -> downloaded as image and converted to JPG
+//   SSR / UR        -> downloaded from Mazoku's video endpoint
+//                    -> actual Content-Type is detected
+//                    -> WebM is converted to REAL MP4
 //
-// Supported tiers:
-//   UR, SSR, SR, S, R, C
+// IMPORTANT:
+// Mazoku may return video/webm even when the URL ends in .mp4.
+// Therefore we NEVER trust the URL extension.
 
 const fs = require("fs");
 const path = require("path");
-const https = require("https");
+const { spawn } = require("child_process");
+const sharp = require("sharp");
 
 const CARD_FILE = path.join(__dirname, "..", "card.json");
 const CARD_DIR = path.join(__dirname, "..", "cards");
@@ -72,19 +74,28 @@ const TIER_ORDER = [
 ];
 
 // --------------------------------------------------
+// ANIMATED TIERS
+// --------------------------------------------------
+//
+// These are the tiers that should be animated.
+//
+// If Mazoku later adds another animated tier,
+// simply add it here.
+// --------------------------------------------------
+
+const ANIMATED_TIERS = new Set([
+    "UR",
+    "SSR"
+]);
+
+// --------------------------------------------------
 // FILE HELPERS
 // --------------------------------------------------
 
 function loadCards() {
 
     if (!fs.existsSync(CARD_FILE)) {
-
-        fs.writeFileSync(
-            CARD_FILE,
-            "{}",
-            "utf8"
-        );
-
+        fs.writeFileSync(CARD_FILE, "{}", "utf8");
     }
 
     try {
@@ -134,16 +145,6 @@ function ensureCardDirectory() {
 // --------------------------------------------------
 // BOT ID GENERATOR
 // --------------------------------------------------
-//
-// This is the ID Zorex uses with:
-//
-//   .cs <BOT_ID>
-//
-// Mazoku UUID is stored separately as:
-//
-//   mazokuId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-//
-// --------------------------------------------------
 
 function generateBotId(cards) {
 
@@ -151,7 +152,6 @@ function generateBotId(cards) {
 
     do {
 
-        // 8-digit BOT ID
         botId = String(
             Math.floor(
                 10000000 +
@@ -166,7 +166,7 @@ function generateBotId(cards) {
 }
 
 // --------------------------------------------------
-// MAZOKU API ERROR HANDLER
+// API ERROR
 // --------------------------------------------------
 
 async function getApiErrorMessage(response) {
@@ -251,6 +251,7 @@ async function searchByMazokuId(
         `&pageSize=100` +
         `&orderBy=version` +
         `&order=ASC`;
+        `&spicy=false`;
 
     console.log(
         `📡 Looking up Mazoku ID...`
@@ -281,23 +282,6 @@ async function searchByMazokuId(
 
 // --------------------------------------------------
 // SEARCH BY NAME
-// --------------------------------------------------
-//
-// IMPORTANT:
-//
-// Instead of doing:
-//
-//   page 1
-//   page 2
-//   page 3
-//   ...
-//   page 121
-//
-// we now ask Mazoku:
-//
-//   ?name=Makima
-//
-// This lets the API perform the search.
 // --------------------------------------------------
 
 async function searchByName(
@@ -354,7 +338,6 @@ async function searchCards(
     const cleanSearch =
         searchTerm.trim();
 
-    // Mazoku UUID format
     const looksLikeId =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
             .test(cleanSearch);
@@ -367,7 +350,6 @@ async function searchCards(
 
     }
 
-    // Use Mazoku's server-side name search
     return searchByName(
         cleanSearch
     );
@@ -375,136 +357,284 @@ async function searchCards(
 }
 
 // --------------------------------------------------
-// IMAGE PATHS
+// MEDIA TYPE
 // --------------------------------------------------
-//
-// Images use the BOT_ID filename so our local card
-// system remains completely independent from Mazoku.
-//
-// Example:
-//
-// BOT ID:
-// 48372915
-//
-// Image:
-// cards/48372915.webp
-//
-// Mazoku UUID:
-// 69f4fdd0-9ca0-4dde-ab7f-81aa81f18a54
-//
+
+function isAnimatedTier(tier) {
+
+    return ANIMATED_TIERS.has(
+        String(tier).toUpperCase()
+    );
+
+}
+
+// --------------------------------------------------
+// FILE PATHS
 // --------------------------------------------------
 
 function getImagePath(botId) {
 
     return path.join(
         CARD_DIR,
-        `${botId}.webp`
+        `${botId}.jpg`
+    );
+
+}
+
+function getVideoPath(botId) {
+
+    return path.join(
+        CARD_DIR,
+        `${botId}.mp4`
     );
 
 }
 
 function getImageRelativePath(botId) {
 
-    return `./cards/${botId}.webp`;
+    return `./cards/${botId}.jpg`;
+
+}
+
+function getVideoRelativePath(botId) {
+
+    return `./cards/${botId}.mp4`;
 
 }
 
 // --------------------------------------------------
-// DOWNLOAD IMAGE
+// DELETE OLD MEDIA
 // --------------------------------------------------
 
-function downloadImage(
-    url,
+function removeOldMedia(botId) {
+
+    const extensions = [
+        ".webp",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".webm",
+        ".mp4"
+    ];
+
+    for (const ext of extensions) {
+
+        const file =
+            path.join(
+                CARD_DIR,
+                `${botId}${ext}`
+            );
+
+        if (fs.existsSync(file)) {
+
+            try {
+
+                fs.unlinkSync(file);
+
+                console.log(
+                    `   🗑️ Removed old media: ${path.basename(file)}`
+                );
+
+            } catch (err) {
+
+                console.warn(
+                    `   ⚠️ Could not remove ${file}: ${err.message}`
+                );
+
+            }
+
+        }
+
+    }
+
+}
+
+// --------------------------------------------------
+// FETCH MEDIA
+// --------------------------------------------------
+//
+// Returns:
+//
+// {
+//   buffer,
+//   contentType
+// }
+//
+// We inspect Content-Type instead of trusting
+// ".webp", ".mp4", or ".gif" in the URL.
+// --------------------------------------------------
+
+async function fetchMedia(
+    url
+) {
+
+    console.log(
+        `   🌐 ${url}`
+    );
+
+    const response =
+        await fetch(url);
+
+    if (!response.ok) {
+
+        throw new Error(
+            `Media download failed: ${response.status} ${response.statusText}`
+        );
+
+    }
+
+    const contentType =
+        (
+            response.headers.get("content-type") ||
+            ""
+        )
+        .split(";")[0]
+        .trim()
+        .toLowerCase();
+
+    const buffer =
+        Buffer.from(
+            await response.arrayBuffer()
+        );
+
+    console.log(
+        `   📦 HTTP ${response.status}`
+    );
+
+    console.log(
+        `   📄 Content-Type: ${contentType || "unknown"}`
+    );
+
+    console.log(
+        `   📏 Size: ${(buffer.length / 1024 / 1024).toFixed(2)} MB`
+    );
+
+    return {
+        buffer,
+        contentType
+    };
+
+}
+
+// --------------------------------------------------
+// SAVE STATIC IMAGE
+// --------------------------------------------------
+//
+// Mazoku gives us WebP.
+// We convert it to a real JPG.
+//
+// This prevents WhatsApp from having to deal with
+// the original WebP file.
+// --------------------------------------------------
+
+async function saveStaticImage(
+    buffer,
     destination
+) {
+
+    await sharp(buffer)
+        .jpeg({
+            quality: 95,
+            mozjpeg: true
+        })
+        .toFile(destination);
+
+}
+
+// --------------------------------------------------
+// RUN FFMPEG
+// --------------------------------------------------
+
+function runFFmpeg(
+    input,
+    output
 ) {
 
     return new Promise(
         (resolve, reject) => {
 
-            const file =
-                fs.createWriteStream(
-                    destination
-                );
+            console.log(
+                `   🎬 Converting video to MP4...`
+            );
 
-            const request =
-                https.get(
-                    url,
-                    response => {
+            const args = [
+                "-y",
 
-                        // Handle redirects
-                        if (
-                            response.statusCode >= 300 &&
-                            response.statusCode < 400 &&
-                            response.headers.location
-                        ) {
+                "-i",
+                input,
 
-                            file.close();
+                // Keep the card vertical while making sure
+                // WhatsApp receives a normal MP4.
+                "-vf",
+                "scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2",
 
-                            fs.unlink(
-                                destination,
-                                () => {}
-                            );
+                "-c:v",
+                "libx264",
 
-                            return downloadImage(
-                                response.headers.location,
-                                destination
-                            )
-                                .then(resolve)
-                                .catch(reject);
+                "-pix_fmt",
+                "yuv420p",
 
-                        }
+                "-movflags",
+                "+faststart",
 
-                        if (
-                            response.statusCode !== 200
-                        ) {
+                // Cards don't need audio.
+                "-an",
 
-                            file.close();
+                output
+            ];
 
-                            fs.unlink(
-                                destination,
-                                () => {}
-                            );
-
-                            reject(
-                                new Error(
-                                    `Image download failed: ${response.statusCode}`
-                                )
-                            );
-
-                            return;
-
-                        }
-
-                        response.pipe(file);
-
-                        file.on(
-                            "finish",
-                            () => {
-
-                                file.close(
-                                    () => {
-                                        resolve();
-                                    }
-                                );
-
-                            }
-                        );
-
+            const ffmpeg =
+                spawn(
+                    "ffmpeg",
+                    args,
+                    {
+                        windowsHide: true
                     }
                 );
 
-            request.on(
+            let stderr = "";
+
+            ffmpeg.stderr.on(
+                "data",
+                data => {
+
+                    stderr +=
+                        data.toString();
+
+                }
+            );
+
+            ffmpeg.on(
                 "error",
                 err => {
 
-                    file.close();
-
-                    fs.unlink(
-                        destination,
-                        () => {}
+                    reject(
+                        new Error(
+                            `Could not start FFmpeg. Make sure FFmpeg is installed and available in PATH.\n${err.message}`
+                        )
                     );
 
-                    reject(err);
+                }
+            );
+
+            ffmpeg.on(
+                "close",
+                code => {
+
+                    if (code === 0) {
+
+                        resolve();
+
+                    } else {
+
+                        reject(
+                            new Error(
+                                `FFmpeg exited with code ${code}\n${stderr.slice(-2000)}`
+                            )
+                        );
+
+                    }
 
                 }
             );
@@ -515,17 +645,102 @@ function downloadImage(
 }
 
 // --------------------------------------------------
-// DUPLICATE CHECK
+// SAVE ANIMATED CARD
 // --------------------------------------------------
 //
-// We DO NOT use the Mazoku UUID as the Zorex card ID.
+// Mazoku's ".mp4" endpoint can return video/webm.
 //
-// Instead, search through card.json for:
-//
-//   mazokuId === Mazoku UUID
-//
-// This prevents importing the same Mazoku card twice,
-// even if the BOT_ID is different.
+// We therefore:
+//   1. Fetch it
+//   2. Inspect Content-Type
+//   3. Save the original response as a temporary file
+//   4. Let FFmpeg read it based on actual media data
+//   5. Produce a genuine MP4
+// --------------------------------------------------
+
+async function saveAnimatedVideo(
+    buffer,
+    contentType,
+    botId
+) {
+
+    const tempExtension =
+        contentType.includes("webm")
+            ? ".webm"
+            : contentType.includes("mp4")
+                ? ".mp4"
+                : ".media";
+
+    const tempPath =
+        path.join(
+            CARD_DIR,
+            `.tmp_${botId}${tempExtension}`
+        );
+
+    const outputPath =
+        getVideoPath(botId);
+
+    try {
+
+        fs.writeFileSync(
+            tempPath,
+            buffer
+        );
+
+        console.log(
+            `   💾 Temporary media: ${path.basename(tempPath)}`
+        );
+
+        // If Mazoku really returns MP4, FFmpeg still normalizes
+        // it into our WhatsApp-friendly MP4.
+        await runFFmpeg(
+            tempPath,
+            outputPath
+        );
+
+        if (!fs.existsSync(outputPath)) {
+
+            throw new Error(
+                "FFmpeg finished but the MP4 file was not created."
+            );
+
+        }
+
+        const size =
+            fs.statSync(outputPath).size;
+
+        if (size === 0) {
+
+            throw new Error(
+                "Generated MP4 is empty."
+            );
+
+        }
+
+        console.log(
+            `   ✅ MP4 saved → ${getVideoRelativePath(botId)}`
+        );
+
+        console.log(
+            `   📏 Final size: ${(size / 1024 / 1024).toFixed(2)} MB`
+        );
+
+    } finally {
+
+        if (fs.existsSync(tempPath)) {
+
+            try {
+                fs.unlinkSync(tempPath);
+            } catch (_) {}
+
+        }
+
+    }
+
+}
+
+// --------------------------------------------------
+// FIND EXISTING CARD
 // --------------------------------------------------
 
 function findExistingCard(
@@ -555,7 +770,7 @@ function findExistingCard(
 }
 
 // --------------------------------------------------
-// IMPORT ONE CARD
+// IMPORT / REPAIR ONE CARD
 // --------------------------------------------------
 
 async function importOne(
@@ -590,38 +805,6 @@ async function importOne(
             "C"
         ).toUpperCase();
 
-    // --------------------------------------------------
-    // CHECK IF MAZOKU CARD ALREADY EXISTS
-    // --------------------------------------------------
-
-    const existingBotId =
-        findExistingCard(
-            cards,
-            mazokuId
-        );
-
-    if (existingBotId) {
-
-        console.log(
-            `   ⏭️ "${name}" already imported.`
-        );
-
-        console.log(
-            `      BOT ID: ${existingBotId}`
-        );
-
-        console.log(
-            `      Mazoku ID: ${mazokuId}`
-        );
-
-        return null;
-
-    }
-
-    // --------------------------------------------------
-    // VALIDATE TIER
-    // --------------------------------------------------
-
     if (!TIER_VALUES[tier]) {
 
         console.log(
@@ -633,114 +816,266 @@ async function importOne(
     }
 
     // --------------------------------------------------
-    // GENERATE ZOREX BOT ID
+    // FIND EXISTING CARD
     // --------------------------------------------------
 
-    const botId =
-        generateBotId(cards);
+    let botId =
+        findExistingCard(
+            cards,
+            mazokuId
+        );
 
-    ensureCardDirectory();
+    const alreadyExists =
+        Boolean(botId);
 
-    const imagePath =
-        getImagePath(botId);
+    if (!botId) {
 
-    const imageRelativePath =
-        getImageRelativePath(botId);
-
-    // --------------------------------------------------
-    // IMAGE DOWNLOAD CHECK
-    // --------------------------------------------------
-
-    if (fs.existsSync(imagePath)) {
+        botId =
+            generateBotId(cards);
 
         console.log(
-            `   ♻️ Image already downloaded — skipping download.`
+            `   🆕 New card`
+        );
+
+        console.log(
+            `      BOT ID: ${botId}`
         );
 
     } else {
 
-        const imageUrl =
-            `${MAZOKU_CDN}/${mazokuId}.webp?width=750`;
-
         console.log(
-            `   ⬇️ Downloading ${name}...`
+            `   🔎 Existing card found`
         );
 
         console.log(
-            `   🌐 ${imageUrl}`
-        );
-
-        await downloadImage(
-            imageUrl,
-            imagePath
-        );
-
-        console.log(
-            `   ✅ Image saved → ${imageRelativePath}`
+            `      BOT ID: ${botId}`
         );
 
     }
 
-    // --------------------------------------------------
-    // TIER VALUE
-    // --------------------------------------------------
-
-    const {
-        min,
-        max
-    } = TIER_VALUES[tier];
+    ensureCardDirectory();
 
     // --------------------------------------------------
-    // SAVE CARD
-    // --------------------------------------------------
-    //
-    // IMPORTANT:
-    //
-    // card.json key = BOT ID
-    //
-    // mazokuId = Mazoku's UUID
-    //
-    // This means .cs continues to use:
-    //
-    // .cs 48372915
-    //
-    // NOT:
-    //
-    // .cs 69f4fdd0-9ca0-4dde-ab7f-81aa81f18a54
-    //
+    // DETERMINE MEDIA TYPE
     // --------------------------------------------------
 
-    cards[botId] = {
-
-        name,
-
-        series,
-
-        tier,
-
-        valueMin: min,
-
-        valueMax: max,
-
-        type: "card",
-
-        image: imageRelativePath,
-
-        // Mazoku's original card UUID
-        mazokuId,
-
-        eventName:
-            card.eventName ||
-            null,
-
-        special:
-            Boolean(card.special)
-
-    };
+    const animated =
+        isAnimatedTier(tier);
 
     console.log(
-        `   ✅ Imported ${name} [${tier}]`
+        `   🎞️ Media type: ${animated ? "ANIMATED VIDEO" : "STATIC IMAGE"}`
     );
+
+    // --------------------------------------------------
+    // ANIMATED CARD
+    // --------------------------------------------------
+
+    if (animated) {
+
+        const videoPath =
+            getVideoPath(botId);
+
+        const imagePath =
+            getImagePath(botId);
+
+        // If it already has a real MP4, don't download again.
+        // BUT if card.json currently points to an image,
+        // we repair it.
+        const hasValidVideo =
+            fs.existsSync(videoPath) &&
+            fs.statSync(videoPath).size > 0;
+
+        if (hasValidVideo) {
+
+            console.log(
+                `   ✅ Existing MP4 found — keeping it.`
+            );
+
+        } else {
+
+            // Remove stale image/media before creating the video.
+            removeOldMedia(botId);
+
+            const videoUrl =
+                `${MAZOKU_CDN}/${mazokuId}.mp4?width=750`;
+
+            console.log(
+                `   ⬇️ Downloading animated ${name}...`
+            );
+
+            const media =
+                await fetchMedia(
+                    videoUrl
+                );
+
+            // IMPORTANT:
+            // We don't care that the URL says .mp4.
+            // Mazoku may return video/webm.
+            if (
+                !media.contentType.startsWith("video/")
+            ) {
+
+                throw new Error(
+                    `Expected animated media, but Mazoku returned "${media.contentType || "unknown"}".`
+                );
+
+            }
+
+            await saveAnimatedVideo(
+                media.buffer,
+                media.contentType,
+                botId
+            );
+
+        }
+
+        // Make absolutely sure the card points to video.
+        cards[botId] = {
+
+            name,
+
+            series,
+
+            tier,
+
+            valueMin:
+                TIER_VALUES[tier].min,
+
+            valueMax:
+                TIER_VALUES[tier].max,
+
+            type: "card",
+
+            video:
+                getVideoRelativePath(botId),
+
+            mazokuId,
+
+            eventName:
+                card.eventName ||
+                null,
+
+            special:
+                Boolean(card.special)
+
+        };
+
+    }
+
+    // --------------------------------------------------
+    // STATIC CARD
+    // --------------------------------------------------
+
+    else {
+
+        const imagePath =
+            getImagePath(botId);
+
+        const videoPath =
+            getVideoPath(botId);
+
+        const hasValidImage =
+            fs.existsSync(imagePath) &&
+            fs.statSync(imagePath).size > 0;
+
+        if (hasValidImage) {
+
+            console.log(
+                `   ✅ Existing JPG found — keeping it.`
+            );
+
+        } else {
+
+            removeOldMedia(botId);
+
+            const imageUrl =
+                `${MAZOKU_CDN}/${mazokuId}.webp?width=750`;
+
+            console.log(
+                `   ⬇️ Downloading ${name}...`
+            );
+
+            const media =
+                await fetchMedia(
+                    imageUrl
+                );
+
+            if (
+                !media.contentType.startsWith("image/")
+            ) {
+
+                throw new Error(
+                    `Expected an image, but Mazoku returned "${media.contentType || "unknown"}".`
+                );
+
+            }
+
+            await saveStaticImage(
+                media.buffer,
+                imagePath
+            );
+
+            console.log(
+                `   ✅ JPG saved → ${getImageRelativePath(botId)}`
+            );
+
+        }
+
+        // Make sure static cards aren't still pointing
+        // at an old video.
+        if (fs.existsSync(videoPath)) {
+
+            try {
+                fs.unlinkSync(videoPath);
+            } catch (_) {}
+
+        }
+
+        cards[botId] = {
+
+            name,
+
+            series,
+
+            tier,
+
+            valueMin:
+                TIER_VALUES[tier].min,
+
+            valueMax:
+                TIER_VALUES[tier].max,
+
+            type: "card",
+
+            image:
+                getImageRelativePath(botId),
+
+            mazokuId,
+
+            eventName:
+                card.eventName ||
+                null,
+
+            special:
+                Boolean(card.special)
+
+        };
+
+    }
+
+    if (alreadyExists) {
+
+        console.log(
+            `   🔧 Card repaired/verified successfully.`
+        );
+
+    } else {
+
+        console.log(
+            `   ✅ Imported ${name} [${tier}]`
+        );
+
+    }
 
     console.log(
         `      BOT ID: ${botId}`
@@ -824,7 +1159,7 @@ Examples:
     }
 
     // --------------------------------------------------
-    // SORT RESULTS BY TIER
+    // SORT BY TIER
     // --------------------------------------------------
 
     results.sort(
@@ -909,12 +1244,21 @@ Examples:
         );
 
         let added = 0;
+        let repaired = 0;
         let skipped = 0;
         let failed = 0;
 
         for (
             const card of results
         ) {
+
+            const existedBefore =
+                Boolean(
+                    findExistingCard(
+                        cards,
+                        card.id
+                    )
+                );
 
             try {
 
@@ -926,7 +1270,11 @@ Examples:
 
                 if (id) {
 
-                    added++;
+                    if (existedBefore) {
+                        repaired++;
+                    } else {
+                        added++;
+                    }
 
                 } else {
 
@@ -952,9 +1300,10 @@ Examples:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Mazoku import complete
 
-🎴 Added:   ${added}
-♻️ Skipped: ${skipped}
-❌ Failed:  ${failed}
+🎴 Added:    ${added}
+🔧 Repaired: ${repaired}
+♻️ Skipped:  ${skipped}
+❌ Failed:   ${failed}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
 
@@ -1031,6 +1380,24 @@ Examples:
     console.log(
         `🆔 Mazoku ID: ${selected.id}`
     );
+
+    const existingBotId =
+        findExistingCard(
+            cards,
+            selected.id
+        );
+
+    if (existingBotId) {
+
+        console.log(
+            `🔧 Existing BOT ID found: ${existingBotId}`
+        );
+
+        console.log(
+            `🔄 Checking/repairing its media...`
+        );
+
+    }
 
     const id =
         await importOne(

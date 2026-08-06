@@ -558,7 +558,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/13537376.jpg",
+    "video": "./cards/13537376.mp4",
     "mazokuId": "e71a1077-6397-40e2-aee2-685f8e40f5e0",
     "eventName": "special",
     "special": true
@@ -630,7 +630,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/13861882.jpg",
+    "video": "./cards/13861882.mp4",
     "mazokuId": "3157f891-de00-478b-93b7-83f595f15975",
     "eventName": "summer_2025",
     "special": false
@@ -1254,7 +1254,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/17126316.jpg",
+    "video": "./cards/17126316.mp4",
     "mazokuId": "a7132fd0-3aa0-471c-a730-6036002cdf4e",
     "eventName": "default",
     "special": false
@@ -2154,7 +2154,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/22934005.jpg",
+    "video": "./cards/22934005.mp4",
     "mazokuId": "0cb628d4-bedf-4ac4-8450-f60f2516cfa9",
     "eventName": "special",
     "special": true
@@ -2168,6 +2168,18 @@
     "type": "card",
     "image": "./cards/22953941.jpg",
     "mazokuId": "b9fae22f-fb42-4361-8a7b-a47a034bbc8f",
+    "eventName": "default",
+    "special": false
+  },
+  "23030158": {
+    "name": "Mai Sakurajima",
+    "series": "Seishun Buta Yarou",
+    "tier": "R",
+    "valueMin": 200000,
+    "valueMax": 350000,
+    "type": "card",
+    "image": "./cards/23030158.jpg",
+    "mazokuId": "676c7e06-4d16-4d89-a85f-89427d2380ff",
     "eventName": "default",
     "special": false
   },
@@ -2250,7 +2262,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/23299477.jpg",
+    "video": "./cards/23299477.mp4",
     "mazokuId": "53be230b-2f83-454b-b12e-ea2c600f9c50",
     "eventName": "special",
     "special": true
@@ -2310,7 +2322,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/23688232.jpg",
+    "video": "./cards/23688232.mp4",
     "mazokuId": "b354ec9f-cab2-48e9-837c-659b775bd443",
     "eventName": "default",
     "special": true
@@ -2490,7 +2502,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/24790122.jpg",
+    "video": "./cards/24790122.mp4",
     "mazokuId": "055369bc-e4ec-4fb6-8199-5ddd2ace141f",
     "eventName": "halloween_2024",
     "special": false
@@ -3215,6 +3227,18 @@
     "eventName": "lny_2026",
     "special": false
   },
+  "29681968": {
+    "name": "Mai Sakurajima",
+    "series": "Seishun Buta Yarou",
+    "tier": "C",
+    "valueMin": 50000,
+    "valueMax": 100000,
+    "type": "card",
+    "image": "./cards/29681968.jpg",
+    "mazokuId": "680b17dc-8aa6-47c0-b91f-3c17287b18d3",
+    "eventName": "halloween_2024",
+    "special": false
+  },
   "29697722": {
     "name": "Rem",
     "series": "Re:Zero",
@@ -3222,7 +3246,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/29697722.jpg",
+    "video": "./cards/29697722.mp4",
     "mazokuId": "a7d1caa8-8a2b-49f9-81c0-5bef3e150e44",
     "eventName": "halloween_2024",
     "special": false
@@ -3354,7 +3378,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/30591692.jpg",
+    "video": "./cards/30591692.mp4",
     "mazokuId": "6944d03f-cc22-434c-a9fc-4e791dac46ef",
     "eventName": "default",
     "special": false
@@ -3378,7 +3402,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/30679245.jpg",
+    "video": "./cards/30679245.mp4",
     "mazokuId": "59e04c5d-c6d6-45fc-9b12-57723ddbc0f6",
     "eventName": "special",
     "special": true
@@ -3630,7 +3654,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/32568704.jpg",
+    "video": "./cards/32568704.mp4",
     "mazokuId": "876406a2-dd7c-496a-8004-86558c5e3b25",
     "eventName": "maid_2025",
     "special": false
@@ -3786,7 +3810,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/33441740.jpg",
+    "video": "./cards/33441740.mp4",
     "mazokuId": "0e4c552e-7c8b-4d49-8c88-19bf1a3cae81",
     "eventName": "summer_2025",
     "special": false
@@ -4446,7 +4470,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/38337074.jpg",
+    "video": "./cards/38337074.mp4",
     "mazokuId": "993bd3ec-b391-4936-ac55-7856b29c01a6",
     "eventName": "halloween_2025",
     "special": false
@@ -5034,7 +5058,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/42051899.jpg",
+    "video": "./cards/42051899.mp4",
     "mazokuId": "a3cb1af5-99c0-49bb-baea-288b10bc1090",
     "eventName": "default",
     "special": false
@@ -5598,7 +5622,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/46036613.jpg",
+    "video": "./cards/46036613.mp4",
     "mazokuId": "c539b866-1502-4131-82b1-2ebd7d552a6f",
     "eventName": "summer_2025",
     "special": false
@@ -5865,6 +5889,18 @@
     "image": "./cards/47668613.jpg",
     "mazokuId": "864a7898-3159-463f-9d74-558f08659b1d",
     "eventName": "summer_2025",
+    "special": false
+  },
+  "47694256": {
+    "name": "Kurisu Makise",
+    "series": "Steins; Gate",
+    "tier": "C",
+    "valueMin": 50000,
+    "valueMax": 100000,
+    "type": "card",
+    "image": "./cards/47694256.jpg",
+    "mazokuId": "f4b0363a-56fe-4572-9e47-60b559a16faf",
+    "eventName": "default",
     "special": false
   },
   "47737750": {
@@ -6150,7 +6186,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/49272907.jpg",
+    "video": "./cards/49272907.mp4",
     "mazokuId": "b6a1d0a4-8a76-4a96-af16-b8016600ca54",
     "eventName": "gala-2026",
     "special": false
@@ -6383,6 +6419,18 @@
     "eventName": "default",
     "special": false
   },
+  "50918343": {
+    "name": "Sakura Matou",
+    "series": "Fate Series",
+    "tier": "C",
+    "valueMin": 50000,
+    "valueMax": 100000,
+    "type": "card",
+    "image": "./cards/50918343.jpg",
+    "mazokuId": "ab260d58-ab49-4df7-ac9f-4ac1830aeaba",
+    "eventName": "default",
+    "special": false
+  },
   "51006520": {
     "name": "Leviathan (Boss)",
     "series": "NIKKE",
@@ -6402,7 +6450,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/51031250.jpg",
+    "video": "./cards/51031250.mp4",
     "mazokuId": "7923231e-2970-48ed-a593-3152c320d7ad",
     "eventName": "special",
     "special": true
@@ -7122,7 +7170,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/55811276.jpg",
+    "video": "./cards/55811276.mp4",
     "mazokuId": "6ca5afad-854c-4021-8939-297133b8bd96",
     "eventName": "maid_2025",
     "special": false
@@ -7319,6 +7367,18 @@
     "eventName": "summer_2025",
     "special": false
   },
+  "57782016": {
+    "name": "Sakura Matou",
+    "series": "Fate Series",
+    "tier": "R",
+    "valueMin": 200000,
+    "valueMax": 350000,
+    "type": "card",
+    "image": "./cards/57782016.jpg",
+    "mazokuId": "5daa4f53-3e1a-46b0-8deb-cdb06dfc7c5a",
+    "eventName": "default",
+    "special": false
+  },
   "57797774": {
     "name": "Reira Tamaki",
     "series": "Utagoe wa Mille-Feuille",
@@ -7362,7 +7422,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/58092214.jpg",
+    "video": "./cards/58092214.mp4",
     "mazokuId": "22eceb73-8e8e-4aae-b9c6-7e2b6c565d2d",
     "eventName": "requiem-corruption",
     "special": true
@@ -7434,7 +7494,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/58557740.jpg",
+    "video": "./cards/58557740.mp4",
     "mazokuId": "8ca7332f-df0d-45b0-8de4-a354ad5fcbd0",
     "eventName": "maid_2025",
     "special": false
@@ -8531,6 +8591,18 @@
     "eventName": "default",
     "special": false
   },
+  "65773373": {
+    "name": "Mai Sakurajima",
+    "series": "Seishun Buta Yarou",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./cards/65773373.jpg",
+    "mazokuId": "db83a671-f1bb-4bae-ac8d-5a0a276b7b7f",
+    "eventName": "default",
+    "special": false
+  },
   "65800161": {
     "name": "Mahiro Yuki",
     "series": "HANA-Doll*",
@@ -8814,7 +8886,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/67473091.jpg",
+    "video": "./cards/67473091.mp4",
     "mazokuId": "41429ff7-94b1-4732-b453-cdefbafd0000",
     "eventName": "default",
     "special": false
@@ -9270,7 +9342,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/69959061.jpg",
+    "video": "./cards/69959061.mp4",
     "mazokuId": "e0109c2c-a1f6-4143-9321-1a146ec7ef12",
     "eventName": "default",
     "special": false
@@ -9390,7 +9462,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/70392649.jpg",
+    "video": "./cards/70392649.mp4",
     "mazokuId": "8f4f6515-cf73-4c43-b404-8724c5def566",
     "eventName": "special",
     "special": true
@@ -9690,7 +9762,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/72338094.jpg",
+    "video": "./cards/72338094.mp4",
     "mazokuId": "356f2846-7521-4643-a341-e97cd4dbd360",
     "eventName": "gala-2026",
     "special": false
@@ -9788,6 +9860,18 @@
     "type": "card",
     "image": "./cards/73036046.jpg",
     "mazokuId": "2a8ca951-bbc6-48f1-9bc0-30beb8155f6f",
+    "eventName": "default",
+    "special": false
+  },
+  "73103939": {
+    "name": "Mai Sakurajima",
+    "series": "Seishun Buta Yarou",
+    "tier": "C",
+    "valueMin": 50000,
+    "valueMax": 100000,
+    "type": "card",
+    "image": "./cards/73103939.jpg",
+    "mazokuId": "1c7782f7-8939-4862-a213-bf06166a0852",
     "eventName": "default",
     "special": false
   },
@@ -10266,7 +10350,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/75795443.jpg",
+    "video": "./cards/75795443.mp4",
     "mazokuId": "3cd456ef-da97-426b-adff-f24f4893de2b",
     "eventName": "special",
     "special": true
@@ -10770,7 +10854,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/77941575.jpg",
+    "video": "./cards/77941575.mp4",
     "mazokuId": "bf74c06b-a3ef-4397-aafe-1736ac9f9087",
     "eventName": "summer_2025",
     "special": false
@@ -10854,7 +10938,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/78839512.jpg",
+    "video": "./cards/78839512.mp4",
     "mazokuId": "bbc3d340-b4ad-4164-8382-7f48897f42b7",
     "eventName": "default",
     "special": false
@@ -11226,7 +11310,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/81729939.jpg",
+    "video": "./cards/81729939.mp4",
     "mazokuId": "2554e4d8-edf8-4229-9b62-0933ec39ca1c",
     "eventName": "default",
     "special": false
@@ -11454,7 +11538,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/82967419.jpg",
+    "video": "./cards/82967419.mp4",
     "mazokuId": "44dde58d-2ef8-459d-b19b-95cb32901f20",
     "eventName": "default",
     "special": false
@@ -11478,7 +11562,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/83052088.jpg",
+    "video": "./cards/83052088.mp4",
     "mazokuId": "a212569c-46c3-4d20-9e68-4ec1dc36e027",
     "eventName": "default",
     "special": false
@@ -11562,7 +11646,7 @@
     "valueMin": 1500000,
     "valueMax": 2000000,
     "type": "card",
-    "image": "./cards/83601660.jpg",
+    "video": "./cards/83601660.mp4",
     "mazokuId": "f999250b-8fc9-4a4a-b8fa-8d14d7787b98",
     "eventName": "default",
     "special": false
@@ -12474,7 +12558,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/89508047.jpg",
+    "video": "./cards/89508047.mp4",
     "mazokuId": "aa468775-ab88-476f-86e6-85d346fccd12",
     "eventName": "default",
     "special": false
@@ -12486,7 +12570,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/89561398.jpg",
+    "video": "./cards/89561398.mp4",
     "mazokuId": "1e00f9f9-b11a-4e1f-a46e-e1b9589998da",
     "eventName": "requiem-corruption",
     "special": false
@@ -12618,7 +12702,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/90812350.jpg",
+    "video": "./cards/90812350.mp4",
     "mazokuId": "45cf99de-8402-4136-902f-aef9cc1c1077",
     "eventName": "summer_2025",
     "special": false
@@ -12810,7 +12894,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/92280105.jpg",
+    "video": "./cards/92280105.mp4",
     "mazokuId": "65351f0d-5d8d-42d2-99e1-b8d5adf07e30",
     "eventName": "summer_2025",
     "special": false
@@ -12846,7 +12930,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/92520272.jpg",
+    "video": "./cards/92520272.mp4",
     "mazokuId": "7bb1517b-d598-4540-9a82-1f47a8c371ff",
     "eventName": "special",
     "special": true
@@ -13017,6 +13101,18 @@
     "image": "./cards/93483724.jpg",
     "mazokuId": "87210b4e-1948-4595-98c6-94045513a4a1",
     "eventName": "halloween_2025",
+    "special": false
+  },
+  "93545675": {
+    "name": "Mai Sakurajima",
+    "series": "Seishun Buta Yarou",
+    "tier": "C",
+    "valueMin": 50000,
+    "valueMax": 100000,
+    "type": "card",
+    "image": "./cards/93545675.jpg",
+    "mazokuId": "d465ea8c-c514-4bf8-a010-43531c3e3445",
+    "eventName": "christmas_2024",
     "special": false
   },
   "93594018": {
@@ -13463,6 +13559,18 @@
     "eventName": "maid_2025",
     "special": false
   },
+  "96933246": {
+    "name": "Ryuunosuke Akutagawa",
+    "series": "Bungou Stray Dogs",
+    "tier": "C",
+    "valueMin": 50000,
+    "valueMax": 100000,
+    "type": "card",
+    "image": "./cards/96933246.jpg",
+    "mazokuId": "3dee52f7-682d-4f5c-a7b5-710bb905ff76",
+    "eventName": "gala-2026",
+    "special": false
+  },
   "96941092": {
     "name": "Yukikaze Mizuki",
     "series": "Taimanin Series",
@@ -13662,7 +13770,7 @@
     "valueMin": 1000000,
     "valueMax": 1500000,
     "type": "card",
-    "image": "./cards/98436064.jpg",
+    "video": "./cards/98436064.mp4",
     "mazokuId": "454a5af9-f02b-4857-866f-3b7a3a7939cf",
     "eventName": "default",
     "special": false
