@@ -1,185 +1,550 @@
 // tools/importCard.js
 //
-// Searches AniList's free character database and imports character(s)
-// into card.json in the exact same shape as your existing cards.
+// Mazoku card importer
 //
-// Single-pick mode (default) — shows matches, you choose one:
-//   node tools/importCard.js "character name" TIER
+// Usage:
+//   node tools/importCard.js "Rem"
+//   node tools/importCard.js "Rem" --all
+//   node tools/importCard.js "69f4fdd0-9ca0-4dde-ab7f-81aa81f18a54"
 //
-// Bulk mode — imports EVERY match found, all at the same tier:
-//   node tools/importCard.js "character name" TIER --all
+// IMPORTANT:
+// - BOT_ID is the short ID used by Zorex (.cs <BOT_ID>)
+// - mazokuId is Mazoku's long UUID and is stored separately
+// - The importer generates the BOT_ID automatically
+// - Images are downloaded only when they do not already exist
 //
-// Example:
-//   node tools/importCard.js "Rem" SSR
-//   node tools/importCard.js "Rem" SSR --all
-//
-// TIER must be one of: SSR, SR, S, R, C
+// Supported tiers:
+//   UR, SSR, SR, S, R, C
 
 const fs = require("fs");
 const path = require("path");
 const https = require("https");
-const readline = require("readline");
-const crypto = require("crypto");
 
 const CARD_FILE = path.join(__dirname, "..", "card.json");
+const CARD_DIR = path.join(__dirname, "..", "cards");
 
-// Value bands derived from your existing card.json entries.
+const MAZOKU_API = "https://api.mazoku.cc/cards";
+const MAZOKU_CDN = "https://cdn7.mazoku.cc/cards";
+
+// --------------------------------------------------
+// TIER VALUES
+// --------------------------------------------------
+
 const TIER_VALUES = {
-    SSR: { min: 1000000, max: 1500000 },
-    SR:  { min: 500000,  max: 800000  },
-    S:   { min: 350000,  max: 500000  },
-    R:   { min: 200000,  max: 350000  },
-    C:   { min: 50000,   max: 100000  }
+    UR: {
+        min: 1500000,
+        max: 2000000
+    },
+
+    SSR: {
+        min: 1000000,
+        max: 1500000
+    },
+
+    SR: {
+        min: 500000,
+        max: 800000
+    },
+
+    S: {
+        min: 350000,
+        max: 500000
+    },
+
+    R: {
+        min: 200000,
+        max: 350000
+    },
+
+    C: {
+        min: 50000,
+        max: 100000
+    }
 };
 
-const ANILIST_URL = "https://graphql.anilist.co";
+const TIER_ORDER = [
+    "UR",
+    "SSR",
+    "SR",
+    "S",
+    "R",
+    "C"
+];
 
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-function ask(question) {
-    return new Promise(resolve => rl.question(question, resolve));
-}
+// --------------------------------------------------
+// FILE HELPERS
+// --------------------------------------------------
 
 function loadCards() {
+
     if (!fs.existsSync(CARD_FILE)) {
-        fs.writeFileSync(CARD_FILE, "{}");
+
+        fs.writeFileSync(
+            CARD_FILE,
+            "{}",
+            "utf8"
+        );
+
     }
-    return JSON.parse(fs.readFileSync(CARD_FILE, "utf8"));
+
+    try {
+
+        return JSON.parse(
+            fs.readFileSync(
+                CARD_FILE,
+                "utf8"
+            )
+        );
+
+    } catch (err) {
+
+        throw new Error(
+            `Could not read card.json: ${err.message}`
+        );
+
+    }
+
 }
 
 function saveCards(cards) {
-    fs.writeFileSync(CARD_FILE, JSON.stringify(cards, null, 2));
-}
 
-// Generates an 8-char lowercase hex ID, same shape as your existing keys
-// (e.g. "59e04c5d"), and makes sure it doesn't collide with an existing one.
-function generateCardId(existingCards) {
-
-    let id;
-
-    do {
-        id = crypto.randomBytes(4).toString("hex");
-    } while (existingCards[id]);
-
-    return id;
+    fs.writeFileSync(
+        CARD_FILE,
+        JSON.stringify(cards, null, 2),
+        "utf8"
+    );
 
 }
 
-// AniList GraphQL character search — free, no API key required.
-async function searchCharacters(name) {
+function ensureCardDirectory() {
 
-    const query = `
-        query ($search: String) {
-            Page(page: 1, perPage: 10) {
-                characters(search: $search) {
-                    id
-                    name {
-                        full
-                    }
-                    image {
-                        large
-                    }
-                    media(perPage: 1) {
-                        nodes {
-                            title {
-                                romaji
-                                english
-                            }
-                        }
-                    }
-                }
+    if (!fs.existsSync(CARD_DIR)) {
+
+        fs.mkdirSync(
+            CARD_DIR,
+            {
+                recursive: true
             }
-        }
-    `;
+        );
 
-    const response = await fetch(ANILIST_URL, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        body: JSON.stringify({ query, variables: { search: name } })
-    });
-
-    if (!response.ok) {
-        throw new Error(`AniList request failed: ${response.status} ${response.statusText}`);
     }
 
-    const json = await response.json();
+}
 
-    return json.data.Page.characters;
+// --------------------------------------------------
+// BOT ID GENERATOR
+// --------------------------------------------------
+//
+// This is the ID Zorex uses with:
+//
+//   .cs <BOT_ID>
+//
+// Mazoku UUID is stored separately as:
+//
+//   mazokuId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+//
+// --------------------------------------------------
+
+function generateBotId(cards) {
+
+    let botId;
+
+    do {
+
+        // 8-digit BOT ID
+        botId = String(
+            Math.floor(
+                10000000 +
+                Math.random() * 90000000
+            )
+        );
+
+    } while (cards[botId]);
+
+    return botId;
 
 }
 
-function downloadImage(url, destPath) {
+// --------------------------------------------------
+// MAZOKU API ERROR HANDLER
+// --------------------------------------------------
 
-    return new Promise((resolve, reject) => {
+async function getApiErrorMessage(response) {
 
-        const file = fs.createWriteStream(destPath);
+    let message =
+        `${response.status} ${response.statusText}`;
 
-        https.get(url, (res) => {
+    try {
 
-            if (res.statusCode !== 200) {
-                reject(new Error(`Image download failed: ${res.statusCode}`));
-                return;
-            }
+        const error =
+            await response.json();
 
-            res.pipe(file);
+        if (error?.error?.message) {
 
-            file.on("finish", () => {
-                file.close(resolve);
-            });
+            message =
+                `${response.status}: ${error.error.message}`;
 
-        }).on("error", (err) => {
-            fs.unlink(destPath, () => {});
-            reject(err);
-        });
+        } else if (error?.message) {
 
-    });
+            message =
+                `${response.status}: ${error.message}`;
+
+        }
+
+    } catch (_) {}
+
+    return message;
 
 }
 
-function slugify(text) {
-    return text
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "");
-}
+// --------------------------------------------------
+// MAZOKU API
+// --------------------------------------------------
 
-function getSeriesTitle(character) {
-    return (
-        character.media.nodes[0]?.title.english ||
-        character.media.nodes[0]?.title.romaji ||
-        "Unknown series"
+async function fetchMazokuPage(
+    page = 1,
+    pageSize = 100
+) {
+
+    const url =
+        `${MAZOKU_API}` +
+        `?page=${page}` +
+        `&pageSize=${pageSize}` +
+        `&orderBy=created_at` +
+        `&order=DESC` +
+        `&spicy=false`;
+
+    console.log(
+        `📡 Fetching Mazoku page ${page}...`
     );
+
+    const response =
+        await fetch(url);
+
+    if (!response.ok) {
+
+        const message =
+            await getApiErrorMessage(response);
+
+        throw new Error(
+            `Mazoku API failed: ${message}`
+        );
+
+    }
+
+    return await response.json();
+
 }
 
-// Builds a filename that includes the series, so two different characters
-// with the same name (like your four Yuki cards) never collide —
-// e.g. "rem_re_zero.jpg" vs "rem_some_other_anime.jpg"
-function buildFileName(charName, seriesTitle) {
-    return `${slugify(charName)}_${slugify(seriesTitle)}.jpg`;
+// --------------------------------------------------
+// SEARCH BY MAZOKU UUID
+// --------------------------------------------------
+
+async function searchByMazokuId(
+    mazokuId
+) {
+
+    const url =
+        `${MAZOKU_API}` +
+        `?cardId=${encodeURIComponent(mazokuId)}` +
+        `&page=1` +
+        `&pageSize=100` +
+        `&orderBy=version` +
+        `&order=ASC`;
+
+    console.log(
+        `📡 Looking up Mazoku ID...`
+    );
+
+    const response =
+        await fetch(url);
+
+    if (!response.ok) {
+
+        const message =
+            await getApiErrorMessage(response);
+
+        throw new Error(
+            `Mazoku API failed: ${message}`
+        );
+
+    }
+
+    const data =
+        await response.json();
+
+    return Array.isArray(data.cards)
+        ? data.cards
+        : [];
+
 }
 
-// Checks whether a card with the same name + series already exists,
-// case-insensitively. Prevents re-running an import from creating a
-// second, functionally-identical card under a different ID.
-function findExistingCard(cards, name, series) {
+// --------------------------------------------------
+// SEARCH BY NAME
+// --------------------------------------------------
+//
+// IMPORTANT:
+//
+// Instead of doing:
+//
+//   page 1
+//   page 2
+//   page 3
+//   ...
+//   page 121
+//
+// we now ask Mazoku:
+//
+//   ?name=Makima
+//
+// This lets the API perform the search.
+// --------------------------------------------------
 
-    const normalizedName = name.trim().toLowerCase();
-    const normalizedSeries = series.trim().toLowerCase();
+async function searchByName(
+    searchTerm
+) {
 
-    for (const [id, card] of Object.entries(cards)) {
+    const cleanSearch =
+        searchTerm.trim();
+
+    const url =
+        `${MAZOKU_API}` +
+        `?page=1` +
+        `&pageSize=100` +
+        `&orderBy=created_at` +
+        `&order=DESC` +
+        `&spicy=false` +
+        `&name=${encodeURIComponent(cleanSearch)}`;
+
+    console.log(
+        `📡 Searching Mazoku for "${cleanSearch}"...`
+    );
+
+    const response =
+        await fetch(url);
+
+    if (!response.ok) {
+
+        const message =
+            await getApiErrorMessage(response);
+
+        throw new Error(
+            `Mazoku API failed: ${message}`
+        );
+
+    }
+
+    const data =
+        await response.json();
+
+    return Array.isArray(data.cards)
+        ? data.cards
+        : [];
+
+}
+
+// --------------------------------------------------
+// SEARCH
+// --------------------------------------------------
+
+async function searchCards(
+    searchTerm
+) {
+
+    const cleanSearch =
+        searchTerm.trim();
+
+    // Mazoku UUID format
+    const looksLikeId =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(cleanSearch);
+
+    if (looksLikeId) {
+
+        return searchByMazokuId(
+            cleanSearch
+        );
+
+    }
+
+    // Use Mazoku's server-side name search
+    return searchByName(
+        cleanSearch
+    );
+
+}
+
+// --------------------------------------------------
+// IMAGE PATHS
+// --------------------------------------------------
+//
+// Images use the BOT_ID filename so our local card
+// system remains completely independent from Mazoku.
+//
+// Example:
+//
+// BOT ID:
+// 48372915
+//
+// Image:
+// cards/48372915.webp
+//
+// Mazoku UUID:
+// 69f4fdd0-9ca0-4dde-ab7f-81aa81f18a54
+//
+// --------------------------------------------------
+
+function getImagePath(botId) {
+
+    return path.join(
+        CARD_DIR,
+        `${botId}.webp`
+    );
+
+}
+
+function getImageRelativePath(botId) {
+
+    return `./cards/${botId}.webp`;
+
+}
+
+// --------------------------------------------------
+// DOWNLOAD IMAGE
+// --------------------------------------------------
+
+function downloadImage(
+    url,
+    destination
+) {
+
+    return new Promise(
+        (resolve, reject) => {
+
+            const file =
+                fs.createWriteStream(
+                    destination
+                );
+
+            const request =
+                https.get(
+                    url,
+                    response => {
+
+                        // Handle redirects
+                        if (
+                            response.statusCode >= 300 &&
+                            response.statusCode < 400 &&
+                            response.headers.location
+                        ) {
+
+                            file.close();
+
+                            fs.unlink(
+                                destination,
+                                () => {}
+                            );
+
+                            return downloadImage(
+                                response.headers.location,
+                                destination
+                            )
+                                .then(resolve)
+                                .catch(reject);
+
+                        }
+
+                        if (
+                            response.statusCode !== 200
+                        ) {
+
+                            file.close();
+
+                            fs.unlink(
+                                destination,
+                                () => {}
+                            );
+
+                            reject(
+                                new Error(
+                                    `Image download failed: ${response.statusCode}`
+                                )
+                            );
+
+                            return;
+
+                        }
+
+                        response.pipe(file);
+
+                        file.on(
+                            "finish",
+                            () => {
+
+                                file.close(
+                                    () => {
+                                        resolve();
+                                    }
+                                );
+
+                            }
+                        );
+
+                    }
+                );
+
+            request.on(
+                "error",
+                err => {
+
+                    file.close();
+
+                    fs.unlink(
+                        destination,
+                        () => {}
+                    );
+
+                    reject(err);
+
+                }
+            );
+
+        }
+    );
+
+}
+
+// --------------------------------------------------
+// DUPLICATE CHECK
+// --------------------------------------------------
+//
+// We DO NOT use the Mazoku UUID as the Zorex card ID.
+//
+// Instead, search through card.json for:
+//
+//   mazokuId === Mazoku UUID
+//
+// This prevents importing the same Mazoku card twice,
+// even if the BOT_ID is different.
+// --------------------------------------------------
+
+function findExistingCard(
+    cards,
+    mazokuId
+) {
+
+    for (
+        const [botId, card] of Object.entries(cards)
+    ) {
 
         if (
-            card.name.trim().toLowerCase() === normalizedName &&
-            card.series.trim().toLowerCase() === normalizedSeries
+            card &&
+            card.mazokuId &&
+            String(card.mazokuId).toLowerCase() ===
+            String(mazokuId).toLowerCase()
         ) {
 
-            return id;
+            return botId;
 
         }
 
@@ -189,113 +554,393 @@ function findExistingCard(cards, name, series) {
 
 }
 
-async function importOne(character, tier, cards) {
+// --------------------------------------------------
+// IMPORT ONE CARD
+// --------------------------------------------------
 
-    const series = getSeriesTitle(character);
+async function importOne(
+    card,
+    cards
+) {
 
-    const existingId = findExistingCard(cards, character.name.full, series);
+    const mazokuId =
+        card.id;
 
-    if (existingId) {
+    if (!mazokuId) {
 
-        console.log(`   ⏭️  Skipped "${character.name.full}" (${series}) — already exists as #${existingId}`);
+        console.log(
+            `   ⚠️ Skipping card without Mazoku ID.`
+        );
 
         return null;
 
     }
 
-    const cardId = generateCardId(cards);
-    const fileName = buildFileName(character.name.full, series);
-    const imagePath = path.join(__dirname, "..", fileName);
+    const name =
+        card.name ||
+        "Unknown";
 
-    console.log(`\n⬇️  Downloading "${character.name.full}" (${series}) → ./${fileName}`);
+    const series =
+        card.seriesName ||
+        "Unknown series";
 
-    await downloadImage(character.image.large, imagePath);
+    const tier =
+        String(
+            card.tier ||
+            "C"
+        ).toUpperCase();
 
-    const { min, max } = TIER_VALUES[tier];
+    // --------------------------------------------------
+    // CHECK IF MAZOKU CARD ALREADY EXISTS
+    // --------------------------------------------------
 
-    cards[cardId] = {
-        name: character.name.full,
+    const existingBotId =
+        findExistingCard(
+            cards,
+            mazokuId
+        );
+
+    if (existingBotId) {
+
+        console.log(
+            `   ⏭️ "${name}" already imported.`
+        );
+
+        console.log(
+            `      BOT ID: ${existingBotId}`
+        );
+
+        console.log(
+            `      Mazoku ID: ${mazokuId}`
+        );
+
+        return null;
+
+    }
+
+    // --------------------------------------------------
+    // VALIDATE TIER
+    // --------------------------------------------------
+
+    if (!TIER_VALUES[tier]) {
+
+        console.log(
+            `   ⚠️ "${name}" has unsupported Mazoku tier "${tier}".`
+        );
+
+        return null;
+
+    }
+
+    // --------------------------------------------------
+    // GENERATE ZOREX BOT ID
+    // --------------------------------------------------
+
+    const botId =
+        generateBotId(cards);
+
+    ensureCardDirectory();
+
+    const imagePath =
+        getImagePath(botId);
+
+    const imageRelativePath =
+        getImageRelativePath(botId);
+
+    // --------------------------------------------------
+    // IMAGE DOWNLOAD CHECK
+    // --------------------------------------------------
+
+    if (fs.existsSync(imagePath)) {
+
+        console.log(
+            `   ♻️ Image already downloaded — skipping download.`
+        );
+
+    } else {
+
+        const imageUrl =
+            `${MAZOKU_CDN}/${mazokuId}.webp?width=750`;
+
+        console.log(
+            `   ⬇️ Downloading ${name}...`
+        );
+
+        console.log(
+            `   🌐 ${imageUrl}`
+        );
+
+        await downloadImage(
+            imageUrl,
+            imagePath
+        );
+
+        console.log(
+            `   ✅ Image saved → ${imageRelativePath}`
+        );
+
+    }
+
+    // --------------------------------------------------
+    // TIER VALUE
+    // --------------------------------------------------
+
+    const {
+        min,
+        max
+    } = TIER_VALUES[tier];
+
+    // --------------------------------------------------
+    // SAVE CARD
+    // --------------------------------------------------
+    //
+    // IMPORTANT:
+    //
+    // card.json key = BOT ID
+    //
+    // mazokuId = Mazoku's UUID
+    //
+    // This means .cs continues to use:
+    //
+    // .cs 48372915
+    //
+    // NOT:
+    //
+    // .cs 69f4fdd0-9ca0-4dde-ab7f-81aa81f18a54
+    //
+    // --------------------------------------------------
+
+    cards[botId] = {
+
+        name,
+
         series,
+
         tier,
+
         valueMin: min,
+
         valueMax: max,
+
         type: "card",
-        image: `./${fileName}`
+
+        image: imageRelativePath,
+
+        // Mazoku's original card UUID
+        mazokuId,
+
+        eventName:
+            card.eventName ||
+            null,
+
+        special:
+            Boolean(card.special)
+
     };
 
-    console.log(`   ✅ Added as #${cardId}`);
+    console.log(
+        `   ✅ Imported ${name} [${tier}]`
+    );
 
-    return cardId;
+    console.log(
+        `      BOT ID: ${botId}`
+    );
+
+    console.log(
+        `      Mazoku ID: ${mazokuId}`
+    );
+
+    return botId;
 
 }
 
+// --------------------------------------------------
+// MAIN
+// --------------------------------------------------
+
 async function main() {
 
-    const args = process.argv.slice(2);
-    const bulkMode = args.includes("--all");
-    const positional = args.filter(a => a !== "--all");
+    const args =
+        process.argv.slice(2);
 
-    const name = positional[0];
-    const tier = (positional[1] || "").toUpperCase();
+    const bulkMode =
+        args.includes("--all");
 
-    if (!name || !TIER_VALUES[tier]) {
+    const positional =
+        args.filter(
+            arg => arg !== "--all"
+        );
 
-        console.log(`Usage:`);
-        console.log(`  node tools/importCard.js "character name" TIER`);
-        console.log(`  node tools/importCard.js "character name" TIER --all`);
-        console.log(`TIER must be one of: ${Object.keys(TIER_VALUES).join(", ")}`);
-        rl.close();
+    const searchTerm =
+        positional.join(" ").trim();
+
+    if (!searchTerm) {
+
+        console.log(`
+Usage:
+
+  node tools/importCard.js "character name"
+
+  node tools/importCard.js "character name" --all
+
+  node tools/importCard.js "MAZOKU-CARD-UUID"
+
+Examples:
+
+  node tools/importCard.js "Rem"
+
+  node tools/importCard.js "Makima"
+
+  node tools/importCard.js "Uta" --all
+
+  node tools/importCard.js "22eceb73-8e8e-4aae-b9c6-7e2b6c565d2d"
+`);
+
         return;
 
     }
 
-    console.log(`\n🔍 Searching AniList for "${name}"...\n`);
+    console.log(
+        `\n🌐 Connecting to Mazoku...\n`
+    );
 
-    const results = await searchCharacters(name);
+    console.log(
+        `🔍 Searching for "${searchTerm}"...\n`
+    );
 
-    if (results.length === 0) {
-        console.log("❌ No characters found. Try a different spelling or name.");
-        rl.close();
+    const results =
+        await searchCards(
+            searchTerm
+        );
+
+    if (!results.length) {
+
+        console.log(
+            `❌ No Mazoku cards found for "${searchTerm}".`
+        );
+
         return;
+
     }
 
-    results.forEach((char, i) => {
-        console.log(`${i + 1}. ${char.name.full}  —  ${getSeriesTitle(char)}`);
-    });
+    // --------------------------------------------------
+    // SORT RESULTS BY TIER
+    // --------------------------------------------------
 
-    const cards = loadCards();
+    results.sort(
+        (a, b) => {
 
-    // ---------- BULK MODE: import every result at the given tier ----------
+            const tierA =
+                TIER_ORDER.indexOf(
+                    String(
+                        a.tier ||
+                        "C"
+                    ).toUpperCase()
+                );
+
+            const tierB =
+                TIER_ORDER.indexOf(
+                    String(
+                        b.tier ||
+                        "C"
+                    ).toUpperCase()
+                );
+
+            return (
+                (tierA === -1 ? 999 : tierA) -
+                (tierB === -1 ? 999 : tierB)
+            );
+
+        }
+    );
+
+    console.log(
+        `\n🎴 Found ${results.length} result(s):\n`
+    );
+
+    results.forEach(
+        (card, index) => {
+
+            const special =
+                card.special
+                    ? " ⭐ SPECIAL"
+                    : "";
+
+            console.log(
+                `${index + 1}. ` +
+                `${card.name} — ` +
+                `${card.seriesName} ` +
+                `[${card.tier}]` +
+                `${special}`
+            );
+
+            console.log(
+                `   Mazoku ID: ${card.id}`
+            );
+
+            if (card.eventName) {
+
+                console.log(
+                    `   Event: ${card.eventName}`
+                );
+
+            }
+
+            console.log();
+
+        }
+    );
+
+    const cards =
+        loadCards();
+
+    // --------------------------------------------------
+    // BULK MODE
+    // --------------------------------------------------
+
     if (bulkMode) {
 
-        console.log(`\n📦 --all flag detected — importing all ${results.length} matches as ${tier}...`);
+        console.log(
+            `📦 --all detected.`
+        );
 
-        const confirm = await ask(`Continue? (y/n): `);
+        console.log(
+            `Importing all ${results.length} results...\n`
+        );
 
-        if (confirm.trim().toLowerCase() !== "y") {
-            console.log("Cancelled.");
-            rl.close();
-            return;
-        }
+        let added = 0;
+        let skipped = 0;
+        let failed = 0;
 
-        const addedIds = [];
-        let skippedCount = 0;
-
-        for (const character of results) {
+        for (
+            const card of results
+        ) {
 
             try {
 
-                const id = await importOne(character, tier, cards);
+                const id =
+                    await importOne(
+                        card,
+                        cards
+                    );
 
                 if (id) {
-                    addedIds.push(id);
+
+                    added++;
+
                 } else {
-                    skippedCount++;
+
+                    skipped++;
+
                 }
 
             } catch (err) {
 
-                console.error(`   ❌ Failed to import "${character.name.full}": ${err.message}`);
+                failed++;
+
+                console.error(
+                    `   ❌ Failed: ${card.name} — ${err.message}`
+                );
 
             }
 
@@ -303,40 +948,134 @@ async function main() {
 
         saveCards(cards);
 
-        console.log(`\n✅ Bulk import complete — ${addedIds.length} added, ${skippedCount} skipped (duplicates), ${results.length - addedIds.length - skippedCount} failed.\n`);
+        console.log(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Mazoku import complete
 
-        rl.close();
+🎴 Added:   ${added}
+♻️ Skipped: ${skipped}
+❌ Failed:  ${failed}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+
         return;
 
     }
 
-    // ---------- SINGLE-PICK MODE (default) ----------
-    const choice = await ask(`\nPick a number (1-${results.length}), or 0 to cancel: `);
-    const index = Number(choice) - 1;
+    // --------------------------------------------------
+    // SINGLE PICK
+    // --------------------------------------------------
 
-    if (choice === "0" || isNaN(index) || index < 0 || index >= results.length) {
-        console.log("Cancelled.");
-        rl.close();
+    const readline =
+        require("readline");
+
+    const rl =
+        readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+    const ask =
+        question =>
+            new Promise(
+                resolve =>
+                    rl.question(
+                        question,
+                        resolve
+                    )
+            );
+
+    const choice =
+        await ask(
+            `Pick a number (1-${results.length}), or 0 to cancel: `
+        );
+
+    rl.close();
+
+    const choiceNumber =
+        Number(choice);
+
+    const index =
+        choiceNumber - 1;
+
+    if (
+        choice === "0" ||
+        !Number.isInteger(choiceNumber) ||
+        index < 0 ||
+        index >= results.length
+    ) {
+
+        console.log(
+            "Cancelled."
+        );
+
         return;
+
     }
 
-    const picked = results[index];
+    const selected =
+        results[index];
 
-    const id = await importOne(picked, tier, cards);
+    console.log(
+        `\n🎴 Selected: ${selected.name}`
+    );
+
+    console.log(
+        `📚 Series: ${selected.seriesName}`
+    );
+
+    console.log(
+        `🏷️ Tier: ${selected.tier}`
+    );
+
+    console.log(
+        `🆔 Mazoku ID: ${selected.id}`
+    );
+
+    const id =
+        await importOne(
+            selected,
+            cards
+        );
 
     saveCards(cards);
 
     if (id) {
-        console.log(`\n✅ Saved to card.json.\n`);
-    } else {
-        console.log(`\n(No changes made — this card already exists.)\n`);
-    }
 
-    rl.close();
+        console.log(
+            `\n💾 Saved to card.json.`
+        );
+
+        console.log(
+            `🎴 BOT ID: ${id}`
+        );
+
+        console.log(
+            `👉 Use: .cs ${id}`
+        );
+
+    } else {
+
+        console.log(
+            `\nℹ️ No changes made.`
+        );
+
+    }
 
 }
 
-main().catch(err => {
-    console.error("❌ Error:", err.message);
-    rl.close();
-});
+// --------------------------------------------------
+// RUN
+// --------------------------------------------------
+
+main().catch(
+    err => {
+
+        console.error(
+            `❌ Error: ${err.message}`
+        );
+
+        process.exitCode = 1;
+
+    }
+);

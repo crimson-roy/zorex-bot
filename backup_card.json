@@ -1,0 +1,1307 @@
+{
+  "18200489": {
+    "name": "Char Aznable",
+    "series": "Mobile Suit Gundam",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./char_aznable_mobile_suit_gundam.jpg"
+  },
+  "59e04c5d": {
+    "name": "Aqua",
+    "series": "KonoSuba: God's Blessing on This Wonderful World!",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "video": "./aqua.mp4"
+  },
+  "e71a1077": {
+    "name": "Gojo Satoru",
+    "series": "Jujutsu Kaisen",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "video": "./gojo.mp4"
+  },
+  "3dbc1b5d": {
+    "name": "Yuki",
+    "series": "Chaos Zero Nightmare",
+    "tier": "C",
+    "valueMin": 50000,
+    "valueMax": 100000,
+    "type": "card",
+    "image": "./yuki_czn.jpg"
+  },
+  "2e74b086": {
+    "name": "Yuki",
+    "series": "Monster Musume no Iru Nichijou",
+    "tier": "R",
+    "valueMin": 200000,
+    "valueMax": 350000,
+    "type": "card",
+    "image": "./yuki_monmusu.jpg"
+  },
+  "27cea9b9": {
+    "name": "Yuki",
+    "series": "IDOLiSH7",
+    "tier": "R",
+    "valueMin": 200000,
+    "valueMax": 350000,
+    "type": "card",
+    "image": "./yuki_idolish7.jpg"
+  },
+  "df2eb585": {
+    "name": "Yuki",
+    "series": "Mazoku",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./yuki_mazoku.jpg"
+  },
+  "b68b55bd": {
+    "name": "Rem",
+    "series": "Re:ZERO -Starting Life in Another World-",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./rem_re_zero_starting_life_in_another_world.jpg"
+  },
+  "53db10bd": {
+    "name": "Rem Galleu",
+    "series": "How NOT to Summon a Demon Lord",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./rem_galleu_how_not_to_summon_a_demon_lord.jpg"
+  },
+  "ca57b8a2": {
+    "name": "Char Aznable",
+    "series": "Mobile Suit Gundam",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./char_aznable_mobile_suit_gundam.jpg"
+  },
+  "bdb0a008": {
+    "name": "Rem",
+    "series": "Death Note",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./rem_death_note.jpg"
+  },
+  "6c54bedf": {
+    "name": "Rias Gremory",
+    "series": "High School DxD",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./rias_gremory_high_school_dxd.jpg"
+  },
+  "e4f5b31d": {
+    "name": "Chopper Tony Tony",
+    "series": "ONE PIECE",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./chopper_tony_tony_one_piece.jpg"
+  },
+  "95efdc4d": {
+    "name": "Momonga",
+    "series": "Overlord",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./momonga_overlord.jpg"
+  },
+  "b411ad18": {
+    "name": "Remi Ayasaki",
+    "series": "Hori-san to Miyamura-kun",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./remi_ayasaki_hori_san_to_miyamura_kun.jpg"
+  },
+  "2b2b1539": {
+    "name": "Jung-Hyeok Yu",
+    "series": "Omniscient Reader",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./jung_hyeok_yu_omniscient_reader.jpg"
+  },
+  "43cdd65b": {
+    "name": "Rem Kaginuki",
+    "series": "Dance with Devils",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./rem_kaginuki_dance_with_devils.jpg"
+  },
+  "49d04a9a": {
+    "name": "Satoru Gojou",
+    "series": "Jujutsu Kaisen",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./satoru_gojou_jujutsu_kaisen.jpg"
+  },
+  "0473d734": {
+    "name": "Wakana Gojou",
+    "series": "My Dress-Up Darling",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./wakana_gojou_my_dress_up_darling.jpg"
+  },
+  "6d80d2c9": {
+    "name": "Kaoru Gojou",
+    "series": "My Dress-Up Darling",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./kaoru_gojou_my_dress_up_darling.jpg"
+  },
+  "5ccd29aa": {
+    "name": "Gojou Sha",
+    "series": "Saiyuki",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./gojou_sha_saiyuki.jpg"
+  },
+  "beaaace5": {
+    "name": "Yuuma Gojou",
+    "series": "Hinomaru Sumo",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./yuuma_gojou_hinomaru_sumo.jpg"
+  },
+  "97cfeb2b": {
+    "name": "Sukuna Gojou",
+    "series": "K: RETURN OF KINGS",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./sukuna_gojou_k_return_of_kings.jpg"
+  },
+  "a140d1e3": {
+    "name": "Reina Gojou",
+    "series": "Hinomaru Sumo",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./reina_gojou_hinomaru_sumo.jpg"
+  },
+  "4e8cc27b": {
+    "name": "Tsukasa Gojouin",
+    "series": "The Maid I Hired Recently is Mysterious",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./tsukasa_gojouin_the_maid_i_hired_recently_is_mysterious.jpg"
+  },
+  "839d5fc4": {
+    "name": "Gojouno Kaguya",
+    "series": "Is It Wrong to Try to Pick Up Girls in a Dungeon?",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./gojouno_kaguya_is_it_wrong_to_try_to_pick_up_girls_in_a_dungeon.jpg"
+  },
+  "ab7229d7": {
+    "name": "Ruka Gojou",
+    "series": "Nanbaka",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./ruka_gojou_nanbaka.jpg"
+  },
+  "df121dfc": {
+    "name": "Rem",
+    "series": "Re:ZERO -Starting Life in Another World-",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./rem_re_zero_starting_life_in_another_world.jpg"
+  },
+  "28a529d7": {
+    "name": "Rem Galleu",
+    "series": "How NOT to Summon a Demon Lord",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./rem_galleu_how_not_to_summon_a_demon_lord.jpg"
+  },
+  "2a63d4c8": {
+    "name": "Rem",
+    "series": "Death Note",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./rem_death_note.jpg"
+  },
+  "4ab55392": {
+    "name": "Rias Gremory",
+    "series": "High School DxD",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./rias_gremory_high_school_dxd.jpg"
+  },
+  "6d9c22d4": {
+    "name": "Chopper Tony Tony",
+    "series": "ONE PIECE",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./chopper_tony_tony_one_piece.jpg"
+  },
+  "1a4df1bb": {
+    "name": "Momonga",
+    "series": "Overlord",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./momonga_overlord.jpg"
+  },
+  "f9f20fcd": {
+    "name": "Remi Ayasaki",
+    "series": "Hori-san to Miyamura-kun",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./remi_ayasaki_hori_san_to_miyamura_kun.jpg"
+  },
+  "be728bf0": {
+    "name": "Jung-Hyeok Yu",
+    "series": "Omniscient Reader",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./jung_hyeok_yu_omniscient_reader.jpg"
+  },
+  "6ea1c177": {
+    "name": "Rem Kaginuki",
+    "series": "Dance with Devils",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./rem_kaginuki_dance_with_devils.jpg"
+  },
+  "96697f07": {
+    "name": "Mikasa Ackerman",
+    "series": "Attack on Titan",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./mikasa_ackerman_attack_on_titan.jpg"
+  },
+  "bee34903": {
+    "name": "Zero Two",
+    "series": "DARLING in the FRANXX",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./zero_two_darling_in_the_franxx.jpg"
+  },
+  "333f558c": {
+    "name": "Emilia",
+    "series": "Re:ZERO -Starting Life in Another World-",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./emilia_re_zero_starting_life_in_another_world.jpg"
+  },
+  "b3d4bddc": {
+    "name": "Emilia Justina",
+    "series": "The Devil is a Part-Timer!",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./emilia_justina_the_devil_is_a_part_timer.jpg"
+  },
+  "b5aaf989": {
+    "name": "Himiko",
+    "series": "BTOOOM!",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./himiko_btooom.jpg"
+  },
+  "ae42bf90": {
+    "name": "Remilia Scarlet",
+    "series": "Touhou Sangetsusei: Eastern and Little Nature Deity",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./remilia_scarlet_touhou_sangetsusei_eastern_and_little_nature_deity.jpg"
+  },
+  "fe42df31": {
+    "name": "Emile Crossfode",
+    "series": "Hundred",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./emile_crossfode_hundred.jpg"
+  },
+  "d1414b66": {
+    "name": "Emilia Ludowell",
+    "series": "The Misfit of Demon King Academy",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./emilia_ludowell_the_misfit_of_demon_king_academy.jpg"
+  },
+  "d180b054": {
+    "name": "Remilia Graupner",
+    "series": "Within The Villainess",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./remilia_graupner_within_the_villainess.jpg"
+  },
+  "4f97503d": {
+    "name": "Emilia",
+    "series": "Lapis Re:LiGHTs",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./emilia_lapis_re_lights.jpg"
+  },
+  "8a8f56a4": {
+    "name": "Emilia",
+    "series": "After School Dice Club",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./emilia_after_school_dice_club.jpg"
+  },
+  "d47e318c": {
+    "name": "Emilia",
+    "series": "Magmell of the Azure Sea",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./emilia_magmell_of_the_azure_sea.jpg"
+  },
+  "2090d728": {
+    "name": "Erza Scarlet",
+    "series": "Fairy Tail",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./erza_scarlet_fairy_tail.jpg"
+  },
+  "bb7b0a87": {
+    "name": "Naruto Uzumaki",
+    "series": "Naruto",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./naruto_uzumaki_naruto.jpg"
+  },
+  "5cebce33": {
+    "name": "Sasuke Uchiha",
+    "series": "Naruto",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./sasuke_uchiha_naruto.jpg"
+  },
+  "80aa2dcf": {
+    "name": "Killua Zoldyck",
+    "series": "Hunter x Hunter",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./killua_zoldyck_hunter_x_hunter.jpg"
+  },
+  "70b21e65": {
+    "name": "Gon Freecss",
+    "series": "Hunter x Hunter",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./gon_freecss_hunter_x_hunter.jpg"
+  },
+  "21a12a6c": {
+    "name": "Vegeta",
+    "series": "Dragon Ball GT",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./vegeta_dragon_ball_gt.jpg"
+  },
+  "f74cc7a4": {
+    "name": "Koujirou Shinomiya",
+    "series": "Food Wars!",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./koujirou_shinomiya_food_wars.jpg"
+  },
+  "36f52f83": {
+    "name": "Vegeta Ou",
+    "series": "Dragon Ball Z",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./vegeta_ou_dragon_ball_z.jpg"
+  },
+  "efd71b3f": {
+    "name": "Vegeta Jr.",
+    "series": "Dragon Ball GT",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./vegeta_jr_dragon_ball_gt.jpg"
+  },
+  "f7318fd6": {
+    "name": "Vegeta: Xeno",
+    "series": "Super Dragon Ball Heroes: Ankoku Makai Mission!",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./vegeta_xeno_super_dragon_ball_heroes_ankoku_makai_mission.jpg"
+  },
+  "d303cd44": {
+    "name": "Copy-Vegeta",
+    "series": "Dragon Ball Super",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./copy_vegeta_dragon_ball_super.jpg"
+  },
+  "1826fb2d": {
+    "name": "Vegetalia",
+    "series": "Peter Grill and the Philosopher’s Time: Super Extra",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./vegetalia_peter_grill_and_the_philosopher_s_time_super_extra.jpg"
+  },
+  "87228ad5": {
+    "name": "Vegetarian no Kainushi",
+    "series": "Hensuki: Are you willing to fall in love with a pervert, as long as she’s a cutie?",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./vegetarian_no_kainushi_hensuki_are_you_willing_to_fall_in_love_with_a_pervert_as_long_as_she_s_a_cutie.jpg"
+  },
+  "65e42a49": {
+    "name": "Mai Cai Laoban",
+    "series": "Scissor Seven Season 2",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./mai_cai_laoban_scissor_seven_season_2.jpg"
+  },
+  "3aaa97d5": {
+    "name": "Tanktop Vegetarian",
+    "series": "One-Punch Man",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./tanktop_vegetarian_one_punch_man.jpg"
+  },
+  "5ed19856": {
+    "name": "Edward Elric",
+    "series": "Fullmetal Alchemist",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./edward_elric_fullmetal_alchemist.jpg"
+  },
+  "18138a28": {
+    "name": "Rimuru Tempest",
+    "series": "That Time I Got Reincarnated as a Slime",
+    "tier": "SSR",
+    "valueMin": 1000000,
+    "valueMax": 1500000,
+    "type": "card",
+    "image": "./rimuru_tempest_that_time_i_got_reincarnated_as_a_slime.jpg"
+  },
+  "f5524fcb": {
+    "name": "Asuna Yuuki",
+    "series": "Sword Art Online",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./asuna_yuuki_sword_art_online.jpg"
+  },
+  "a51ca238": {
+    "name": "Nobara Kugisaki",
+    "series": "Jujutsu Kaisen",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./nobara_kugisaki_jujutsu_kaisen.jpg"
+  },
+  "cc422ac7": {
+    "name": "Power",
+    "series": "Chainsaw Man",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./power_chainsaw_man.jpg"
+  },
+  "793dd480": {
+    "name": "Hawk",
+    "series": "The Seven Deadly Sins",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./hawk_the_seven_deadly_sins.jpg"
+  },
+  "6beb5658": {
+    "name": "Yuuko Kouzuki",
+    "series": "Akane Maniax",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./yuuko_kouzuki_akane_maniax.jpg"
+  },
+  "6f7f0472": {
+    "name": "Meninas McAllon",
+    "series": "Bleach",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./meninas_mcallon_bleach.jpg"
+  },
+  "65791bdb": {
+    "name": "Julie Powers",
+    "series": "Scott Pilgrim Takes Off",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./julie_powers_scott_pilgrim_takes_off.jpg"
+  },
+  "8407b56c": {
+    "name": "Power Ash",
+    "series": "The Dungeon of Black Company",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./power_ash_the_dungeon_of_black_company.jpg"
+  },
+  "6aa4e741": {
+    "name": "Kaoru Matsubara",
+    "series": "Powerpuff Girls Z",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./kaoru_matsubara_powerpuff_girls_z.jpg"
+  },
+  "6ce0e528": {
+    "name": "Higari Maijima",
+    "series": "My Hero Academia",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./higari_maijima_my_hero_academia.jpg"
+  },
+  "66f31543": {
+    "name": "Power Joe",
+    "series": "Yuusha Keisatsu J-Decker",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./power_joe_yuusha_keisatsu_j_decker.jpg"
+  },
+  "42b5fd91": {
+    "name": "Hino Choko",
+    "series": "Tenkaichi: The Greatest Warrior Under the Rising Sun",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./hino_choko_tenkaichi_the_greatest_warrior_under_the_rising_sun.jpg"
+  },
+  "038e8500": {
+    "name": "Yor Forger",
+    "series": "SPY x FAMILY",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./yor_forger_spy_x_family.jpg"
+  },
+  "4bf6e91e": {
+    "name": "Anya Forger",
+    "series": "SPY x FAMILY",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./anya_forger_spy_x_family.jpg"
+  },
+  "0ccaeba5": {
+    "name": "Winry Rockbell",
+    "series": "Fullmetal Alchemist",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./winry_rockbell_fullmetal_alchemist.jpg"
+  },
+  "c2c099da": {
+    "name": "Denji",
+    "series": "Chainsaw Man",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./denji_chainsaw_man.jpg"
+  },
+  "610ad8da": {
+    "name": "Denji",
+    "series": "Pokémon the Series: Diamond and Pearl",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./denji_pok_mon_the_series_diamond_and_pearl.jpg"
+  },
+  "f9fc0be4": {
+    "name": "Denji Kudou",
+    "series": "Abara",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./denji_kudou_abara.jpg"
+  },
+  "0c679c3a": {
+    "name": "Denji no Chichi",
+    "series": "Chainsaw Man",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./denji_no_chichi_chainsaw_man.jpg"
+  },
+  "de598753": {
+    "name": "Denjirou Tatsumi",
+    "series": "Battle Spirits: Heroes",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./denjirou_tatsumi_battle_spirits_heroes.jpg"
+  },
+  "30d95324": {
+    "name": "Denjirou Ookouchi",
+    "series": "Dai-Guard",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./denjirou_ookouchi_dai_guard.jpg"
+  },
+  "f2c070bc": {
+    "name": "Denjirou Shiba",
+    "series": "Coppelion",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./denjirou_shiba_coppelion.jpg"
+  },
+  "a05c285a": {
+    "name": "Denjiro Maru",
+    "series": "Detective Conan",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./denjiro_maru_detective_conan.jpg"
+  },
+  "6af33ba2": {
+    "name": "Denji Shibakaru",
+    "series": "Detective Conan",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./denji_shibakaru_detective_conan.jpg"
+  },
+  "2d47d21d": {
+    "name": "Denji Tsunashi",
+    "series": "I Can't Understand What My Husband is Saying 2nd Thread",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./denji_tsunashi_i_can_t_understand_what_my_husband_is_saying_2nd_thread.jpg"
+  },
+  "1ee99991": {
+    "name": "Megumi Fushiguro",
+    "series": "Jujutsu Kaisen",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./megumi_fushiguro_jujutsu_kaisen.jpg"
+  },
+  "b0573756": {
+    "name": "Loid Forger",
+    "series": "SPY x FAMILY",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./loid_forger_spy_x_family.jpg"
+  },
+  "28a92e9f": {
+    "name": "Subaru Natsuki",
+    "series": "Re:ZERO -Starting Life in Another World-",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./subaru_natsuki_re_zero_starting_life_in_another_world.jpg"
+  },
+  "a4f6221e": {
+    "name": "Kazuma Satou",
+    "series": "KONOSUBA -God's blessing on this wonderful world!",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./kazuma_satou_konosuba_god_s_blessing_on_this_wonderful_world.jpg"
+  },
+  "82b9e78a": {
+    "name": "Zenitsu Agatsuma",
+    "series": "Demon Slayer: Kimetsu no Yaiba",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./zenitsu_agatsuma_demon_slayer_kimetsu_no_yaiba.jpg"
+  },
+  "cbfa169b": {
+    "name": "Inosuke Hashibira",
+    "series": "Demon Slayer: Kimetsu no Yaiba",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./inosuke_hashibira_demon_slayer_kimetsu_no_yaiba.jpg"
+  },
+  "9d4d2836": {
+    "name": "Luffy Monkey",
+    "series": "ONE PIECE",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./luffy_monkey_one_piece.jpg"
+  },
+  "e8ac03de": {
+    "name": "Arcueid Brunestud",
+    "series": "Lunar Legend Tsukihime",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./arcueid_brunestud_lunar_legend_tsukihime.jpg"
+  },
+  "d5231e8f": {
+    "name": "Ponta",
+    "series": "Skeleton Knight in Another World",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./ponta_skeleton_knight_in_another_world.jpg"
+  },
+  "d9607cc1": {
+    "name": "Fuwawa Abyssgard",
+    "series": "Holo no Graffiti",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./fuwawa_abyssgard_holo_no_graffiti.jpg"
+  },
+  "0b34ed03": {
+    "name": "Youko Morinomiya",
+    "series": "Gakuen Babysitters",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./youko_morinomiya_gakuen_babysitters.jpg"
+  },
+  "1dd7ae96": {
+    "name": "Demalo Black",
+    "series": "ONE PIECE",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./demalo_black_one_piece.jpg"
+  },
+  "4fb67b26": {
+    "name": "Luffy Yamamoto",
+    "series": "Koisuru ONE PIECE",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./luffy_yamamoto_koisuru_one_piece.jpg"
+  },
+  "aea4ee75": {
+    "name": "Wada Akinori",
+    "series": "Goodnight Punpun",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./wada_akinori_goodnight_punpun.jpg"
+  },
+  "0ccc3f6f": {
+    "name": "Fluffy",
+    "series": "Mr.A's Farm",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./fluffy_mr_a_s_farm.jpg"
+  },
+  "e5964f17": {
+    "name": "Zoro Roronoa",
+    "series": "ONE PIECE",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./zoro_roronoa_one_piece.jpg"
+  },
+  "5f66b497": {
+    "name": "Tanjirou Kamado",
+    "series": "Demon Slayer: Kimetsu no Yaiba",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./tanjirou_kamado_demon_slayer_kimetsu_no_yaiba.jpg"
+  },
+  "2a70728d": {
+    "name": "Matsuemon Tennouji",
+    "series": "Demon Slayer: Kimetsu no Yaiba",
+    "tier": "SR",
+    "valueMin": 500000,
+    "valueMax": 800000,
+    "type": "card",
+    "image": "./matsuemon_tennouji_demon_slayer_kimetsu_no_yaiba.jpg"
+  },
+  "a69d0846": {
+    "name": "Marin Kitagawa",
+    "series": "My Dress-Up Darling",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./marin_kitagawa_my_dress_up_darling.jpg"
+  },
+  "7cd72ee8": {
+    "name": "Nami",
+    "series": "ONE PIECE",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./nami_one_piece.jpg"
+  },
+  "2850958a": {
+    "name": "Kento Nanami",
+    "series": "Jujutsu Kaisen",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./kento_nanami_jujutsu_kaisen.jpg"
+  },
+  "b222e4db": {
+    "name": "Rei Ayanami",
+    "series": "Neon Genesis Evangelion",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./rei_ayanami_neon_genesis_evangelion.jpg"
+  },
+  "df6c100c": {
+    "name": "Mami Nanami",
+    "series": "Rent-A-Girlfriend",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./mami_nanami_rent_a_girlfriend.jpg"
+  },
+  "79f3a540": {
+    "name": "Asuka Langley Souryuu",
+    "series": "Neon Genesis Evangelion",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./asuka_langley_souryuu_neon_genesis_evangelion.jpg"
+  },
+  "8e210b0d": {
+    "name": "Minato Namikaze",
+    "series": "Naruto",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./minato_namikaze_naruto.jpg"
+  },
+  "0d14fe74": {
+    "name": "Chiaki Nanami",
+    "series": "Danganronpa 3: The End of Hope’s Peak High School - Despair Arc",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./chiaki_nanami_danganronpa_3_the_end_of_hope_s_peak_high_school_despair_arc.jpg"
+  },
+  "c3ee2a70": {
+    "name": "Hanamichi Sakuragi",
+    "series": "Slam Dunk",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./hanamichi_sakuragi_slam_dunk.jpg"
+  },
+  "b5fd39e6": {
+    "name": "Nanami Momozono",
+    "series": "Kamisama Kiss",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./nanami_momozono_kamisama_kiss.jpg"
+  },
+  "5598955f": {
+    "name": "Nanami Aoyama",
+    "series": "The Pet Girl of Sakurasou",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./nanami_aoyama_the_pet_girl_of_sakurasou.jpg"
+  },
+  "fdb12657": {
+    "name": "Chika Fujiwara",
+    "series": "Kaguya-sama: Love is War",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./chika_fujiwara_kaguya_sama_love_is_war.jpg"
+  },
+  "0fa757e5": {
+    "name": "Kurisu Makise",
+    "series": "Steins;Gate",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./kurisu_makise_steins_gate.jpg"
+  },
+  "bc3afca0": {
+    "name": "Tooru Oikawa",
+    "series": "HAIKYU!!",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./tooru_oikawa_haikyu.jpg"
+  },
+  "7b5eda7a": {
+    "name": "Tooru Honda",
+    "series": "Fruits Basket",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./tooru_honda_fruits_basket.jpg"
+  },
+  "f03fffc0": {
+    "name": "Tooru Rikiishi",
+    "series": "Tomorrow's Joe",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./tooru_rikiishi_tomorrow_s_joe.jpg"
+  },
+  "21e8ef54": {
+    "name": "Tooru Adachi",
+    "series": "Persona 4 the Animation",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./tooru_adachi_persona_4_the_animation.jpg"
+  },
+  "27a05d55": {
+    "name": "Tooru Naruse",
+    "series": "Harlem Beat",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./tooru_naruse_harlem_beat.jpg"
+  },
+  "132d4bb2": {
+    "name": "Tohru Ichijou",
+    "series": "Welcome to Japan, Ms. Elf!",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./tohru_ichijou_welcome_to_japan_ms_elf.jpg"
+  },
+  "1bb7984c": {
+    "name": "Tohru Izumi",
+    "series": "I’m the Catlords’ Manservant",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./tohru_izumi_i_m_the_catlords_manservant.jpg"
+  },
+  "b4265480": {
+    "name": "Tohru",
+    "series": "Juunenme, Kikan wo Akirameta Tenisha wa Imasara Shujinkou ni Naru",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./tohru_juunenme_kikan_wo_akirameta_tenisha_wa_imasara_shujinkou_ni_naru.jpg"
+  },
+  "495342bc": {
+    "name": "Darkness",
+    "series": "KONOSUBA -God's blessing on this wonderful world!",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./darkness_konosuba_god_s_blessing_on_this_wonderful_world.jpg"
+  },
+  "498f1682": {
+    "name": "Griffith",
+    "series": "Berserk",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./griffith_berserk.jpg"
+  },
+  "8c69c954": {
+    "name": "Hak Son",
+    "series": "Yona of the Dawn",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./hak_son_yona_of_the_dawn.jpg"
+  },
+  "65af702a": {
+    "name": "Konjiki no Yami",
+    "series": "To Love Ru",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./konjiki_no_yami_to_love_ru.jpg"
+  },
+  "40708cf6": {
+    "name": "Chihiro Rokuhira",
+    "series": "Kagurabachi",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./chihiro_rokuhira_kagurabachi.jpg"
+  },
+  "cc5be4f0": {
+    "name": "Yumiella Dolkness",
+    "series": "Villainess Level 99: I May Be the Hidden Boss But I'm Not the Demon Lord",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./yumiella_dolkness_villainess_level_99_i_may_be_the_hidden_boss_but_i_m_not_the_demon_lord.jpg"
+  },
+  "2fb8fa49": {
+    "name": "Guy Crimson",
+    "series": "That Time I Got Reincarnated as a Slime",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./guy_crimson_that_time_i_got_reincarnated_as_a_slime.jpg"
+  },
+  "20c7872f": {
+    "name": "La+ Darknesss",
+    "series": "Holo no Graffiti",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./la_darknesss_holo_no_graffiti.jpg"
+  },
+  "8b10f9b8": {
+    "name": "Kirara Hazama",
+    "series": "Assassination Classroom",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./kirara_hazama_assassination_classroom.jpg"
+  },
+  "8469689a": {
+    "name": "Yami no Ouji",
+    "series": "Shironeko Project ZERO CHRONICLE",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./yami_no_ouji_shironeko_project_zero_chronicle.jpg"
+  },
+  "1e8bfe77": {
+    "name": "Megumin",
+    "series": "KONOSUBA -God's blessing on this wonderful world!",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./megumin_konosuba_god_s_blessing_on_this_wonderful_world.jpg"
+  },
+  "9e82cce7": {
+    "name": "Chomusuke",
+    "series": "KONOSUBA -God's blessing on this wonderful world! 2",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./chomusuke_konosuba_god_s_blessing_on_this_wonderful_world_2.jpg"
+  },
+  "9e21a96d": {
+    "name": "Megumi Jinno",
+    "series": "Eromanga Sensei",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./megumi_jinno_eromanga_sensei.jpg"
+  },
+  "a268f270": {
+    "name": "Megumi Aikawa",
+    "series": "Heaven Burns Red : Comic Anthology",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./megumi_aikawa_heaven_burns_red_comic_anthology.jpg"
+  },
+  "dc8e8076": {
+    "name": "Megumi Minami",
+    "series": "Detective School Q",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./megumi_minami_detective_school_q.jpg"
+  },
+  "968dc118": {
+    "name": "Megumi Aikawa",
+    "series": "Me, a Genius? I Was Reborn into Another World and I Think They've Got the Wrong Idea!",
+    "tier": "S",
+    "valueMin": 350000,
+    "valueMax": 500000,
+    "type": "card",
+    "image": "./megumi_aikawa_me_a_genius_i_was_reborn_into_another_world_and_i_think_they_ve_got_the_wrong_idea.jpg"
+  }
+}
