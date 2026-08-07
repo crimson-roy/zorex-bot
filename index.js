@@ -38,7 +38,6 @@ const { inviteCommands } = require("./commands/invite");
 const { minesCommands } = require("./commands/mines");
 const { gambleCommands } = require("./commands/gamble");
 const { groupCommands } = require("./commands/group");
-const { cardCommands } = require("./commands/card");
 
 const {
     moderationWatcher
@@ -61,7 +60,9 @@ const {
     forceEndAuction,
     viewCollection,
     viewInventory,
-    useLuckyCharm
+    useLuckyCharm,
+    auctionStatus,
+    viewAuctionCards
 } = require("./commands/auction");
 
 const { crimeCommand } = require("./commands/crime");
@@ -146,6 +147,11 @@ const { giveCommand } = require("./commands/give");
 const { addCardCommand } = require("./commands/addcard");
 const { resetEconomyCommand } = require("./commands/reseteconomy");
 const { removeCardCommand } = require("./commands/rcard");
+// NOTE: this is the ONLY require("./commands/card") in the file — a
+// duplicate of this line (a second, separate `const { cardCommands } =
+// require("./commands/card")` further down) was what crashed the boot
+// with "Identifier 'cardCommands' has already been declared". Do not
+// re-add a second one.
 const { cardCommands, cardLeaderboardCommand } = require("./commands/card");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
@@ -1891,6 +1897,8 @@ else if (text.startsWith(".mem")) {
 
 } else if (
 
+    text === ".auction" ||
+    text.startsWith(".auctioncards") ||
     text.startsWith(".importauction") ||
     text.startsWith(".auctionstart") ||
     text.startsWith(".auctionbid") ||
@@ -1900,7 +1908,15 @@ else if (text.startsWith(".mem")) {
 
 ) {
 
-    if (text.startsWith(".importauction")) {
+    if (text === ".auction") {
+
+        await auctionStatus(sock, msg);
+
+    } else if (text.startsWith(".auctioncards")) {
+
+        await viewAuctionCards(sock, msg);
+
+    } else if (text.startsWith(".importauction")) {
 
         await importAuctionItem(sock, msg, text);
 
