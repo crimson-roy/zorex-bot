@@ -28,7 +28,9 @@ const CARD_FILE = "./card.json";
 
 const { resetUserCooldown } = require("./cooldown");
 const { resetUserDailyLimit } = require("./dailylimit");
-const { findOwners, sendCardDisplay } = require("./card");
+// TIER_ICONS pulled in from the existing card.js mapping — never
+// duplicated here (see: UR/SSR/SR/S/R/C icons already defined there).
+const { findOwners, sendCardDisplay, TIER_ICONS } = require("./card");
 
 const DEFAULT_STARTING_BID = 100000;
 const AUCTION_DURATION_MS = 5 * 60 * 1000; // 5 minutes
@@ -74,6 +76,23 @@ function isOwner(userId) {
     if (!userId) return false;
     if (MAIN_OWNER && userId === MAIN_OWNER) return true;
     return loadOwners().includes(userId);
+}
+
+// Registered-name lookup (users.json) — used anywhere a person needs to be
+// displayed by name instead of a raw WhatsApp ID. Falls back safely if the
+// user isn't registered so a missing profile never crashes a display.
+function getRegisteredName(userId) {
+
+    if (!userId) return "Unknown User";
+
+    const users = loadUsers();
+
+    if (users[userId] && users[userId].name) {
+        return users[userId].name;
+    }
+
+    return "Unknown User";
+
 }
 
 let auctionTimer = null; // in-memory handle for the single global auction timer
@@ -141,8 +160,181 @@ async function importAuctionItem(sock, msg, text) {
     auctionItems[itemId] = imported;
     saveAuctionItems(auctionItems);
 
+    // ---- Success display ----
+    // Cards get the richer, .col-style confirmation: tier icon + name +
+    // visual, with NO card ID and NO series shown. The item still keeps its
+    // real ID internally (auctionItems[itemId] above) — only the display
+    // omits it. Non-card imports (shop items) keep the original plain
+    // confirmation unchanged.
+    if (imported.type === "card") {
+
+        const cardData = cards[itemId] || {};
+        const tier = cardData.tier || "C";
+        const icon = TIER_ICONS[tier] || "⚪";
+
+        const caption = `✅ Imported into auction pool!\n\n🎴 Auction Card:\n${icon} ${imported.name}`;
+
+        if (imported.video && fs.existsSync(imported.video)) {
+
+            return await sock.sendMessage(msg.key.remoteJid, {
+                video: fs.readFileSync(imported.video),
+                caption,
+                gifPlayback: true
+            }, { quoted: msg });
+
+        } else if (imported.image && fs.existsSync(imported.image)) {
+
+            return await sock.sendMessage(msg.key.remoteJid, {
+                image: fs.readFileSync(imported.image),
+                caption
+            }, { quoted: msg });
+
+        } else {
+
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: caption
+            }, { quoted: msg });
+
+        }
+
+    }
+
+    // Non-card items — original behavior, unchanged
     return await sock.sendMessage(msg.key.remoteJid, {
         text: `✅ Imported into auction pool!\n\n🎁 Item:\n${imported.name}\n\n🆔 ID:\n${itemId}`
+    }, { quoted: msg });
+
+}
+
+
+// ---------- .auctioncards — list cards currently sitting in the auction pool ----------
+// Separate command from .auction — does NOT get folded into `.auction cards`.
+// This only lists what .importauction has already added to the pool; it does
+// not add anything itself.
+async function viewAuctionCards(sock, msg) {
+
+    const auctionItems = loadAuctionItems();
+    const cards = loadCards();
+
+    const cardEntries = Object.entries(auctionItems).filter(
+        ([, item]) => item.type === "card"
+    );
+
+    if (cardEntries.length === 0) {
+
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `🎴 There are no cards currently in the auction pool.\n\nUse:\n.importauction <CARD_ID>`
+        }, { quoted: msg });
+
+    }
+
+    const list = cardEntries
+        .map(([id, item], i) => {
+
+            const cardData = cards[id] || {};
+            const tier = cardData.tier || "C";
+            const icon = TIER_ICONS[tier] || "⚪";
+
+            return `${i + 1}. ${icon} ${item.name}`;
+
+        })
+        .join("\n");
+
+    return await sock.sendMessage(msg.key.remoteJid, {
+        text:
+`🎴 *Auction Cards*
+
+${list}
+
+💡 Use .auctionstart <item_ID> <startingBid> to start an auction.`
+    }, { quoted: msg });
+
+}
+
+
+// ---------- .auction — help/status ----------
+// No active auction → auction help/status message.
+// Active auction → current auction status, reading real fields off
+// auction.json (item, startingBid, currentBid, highestBidder, endsAt).
+async function auctionStatus(sock, msg) {
+
+    const auction = loadAuction();
+
+    if (!auction.active) {
+
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text:
+`💡 *Auction System*
+
+🔹 *Public Commands:*
+- .auction - Check auction status
+
+👑 *Owner Commands:*
+- .auctionstart [item_ID] [startingBid] - Start auction
+- .auctionend - End auction
+- .auctioncards - View auction cards
+
+📝 Types: item, card
+📝 Item IDs: luckycharm
+
+🎴 *Auction Cards:*
+Use .importauction <CARD_ID> to add cards to the auction pool.`
+        }, { quoted: msg });
+
+    }
+
+    // Active auction — compute remaining time from the real endsAt value.
+    // If the auction has technically expired but the timer/state hasn't
+    // been cleaned up yet, show a safe fallback instead of a negative time.
+    const remainingMs = (auction.endsAt || 0) - Date.now();
+
+    let remainingText;
+
+    if (remainingMs <= 0) {
+
+        remainingText = "Ending shortly...";
+
+    } else {
+
+        const totalSeconds = Math.ceil(remainingMs / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        remainingText = minutes > 0
+            ? `${minutes} minute${minutes === 1 ? "" : "s"}${seconds > 0 ? ` ${seconds}s` : ""}`
+            : `${seconds} second${seconds === 1 ? "" : "s"}`;
+
+    }
+
+    // Registered-name lookup for the highest bidder — never the raw
+    // WhatsApp ID. Safe fallback if their profile can't be found.
+    const bidderName = auction.highestBidder
+        ? getRegisteredName(auction.highestBidder)
+        : "No bids yet";
+
+    const itemName = (auction.item && auction.item.name) || "Unknown Item";
+
+    return await sock.sendMessage(msg.key.remoteJid, {
+        text:
+`🔨 *ACTIVE AUCTION*
+
+🎁 *Item:*
+${itemName}
+
+💰 *Starting Bid:*
+${(auction.startingBid || 0).toLocaleString()} 🌙
+
+💸 *Current Bid:*
+${(auction.currentBid || 0).toLocaleString()} 🌙
+
+👤 *Highest Bidder:*
+${bidderName}
+
+⏳ *Time Remaining:*
+${remainingText}
+
+Use:
+.auctionbid <amount>`
     }, { quoted: msg });
 
 }
@@ -511,13 +703,58 @@ async function viewCollection(sock, msg, text) {
     }
 
     // .col — plain list
+    // .col — card collection list
+
+    const cards = loadCards();
+
     const list = items
-        .map((it, i) => `${i + 1}. ${it.name} (${it.type})`)
+        .map((it, i) => {
+
+            const card = cards[it.id];
+
+            // If the card was removed from card.json,
+            // still show the stored collection entry safely.
+            if (!card) {
+                return `${i + 1}. 🃏 ⚪ ${it.name} — Unknown Series #${it.id}`;
+            }
+
+            const tier = card.tier || it.tier || "C";
+
+            const icon =
+                TIER_ICONS[tier] || "⚪";
+
+            const series =
+                card.series || "Unknown Series";
+
+            return `${i + 1}. 🃏 ${icon} ${card.name} — ${series} #${it.id}`;
+
+        })
         .join("\n");
 
-    return await sock.sendMessage(msg.key.remoteJid, {
-        text: `📦 *YOUR COLLECTION*\n\n${list}\n\nType .col <number> to view a specific item.`
-    }, { quoted: msg });
+    // Header uses the sender's REGISTERED name from users.json (not their
+    // raw WhatsApp pushName), matching the rest of the display system.
+    // Falls back to pushName, then a generic label, if they aren't
+    // registered — never a raw WhatsApp ID.
+    const users = loadUsers();
+    const displayName =
+        (users[sender] && users[sender].name) ||
+        msg.pushName ||
+        "User";
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text:
+`🃏 ${displayName}'s Collection
+
+━━━━━━━━━━━━━━━━━━━━━
+${list}
+━━━━━━━━━━━━━━━━━━━━━
+
+💡 Use .col <#> to view a card detail`
+        },
+        { quoted: msg }
+    );
 
 }
 
@@ -706,5 +943,7 @@ module.exports = {
     forceEndAuction,
     viewCollection,
     viewInventory,
-    useLuckyCharm
+    useLuckyCharm,
+    auctionStatus,
+    viewAuctionCards
 };

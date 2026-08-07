@@ -144,11 +144,14 @@ const { execute: spawnCommand } = require("./commands/spawn");
 const { execute: claimCommand } = require("./commands/claim");
 const { giveCommand } = require("./commands/give");
 const { addCardCommand } = require("./commands/addcard");
+const { resetEconomyCommand } = require("./commands/reseteconomy");
 const { removeCardCommand } = require("./commands/rcard");
+const { cardCommands, cardLeaderboardCommand } = require("./commands/card");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
 const { upscleCommands } = require("./commands/upscle");
 const { graphicsCommands } = require("./commands/graphics");
+const { broadcastCommand } = require("./commands/broadcast");
 const { videoUpscaleCommands } = require('./commands/videoUpscale');
 
 const { MAIN_OWNER } = require("./config");
@@ -1757,6 +1760,15 @@ ${board}
         text
     );
 
+} else if (text.startsWith(".broadcast")) {
+
+    await broadcastCommand(sock, msg, text);
+
+} else if (text === ".cardlb") {
+
+    await cardLeaderboardCommand(sock, msg);
+
+
 } else if (text.startsWith(".trade")) {
 
     // Covers .trade, .tradeaccept, .tradedecline, .tradesell,
@@ -1857,6 +1869,10 @@ else if (text.startsWith(".mem")) {
 
 } else if (text.startsWith('.upscale') || text.startsWith('.fps') || text.startsWith('.bitrate')) {
     return await videoUpscaleCommands(sock, msg, text);
+
+} else if (text.startsWith(".reseteconomy")) {
+
+    await resetEconomyCommand(sock, msg, text);
 
 } else if (text.startsWith(".sell")) {
 

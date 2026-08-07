@@ -9,12 +9,12 @@ const USERS_FILE = dataPath("users.json");
 // NOTE: BASE_INCOME wasn't specified — 50,000 🌙/6h is my starting guess
 // (roughly a 6h payback window on the 300,000 creation cost before any
 // upgrades). Change this one number if you want a different pace.
-const CREATE_COST = 300000;
-const BASE_INCOME = 50000;              // income/6h at level 0 (no upgrades)
-const INCOME_MULTIPLIER = 1.4;          // +40% income per upgrade
-const BASE_UPGRADE_COST = 500000;       // cost of the 1st upgrade
-const UPGRADE_COST_MULTIPLIER = 1.2;    // +20% upgrade cost per upgrade
-const PAYOUT_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const CREATE_COST = 100000000;
+const BASE_INCOME = 100000;
+const INCOME_MULTIPLIER = 1.15;
+const BASE_UPGRADE_COST = 35000;
+const UPGRADE_COST_MULTIPLIER = 1.07;
+const PAYOUT_INTERVAL_MS = 12 * 60 * 60 * 1000; // 6 hours
 
 function loadUsers() {
 
@@ -141,7 +141,7 @@ async function companyCommand(sock, msg) {
 ╰━━━━━━━━━━━━━━━━━━━━━━━╯
 » Name    : ${company.name}
 » Level   : ${company.level}
-» Income  : ${income.toLocaleString()} 🌙 every 6h
+» Income  : ${income.toLocaleString()} 🌙 every 12h
 » Next Up : ${nextUpgradeCost.toLocaleString()} 🌙 (.companyupgrade)
 » Payout  : in ${timeLeft}
 ━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -154,7 +154,7 @@ async function companyCommand(sock, msg) {
 
 }
 
-// ---------- .companycreate <name> — start a company for 300,000 ----------
+// ---------- .companycreate <name> — start a company for 100,000,000 ----------
 async function companyCreateCommand(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -212,7 +212,7 @@ async function companyCreateCommand(sock, msg, text) {
    🏢 𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗖𝗥𝗘𝗔𝗧𝗘𝗗 🏢
 ╰━━━━━━━━━━━━━━━━━━━━━━━╯
 » Name    : ${name}
-» Income  : ${incomeAtLevel(0).toLocaleString()} 🌙 every 6h
+» Income  : ${incomeAtLevel(0).toLocaleString()} 🌙 every 12h
 » Wallet  : ${users[sender].wallet.toLocaleString()} 🌙
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 Use .companyupgrade to grow your empire.`
@@ -222,7 +222,7 @@ Use .companyupgrade to grow your empire.`
 
 }
 
-// ---------- .companyupgrade — level up, cost +20%, income +40% each time ----------
+// ---------- .companyupgrade — level up, cost +7%, income +15% each time ----------
 async function companyUpgradeCommand(sock, msg) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -275,7 +275,7 @@ async function companyUpgradeCommand(sock, msg) {
 ╰━━━━━━━━━━━━━━━━━━━━━━━╯
 » Name       : ${company.name}
 » New Level  : ${company.level}
-» New Income : ${newIncome.toLocaleString()} 🌙 every 6h
+» New Income : ${newIncome.toLocaleString()} 🌙 every 12h
 » Wallet     : ${users[sender].wallet.toLocaleString()} 🌙
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 Next upgrade costs ${nextCost.toLocaleString()} 🌙`

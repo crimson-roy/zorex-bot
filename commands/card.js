@@ -13,7 +13,13 @@ const dataPath = require("../lib/dataPath");
 const CARD_FILE = "./card.json";
 const COLLECTION_FILE = dataPath("collection.json");
 
+// users.json — read-only here, used for registered-name lookups (e.g.
+// .cardlb). Written elsewhere (index.js's .register flow); this file only
+// ever reads it.
+const USERS_FILE = dataPath("users.json");
+
 const TIER_ICONS = {
+    UR: "💎",
     SSR: "👑",
     SR: "🟣",
     S: "🟡",
@@ -22,6 +28,7 @@ const TIER_ICONS = {
 };
 
 const TIER_LABELS = {
+    UR: "UR",
     SSR: "SSR",
     SR: "SR",
     S: "S",
@@ -29,7 +36,7 @@ const TIER_LABELS = {
     C: "Common"
 };
 
-const TIER_ORDER = ["SSR", "SR", "S", "R", "C"];
+const TIER_ORDER = ["UR", "SSR", "SR", "S", "R", "C"];
 
 
 function loadCards() {
@@ -49,6 +56,16 @@ function loadCollection() {
     }
 
     return JSON.parse(fs.readFileSync(COLLECTION_FILE, "utf8"));
+
+}
+
+function loadUsers() {
+
+    if (!fs.existsSync(USERS_FILE)) {
+        fs.writeFileSync(USERS_FILE, "{}");
+    }
+
+    return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
 
 }
 
@@ -251,8 +268,63 @@ ${lines.join("\n")}`;
 
 }
 
+
+// ---------- .cardlb — top 15 card collectors ----------
+// Public command. Ranks by RAW total card count in collection.json — no
+// series involved (series isn't part of the card system yet, per spec).
+// Names are pulled from users.json (registered name), never a raw
+// WhatsApp ID/mention, matching the rest of the display system.
+async function cardLeaderboardCommand(sock, msg) {
+
+    const collection = loadCollection();
+    const users = loadUsers();
+
+    const ranked = Object.entries(collection)
+        .map(([userId, items]) => ({
+            userId,
+            count: (items || []).length
+        }))
+        .filter(entry => entry.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 15);
+
+    if (ranked.length === 0) {
+
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `🏆 No one has collected any cards yet.`
+        }, { quoted: msg });
+
+    }
+
+    const medals = ["🥇", "🥈", "🥉"];
+
+    const list = ranked
+        .map((entry, i) => {
+
+            const rankLabel = medals[i] || `${i + 1}.`;
+
+            const name =
+                (users[entry.userId] && users[entry.userId].name) ||
+                "Unregistered User";
+
+            return `${rankLabel} ${name} — ${entry.count} card${entry.count === 1 ? "" : "s"}`;
+
+        })
+        .join("\n");
+
+    return await sock.sendMessage(msg.key.remoteJid, {
+        text:
+`🏆 *Card Leaderboard — Top ${ranked.length}*
+
+${list}`
+    }, { quoted: msg });
+
+}
+
+
 module.exports = {
     cardCommands,
+    cardLeaderboardCommand,
     loadCards,
     loadCollection,
     findOwners,
