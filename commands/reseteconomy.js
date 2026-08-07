@@ -156,6 +156,12 @@ async function resetEconomyCommand(sock, msg, text) {
     // ----------------------------------------------
     // CHECK CONFIRMATION
     // ----------------------------------------------
+    //
+    // The command itself is now what carries the confirmation:
+    // ".reseteconomy" starts the flow, and ".yes" / ".no" arrive as their
+    // own standalone messages (routed here from index.js), NOT as a second
+    // argument to ".reseteconomy". So we read args[0] — the command word —
+    // rather than args[1].
 
     const args =
         text
@@ -163,9 +169,13 @@ async function resetEconomyCommand(sock, msg, text) {
             .split(/\s+/)
             .filter(Boolean);
 
+    const command = args[0] ? args[0].toLowerCase() : "";
+
     const confirmation =
-        args[1]
-            ? args[1].toLowerCase()
+        command === ".yes" || command === "yes"
+            ? "yes"
+            : command === ".no" || command === "no"
+            ? "no"
             : null;
 
     // ----------------------------------------------
@@ -183,26 +193,8 @@ async function resetEconomyCommand(sock, msg, text) {
                 text:
 `╭━━━━━━ ⚠️ 𝗘𝗖𝗢𝗡𝗢𝗠𝗬 𝗥𝗘𝗦𝗘𝗧 ━━━━━━╮
 │
-│ Using this command will reset
-│ ALL USERS' ECONOMY DATA.
-│
-│ This includes:
-│
-│ 💰 Wallet balances
-│ 🏦 Bank balances
-│ 📊 Levels & ranks
-│ 🎮 Games / wins / losses
-│ 🔥 Daily streaks
-│ 🏢 Companies
-│ 📈 Company upgrades
-│ 🎒 Inventories
-│
-│ Every company will be deleted,
-│ regardless of its current level.
-│
-│ 🃏 COLLECTIONS WILL NOT BE TOUCHED.
-│
-│ ⚠️ THIS ACTION CANNOT BE UNDONE.
+│ This will reset ALL users'
+│ economy data.
 │
 │ Are you absolutely sure?
 │
@@ -222,7 +214,7 @@ async function resetEconomyCommand(sock, msg, text) {
     // .NO
     // ----------------------------------------------
 
-    if (confirmation === ".no" || confirmation === "no") {
+    if (confirmation === "no") {
 
         if (
             !resetPending ||
@@ -262,7 +254,7 @@ async function resetEconomyCommand(sock, msg, text) {
     // .YES
     // ----------------------------------------------
 
-    if (confirmation === ".yes" || confirmation === "yes") {
+    if (confirmation === "yes") {
 
         if (
             !resetPending ||
@@ -325,14 +317,6 @@ async function resetEconomyCommand(sock, msg, text) {
 │ All users have been reset.
 │
 │ 👥 Users reset: ${totalUsers}
-│ 💰 New wallet: 500,000 🌙
-│ 🏢 Companies: Deleted
-│ 🎒 Inventories: Wiped
-│
-│ 🃏 Collections were NOT touched.
-│
-│ The economy is now back to
-│ its initial state.
 │
 ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯`
                 },

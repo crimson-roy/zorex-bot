@@ -1880,6 +1880,10 @@ else if (text.startsWith(".mem")) {
 
     await resetEconomyCommand(sock, msg, text);
 
+} else if (text === ".yes" || text === ".no") {
+
+    await resetEconomyCommand(sock, msg, text);
+
 } else if (text.startsWith(".sell")) {
 
     await sellCommand(sock, msg, text);
