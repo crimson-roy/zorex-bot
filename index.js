@@ -71,9 +71,6 @@ const { begCommand } = require("./commands/beg");
 const { fishCommand, sellCommand } = require("./commands/fish");
 const { digCommand } = require("./commands/dig");
 
-// .company / .companycreate / .companyupgrade — passive-income companies
-const { companyCommand, companyCreateCommand, companyUpgradeCommand } = require("./commands/company");
-
 // .invest (buy/sell) / .assets — global market + personal portfolio
 const { investCommand, assetsCommand } = require("./commands/invest");
 
