@@ -18,7 +18,6 @@ const dataPath = require("../lib/dataPath");
 // already exists without that entry. .setrole (and every other command
 // below gated by isOwner()) now checks MAIN_OWNER first, same as
 // auction.js's isOwner().
-const { MAIN_OWNER } = require("../config");
 
 const OWNERS_FILE = dataPath("owners.json");
 const USERS_FILE = dataPath("users.json");
