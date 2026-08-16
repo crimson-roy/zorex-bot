@@ -1,6 +1,7 @@
 const fs = require("fs");
 const dataPath = require("../lib/dataPath");
 const { loadInventory, saveInventory } = require("./inventory");
+const { findEmploymentAnywhere } = require("../lib/jobOffers");
 
 // PERSISTENCE FIX: both are written by this file (wallet on every buy/
 // sell, market rates on every tick) — routed through dataPath() so a
@@ -286,7 +287,7 @@ async function assetsCommand(sock, msg) {
             {
                 text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
    💼 𝗙𝗜𝗡𝗔𝗡𝗖𝗜𝗔𝗟 𝗔𝗨𝗗𝗜𝗧 💼
-╰━━━━━━━━━━━━━━━━━━━━━━━╯
+╰━━━━━━━━━━━━━━━━━━━━━━━╮
 ℹ️ No assets currently held in your portfolio.
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 » Liquid Reserves : ${liquid.toLocaleString()} 🌙
@@ -316,7 +317,7 @@ async function assetsCommand(sock, msg) {
         {
             text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
    💼 𝗙𝗜𝗡𝗔𝗡𝗖𝗜𝗔𝗟 𝗔𝗨𝗗𝗜𝗧 💼
-╰━━━━━━━━━━━━━━━━━━━━━━━╯
+╰━━━━━━━━━━━━━━━━━━━━━━━╮
 ${lines.join("\n")}
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 » Liquid Reserves : ${liquid.toLocaleString()} 🌙
@@ -328,7 +329,165 @@ ${lines.join("\n")}
 
 }
 
+// ---------- .companyinvest — same mechanics, spends the COMPANY wallet ----------
+// Authorized callers: the company's OWNER (always, no role needed — it's
+// their company), or an EMPLOYEE holding the "investor" role granted via
+// .company assign investor @user. Holdings are stored directly on the
+// company object (company.assets — same {id, quantity} shape as a
+// personal inventory asset entry) rather than in inventory.json, since
+// this is company-scoped data that already lives alongside
+// company.wallet/company.employees.
+async function resolveInvestingCompany(users, sender) {
+
+    if (users[sender].company) {
+        return { company: users[sender].company, ownerId: sender };
+    }
+
+    const job = findEmploymentAnywhere(users, sender);
+
+    if (job) {
+        const employerCompany = users[job.ownerId].company;
+        const employeeRecord = employerCompany.employees[job.employeeId];
+        if (employeeRecord && employeeRecord.role === "investor") {
+            return { company: employerCompany, ownerId: job.ownerId };
+        }
+    }
+
+    return null;
+
+}
+
+async function companyInvestCommand(sock, msg, text) {
+
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const users = loadUsers();
+
+    if (!users[sender]) {
+        return await sock.sendMessage(msg.key.remoteJid, { text: notRegisteredMessage() }, { quoted: msg });
+    }
+
+    const resolved = await resolveInvestingCompany(users, sender);
+
+    if (!resolved) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ You need to own a company, or hold the *investor* role at one (via .company assign investor), to use .companyinvest.`
+        }, { quoted: msg });
+    }
+
+    const { company } = resolved;
+    company.wallet = company.wallet || 0;
+    company.assets = company.assets || [];
+
+    const args = text.replace(".companyinvest", "").trim().split(/\s+/).filter(Boolean);
+    const sub = (args[0] || "").toLowerCase();
+
+    if (sub !== "buy" && sub !== "sell") {
+
+        const market = tickMarket();
+
+        const lines = Object.entries(ASSETS).map(([id, def]) => {
+            const rate = market[id].rate;
+            return `${def.emoji} ${def.name} [${id}]
+   Rate: ${rate.toLocaleString()} 🌙 | ${riskLabel(def.risk)}`;
+        });
+
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
+   📈 𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗠𝗔𝗥𝗞𝗘𝗧
+╰━━━━━━━━━━━━━━━━━━━━━━━╮
+${lines.join("\n")}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+🏢 Company Wallet: ${company.wallet.toLocaleString()} 🌙
+
+.companyinvest buy <id> <amount>
+.companyinvest sell <id> <amount>`
+        }, { quoted: msg });
+
+    }
+
+    const id = (args[1] || "").toLowerCase();
+    const def = ASSETS[id];
+
+    if (!def) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Unknown asset "${args[1] || ""}".\n\nUse .companyinvest to see valid IDs (gold, stark, land, oil, tech, bonds, art).`
+        }, { quoted: msg });
+    }
+
+    const amount = Number(args[2]);
+
+    if (!Number.isInteger(amount) || amount <= 0) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Usage:\n\n.companyinvest ${sub} ${id} <amount>\n\nExample:\n\n.companyinvest ${sub} ${id} 5`
+        }, { quoted: msg });
+    }
+
+    const market = tickMarket();
+    const rate = market[id].rate;
+    const total = rate * amount;
+
+    const holding = company.assets.find(a => a.id === id);
+
+    if (sub === "buy") {
+
+        if (company.wallet < total) {
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ Company wallet needs ${total.toLocaleString()} 🌙 to buy ${amount} ${def.name}.\n\n🏢 Company Wallet: ${company.wallet.toLocaleString()} 🌙`
+            }, { quoted: msg });
+        }
+
+        company.wallet -= total;
+
+        if (holding) {
+            holding.quantity += amount;
+        } else {
+            company.assets.push({ id, quantity: amount, obtainedAt: Date.now() });
+        }
+
+        saveUsers(users);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `${def.emoji} *COMPANY BOUGHT*
+» Asset   : ${def.name} x${amount}
+» Cost    : ${total.toLocaleString()} 🌙
+» Rate    : ${rate.toLocaleString()} 🌙 each
+» Company Wallet: ${company.wallet.toLocaleString()} 🌙`
+        }, { quoted: msg });
+
+    } else {
+
+        const owned = holding ? holding.quantity : 0;
+
+        if (owned < amount) {
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ Company only holds ${owned} ${def.name} — can't sell ${amount}.`
+            }, { quoted: msg });
+        }
+
+        holding.quantity -= amount;
+
+        if (holding.quantity <= 0) {
+            company.assets = company.assets.filter(a => a.id !== id);
+        }
+
+        company.wallet += total;
+
+        saveUsers(users);
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `${def.emoji} *COMPANY SOLD*
+» Asset   : ${def.name} x${amount}
+» Proceeds: ${total.toLocaleString()} 🌙
+» Rate    : ${rate.toLocaleString()} 🌙 each
+» Company Wallet: ${company.wallet.toLocaleString()} 🌙`
+        }, { quoted: msg });
+
+    }
+
+}
+
 module.exports = {
     investCommand,
-    assetsCommand
+    assetsCommand,
+    companyInvestCommand
 };

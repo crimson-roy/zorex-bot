@@ -91,15 +91,8 @@ async function removeCardCommand(sock, msg, text) {
 
     }
 
+  const context = getContextInfo(msg);
     const mentions = getMentionedJids(msg);
-
-    if (mentions.length === 0) {
-
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Usage:\n\n.rcard <CARD_ID> @user\n\nExample:\n.rcard 59e04c5d @user`
-        }, { quoted: msg });
-
-    }
 
     if (mentions.length > 1) {
 
@@ -109,7 +102,8 @@ async function removeCardCommand(sock, msg, text) {
 
     }
 
-    const targetId = mentions[0];
+    // Priority: @mention > reply-to-user > self (no target given at all)
+    const recipientId = mentions[0] || context.participant || senderId;
 
     const args = text.trim().split(/\s+/).filter(Boolean);
     const rawId = args[1];

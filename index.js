@@ -152,13 +152,23 @@ const { removeCardCommand } = require("./commands/rcard");
 // require("./commands/card")` further down) was what crashed the boot
 // with "Identifier 'cardCommands' has already been declared". Do not
 // re-add a second one.
-const { cardCommands, cardLeaderboardCommand } = require("./commands/card");
+const { cardCommands, cardLeaderboardCommand, seriesSearchCommand } = require("./commands/card");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: hbCommand } = require("./commands/hb");
 const { upscleCommands } = require("./commands/upscle");
 const { graphicsCommands } = require("./commands/graphics");
 const { broadcastCommand } = require("./commands/broadcast");
 const { videoUpscaleCommands } = require('./commands/videoUpscale');
+const {
+    companyCommand,
+    companyCreateCommand,
+    companyUpgradeCommand,
+    companyOfferCommand,
+    companyOffersCommand,
+    companyApproveCommand
+} = require("./commands/company");
+
+const { jobOffersCommand, jobApplyCommand } = require("./commands/jobs");
 
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = dataPath("owners.json");
@@ -1774,6 +1784,10 @@ ${board}
 
     await cardLeaderboardCommand(sock, msg);
 
+    } else if (text.startsWith(".ss")) {
+
+    await seriesSearchCommand(sock, msg, text);
+
 
 } else if (text.startsWith(".trade")) {
 
@@ -1859,11 +1873,34 @@ else if (text.startsWith(".mem")) {
 
 } else if (text.startsWith(".companyupgrade")) {
 
-    await companyUpgradeCommand(sock, msg, text);
+    await companyUpgradeCommand(sock, msg);
 
-} else if (text === ".company") {
+} else if (text.startsWith(".companyoffers")) {
 
-    await companyCommand(sock, msg);
+    await companyOffersCommand(sock, msg);
+
+} else if (text.startsWith(".companyoffer")) {
+
+    await companyOfferCommand(sock, msg, text);
+
+} else if (text.startsWith(".companyapprove")) {
+
+    await companyApproveCommand(sock, msg, text);
+
+} else if (text === ".company" || text.startsWith(".company ")) {
+
+    // FIX: this used to be `text === ".company"` only, and companyCommand()
+    // was called with no `text` arg at all — so .company deposit/distribute/
+    // assign could never actually be reached. Both are fixed here.
+    await companyCommand(sock, msg, text);
+
+} else if (text === ".joboffers") {
+
+    await jobOffersCommand(sock, msg);
+
+} else if (text.startsWith(".jobapply")) {
+
+    await jobApplyCommand(sock, msg, text);
 
    } else if (text === ".enhance" || text === ".fix" || text === ".fixquality") {
 
@@ -2169,6 +2206,22 @@ ROY AI SYSTEM
         }
     );
 
+     if (
+        msg.key.remoteJid.endsWith("@g.us") &&
+        isCrimsonMentioned
+    ) {
+
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: reply
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
     }
 
     });

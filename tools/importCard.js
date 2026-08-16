@@ -152,12 +152,12 @@ function generateBotId(cards) {
 
     do {
 
-        botId = String(
-            Math.floor(
-                10000000 +
-                Math.random() * 90000000
-            )
-        );
+        // 8 hex characters, matching the style of your existing older
+        // cards (e.g. "59e04c5d", "a7132fd0") — letters + numbers instead
+        // of a plain numeric string.
+        botId = require("crypto")
+            .randomBytes(4)
+            .toString("hex");
 
     } while (cards[botId]);
 
@@ -244,14 +244,14 @@ async function searchByMazokuId(
     mazokuId
 ) {
 
-    const url =
-        `${MAZOKU_API}` +
-        `?cardId=${encodeURIComponent(mazokuId)}` +
-        `&page=1` +
-        `&pageSize=100` +
-        `&orderBy=version` +
-        `&order=ASC`;
-        `&spicy=false`;
+   const url =
+    `${MAZOKU_API}` +
+    `?cardId=${encodeURIComponent(mazokuId)}` +
+    `&page=1` +
+    `&pageSize=100` +
+    `&orderBy=version` +
+    `&order=ASC` +
+    `&spicy=false`;
 
     console.log(
         `📡 Looking up Mazoku ID...`
@@ -324,6 +324,150 @@ async function searchByName(
     return Array.isArray(data.cards)
         ? data.cards
         : [];
+
+}
+
+// --------------------------------------------------
+// SEARCH BY SERIES
+// --------------------------------------------------
+//
+// Tries a direct seriesName query param first, mirroring how
+// searchByName() uses &name=. Mazoku's API isn't publicly documented,
+// so this isn't confirmed to work — if it comes back empty, this falls
+// back to paginating fetchMazokuPage() and filtering on card.seriesName
+// client-side, which is slower but guaranteed correct regardless of
+// what the query param actually does.
+
+async function searchBySeriesDirect(
+    seriesTerm
+) {
+
+    const cleanSearch =
+        seriesTerm.trim();
+
+    const url =
+        `${MAZOKU_API}` +
+        `?page=1` +
+        `&pageSize=100` +
+        `&orderBy=created_at` +
+        `&order=DESC` +
+        `&spicy=false` +
+        `&seriesName=${encodeURIComponent(cleanSearch)}`;
+
+    console.log(
+        `📡 Searching Mazoku by series "${cleanSearch}"...`
+    );
+
+    const response =
+        await fetch(url);
+
+    if (!response.ok) {
+
+        const message =
+            await getApiErrorMessage(response);
+
+        throw new Error(
+            `Mazoku API failed: ${message}`
+        );
+
+    }
+
+    const data =
+        await response.json();
+
+    return Array.isArray(data.cards)
+        ? data.cards
+        : [];
+
+}
+
+async function searchBySeriesPaginated(
+    seriesTerm
+) {
+
+    const cleanSearch =
+        seriesTerm.trim().toLowerCase();
+
+    let page = 1;
+    let allMatches = [];
+    let keepGoing = true;
+
+    while (keepGoing) {
+
+        const data =
+            await fetchMazokuPage(page, 100);
+
+        const results =
+            Array.isArray(data.cards)
+                ? data.cards
+                : [];
+
+        if (results.length === 0) {
+
+            keepGoing = false;
+            break;
+
+        }
+
+        const matches =
+            results.filter(
+                card =>
+                    (card.seriesName || "")
+                        .toLowerCase()
+                        .includes(cleanSearch)
+            );
+
+        allMatches = allMatches.concat(matches);
+
+        if (results.length < 100) {
+            keepGoing = false;
+        } else {
+            page++;
+        }
+
+    }
+
+  const uniqueCards = new Map();
+
+for (const card of allMatches) {
+
+    if (!card?.id) {
+        continue;
+    }
+
+    uniqueCards.set(
+        String(card.id).toLowerCase(),
+        card
+    );
+
+}
+
+return [...uniqueCards.values()];
+
+}
+
+async function searchBySeries(
+    seriesTerm
+) {
+
+    const direct =
+        await searchBySeriesDirect(seriesTerm);
+
+    if (direct.length > 0) {
+
+        console.log(
+            `   ✅ Direct seriesName query worked (${direct.length} result(s)).`
+        );
+
+        return direct;
+
+    }
+
+    console.log(
+        `   ⚠️ Direct seriesName query returned nothing — falling back to full page scan...`
+    );
+
+    return await searchBySeriesPaginated(seriesTerm);
 
 }
 
@@ -743,29 +887,41 @@ async function saveAnimatedVideo(
 // FIND EXISTING CARD
 // --------------------------------------------------
 
-function findExistingCard(
-    cards,
-    mazokuId
-) {
+function buildMazokuIndex(cards) {
 
-    for (
-        const [botId, card] of Object.entries(cards)
-    ) {
+    const index = new Map();
 
-        if (
-            card &&
-            card.mazokuId &&
-            String(card.mazokuId).toLowerCase() ===
-            String(mazokuId).toLowerCase()
-        ) {
+    for (const [botId, card] of Object.entries(cards)) {
 
-            return botId;
-
+        if (!card?.mazokuId) {
+            continue;
         }
+
+        index.set(
+            String(card.mazokuId).toLowerCase(),
+            botId
+        );
 
     }
 
-    return null;
+    return index;
+
+}
+
+function findExistingCard(
+    mazokuIndex,
+    mazokuId
+) {
+
+    if (!mazokuId) {
+        return null;
+    }
+
+    return (
+        mazokuIndex.get(
+            String(mazokuId).toLowerCase()
+        ) || null
+    );
 
 }
 
@@ -775,7 +931,8 @@ function findExistingCard(
 
 async function importOne(
     card,
-    cards
+    cards,
+    mazokuIndex
 ) {
 
     const mazokuId =
@@ -820,10 +977,10 @@ async function importOne(
     // --------------------------------------------------
 
     let botId =
-        findExistingCard(
-            cards,
-            mazokuId
-        );
+    findExistingCard(
+        mazokuIndex,
+        mazokuId
+    );
 
     const alreadyExists =
         Boolean(botId);
@@ -840,6 +997,11 @@ async function importOne(
         console.log(
             `      BOT ID: ${botId}`
         );
+
+mazokuIndex.set(
+    String(mazokuId).toLowerCase(),
+    botId
+);
 
     } else {
 
@@ -1101,9 +1263,12 @@ async function main() {
     const bulkMode =
         args.includes("--all");
 
+    const seriesMode =
+        args.includes("--series");
+
     const positional =
         args.filter(
-            arg => arg !== "--all"
+            arg => arg !== "--all" && arg !== "--series"
         );
 
     const searchTerm =
@@ -1144,9 +1309,9 @@ Examples:
     );
 
     const results =
-        await searchCards(
-            searchTerm
-        );
+        seriesMode
+            ? await searchBySeries(searchTerm)
+            : await searchCards(searchTerm);
 
     if (!results.length) {
 
@@ -1225,9 +1390,11 @@ Examples:
 
         }
     );
+const cards =
+    loadCards();
 
-    const cards =
-        loadCards();
+const mazokuIndex =
+    buildMazokuIndex(cards);
 
     // --------------------------------------------------
     // BULK MODE
@@ -1252,22 +1419,22 @@ Examples:
             const card of results
         ) {
 
-            const existedBefore =
-                Boolean(
-                    findExistingCard(
-                        cards,
-                        card.id
-                    )
-                );
+          const existedBefore =
+    Boolean(
+        findExistingCard(
+            mazokuIndex,
+            card.id
+        )
+    );
 
             try {
 
-                const id =
-                    await importOne(
-                        card,
-                        cards
-                    );
-
+             const id =
+    await importOne(
+        card,
+        cards,
+        mazokuIndex
+    );
                 if (id) {
 
                     if (existedBefore) {
@@ -1381,11 +1548,11 @@ Examples:
         `🆔 Mazoku ID: ${selected.id}`
     );
 
-    const existingBotId =
-        findExistingCard(
-            cards,
-            selected.id
-        );
+   const existingBotId =
+    findExistingCard(
+        mazokuIndex,
+        selected.id
+    );
 
     if (existingBotId) {
 
@@ -1398,12 +1565,12 @@ Examples:
         );
 
     }
-
-    const id =
-        await importOne(
-            selected,
-            cards
-        );
+const id =
+    await importOne(
+        selected,
+        cards,
+        mazokuIndex
+    );
 
     saveCards(cards);
 

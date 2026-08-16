@@ -1,5 +1,6 @@
 const fs = require("fs");
 
+const { MAIN_OWNER } = require("../config");
 const { resetUserCooldown, resetAllCooldowns } = require("./cooldown");
 const { resetUserDailyLimit, resetAllDailyLimits } = require("./dailylimit");
 

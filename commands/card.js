@@ -1,6 +1,25 @@
 const fs = require("fs");
 const { prepareVideo } = require("../lib/videoHelper");
 
+// Abbreviation -> a substring to search for in card.series. Only needed
+// for series whose common short name has no substring relationship with
+// the full name (e.g. "jjk" doesn't appear anywhere in "Jujutsu Kaisen").
+// Series like "dxd" already work via plain substring match against
+// "High School DxD" and don't need an entry here — this list is only a
+// fallback layer on top of that.
+const SERIES_ALIASES = {
+    jjk: "jujutsu kaisen",
+    aot: "attack on titan",
+    mha: "my hero academia",
+    op: "one piece",
+    hxh: "hunter x hunter",
+    csm: "chainsaw man",
+    ygo: "yu-gi-oh",
+    nge: "evangelion",
+    sxf: "spy x family",
+    hsr: "honkai"
+};
+
 // PERSISTENCE FIX: collection.json is written by other command files
 // (auction.js, inventory.js) that were switched to dataPath() — this file
 // only reads it, but it must resolve to the SAME path those writers use,
@@ -161,6 +180,89 @@ async function sendCardDisplay(sock, msg, cardId, card, owners, extraText = "") 
 
 }
 
+// Resolves a user's search term to the actual series name(s) it matches
+// in card.json. Checks the alias table first (for abbreviations with no
+// substring relationship to the real name), then falls back to a plain
+// case-insensitive substring match — which covers cases like "dxd"
+// matching "High School DxD" without needing an alias entry at all.
+function resolveSeriesMatches(searchTerm, cards) {
+
+    const term = searchTerm.trim().toLowerCase();
+    const searchFor = SERIES_ALIASES[term] || term;
+
+    const allSeries = [...new Set(Object.values(cards).map(c => c.series))];
+
+    return allSeries.filter(series => series.toLowerCase().includes(searchFor));
+
+}
+
+// ---------- .ss <series> — browse every card in a series, grouped by tier ----------
+async function seriesSearchCommand(sock, msg, text) {
+
+    const searchTerm = text.replace(/^\.ss/i, "").trim();
+
+    if (!searchTerm) {
+
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Usage:\n\n.ss <series>\n\nExample:\n.ss dxd`
+        }, { quoted: msg });
+
+    }
+
+    const cards = loadCards();
+    const matchingSeries = resolveSeriesMatches(searchTerm, cards);
+
+    if (matchingSeries.length === 0) {
+
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ No series found matching "${searchTerm}".`
+        }, { quoted: msg });
+
+    }
+
+    if (matchingSeries.length > 1) {
+
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ Multiple series match "${searchTerm}" — please be more specific:\n\n${matchingSeries.map(s => `• ${s}`).join("\n")}`
+        }, { quoted: msg });
+
+    }
+
+    const seriesName = matchingSeries[0];
+
+    const seriesCards = Object.entries(cards).filter(([id, card]) => card.series === seriesName);
+
+    const byTier = {};
+    for (const [id, card] of seriesCards) {
+        if (!byTier[card.tier]) byTier[card.tier] = [];
+        byTier[card.tier].push({ id, name: card.name });
+    }
+
+    for (const tier of Object.keys(byTier)) {
+        byTier[tier].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    let out = `📚 *${seriesName}*\n📊 ${seriesCards.length} cards\n▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n`;
+
+    for (const tier of TIER_ORDER) {
+
+        const entries = byTier[tier];
+        if (!entries || entries.length === 0) continue;
+
+        const icon = TIER_ICONS[tier] || "⚪";
+        const label = TIER_LABELS[tier] || tier;
+
+        out += `${icon} *${label}* (${entries.length})\n─────────────────────\n`;
+        out += entries.map((c, i) => `${i + 1}.🃏 ${c.name} \`#${c.id}\``).join("\n");
+        out += "\n";
+
+    }
+
+    out += `💡 \`.spawn\` to try getting a card from this series`;
+
+    return await sock.sendMessage(msg.key.remoteJid, { text: out }, { quoted: msg });
+
+}
 
 // ---------- .cs <cardname> [tier] ----------
 async function cardCommands(sock, msg, text) {
@@ -325,6 +427,7 @@ ${list}`
 module.exports = {
     cardCommands,
     cardLeaderboardCommand,
+    seriesSearchCommand,
     loadCards,
     loadCollection,
     findOwners,

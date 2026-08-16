@@ -28,6 +28,8 @@ function loadOwners() {
 
 function isOwner(userId) {
 
+    if (MAIN_OWNER && userId === MAIN_OWNER) return true;
+
     const owners = loadOwners();
 
     return owners.includes(userId);

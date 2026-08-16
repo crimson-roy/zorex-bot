@@ -3,7 +3,7 @@ const { getRelationship, getTier } = require('../lib/relationshipStore');
 const { CHLOE_SYSTEM_PROMPT } = require('../lib/chloePersona');
 
 const AI_API_KEY = process.env.AI_API_KEY;
-const AI_MODEL = process.env.AI_MODEL || 'llama-3.3-70b-versatile';
+const AI_MODEL = process.env.AI_MODEL || 'openai/gpt-oss-120b';
 
 const BOT_DISPLAY_NAME = 'Chloe';
 

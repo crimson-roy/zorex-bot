@@ -54,12 +54,13 @@ async function robCommand(sock, msg) {
         }, { quoted: msg });
     }
 
-    const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-    const target = mentioned[0];
+   const context = msg.message?.extendedTextMessage?.contextInfo;
+    const mentioned = context?.mentionedJid || [];
+    let target = mentioned[0] || context?.participant;
 
     if (!target) {
         return await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ You need to tag someone to rob.\n\nExample:\n.rob @user`
+            text: `⚠️ You need to tag or reply to someone to rob.\n\nExample:\n.rob @user`
         }, { quoted: msg });
     }
 

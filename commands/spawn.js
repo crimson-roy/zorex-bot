@@ -46,8 +46,9 @@ async function execute(sock, msg, args) {
 
     if (!arg) {
 
-        // No argument — fully random card from the whole pool.
-        picked = getRandomCard();
+       // No argument — fully random card from the whole pool. Owner
+        // spawns are allowed to include event cards on purpose.
+        picked = getRandomCard(true);
 
         if (!picked) {
 

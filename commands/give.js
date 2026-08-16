@@ -92,25 +92,19 @@ async function giveCommand(sock, msg, text) {
     const senderId = getSenderId(msg);
 
     // --- 1. Validate mentions: exactly one required ---
+  const context = getContextInfo(msg);
     const mentions = getMentionedJids(msg);
-
-    if (mentions.length === 0) {
-
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ You must mention who you're giving the card to.\n\nUsage:\n.give <slot> @user\n.give all @user`
-        }, { quoted: msg });
-
-    }
 
     if (mentions.length > 1) {
 
         return await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Please mention exactly one user to gift to.`
+            text: `⚠️ Please mention exactly one user.`
         }, { quoted: msg });
 
     }
 
-    const recipientId = mentions[0];
+    // Priority: @mention > reply-to-user > self (no target given at all)
+    const recipientId = mentions[0] || context.participant || senderId;
 
     if (recipientId === senderId) {
 

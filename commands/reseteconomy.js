@@ -1,6 +1,7 @@
 const fs = require("fs");
 const dataPath = require("../lib/dataPath");
 const { MAIN_OWNER } = require("../config");
+const { saveInventory } = require("./inventory");
 
 const USERS_FILE = dataPath("users.json");
 
@@ -84,7 +85,11 @@ function resetUser(user) {
     // company
     // inventory
     //
-    // Therefore they are completely removed.
+    // Therefore they are completely removed. (`company` lives inline on
+    // the user object and is dropped just by not copying it forward —
+    // that also takes its `offers`/`employees`/`wallet` with it. Assets
+    // live in the SEPARATE inventory.json file — see performEconomyReset()
+    // below for where that actually gets wiped.)
 
     return resetUser;
 }
@@ -109,6 +114,27 @@ function performEconomyReset() {
     }
 
     saveUsers(resetUsers);
+
+    // FIX: the confirmation message below has always promised
+    // "🎒 Inventories → WIPED", but nothing in this function actually
+    // touched inventory.json before now — everyone's .shop collectibles,
+    // mystery-box wins, AND .invest asset holdings (gold/stark/land/oil/
+    // tech/bonds/art — see commands/invest.js's ASSETS) all survived a
+    // reset silently. Wiped here to match what owners are already told
+    // is happening.
+    //
+    // Collections (collection.json, i.e. cards) are intentionally left
+    // alone — matches "🃏 Collections → UNTOUCHED" below and keeps
+    // .cardlb meaningful across a reset.
+    //
+    // NOT touched: market.json (global asset prices — that's shared
+    // market state, not any individual user's data, so a reset shouldn't
+    // reroll it) and lib/jobOffers.js's offerCounter.json (harmless to
+    // leave running — since every company's `offers` object was just
+    // deleted along with `company` above, there's nothing left for an
+    // old offer ID to collide with; the counter just starts new offers
+    // at a higher number than before, which doesn't break anything).
+    saveInventory({});
 
     return totalUsers;
 }
