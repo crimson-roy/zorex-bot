@@ -40,6 +40,14 @@ function saveUsers(users) {
 
 }
 
+// ---------- Shared Zorex visual system ----------
+// Same divider/footer/box language used across every employment command
+// (owner-side here, employee-side in commands/jobs.js) so .companyoffers,
+// .oversee, .joboffers, .jobapply, .job, .duty and .jobinfo all read as
+// one consistent product.
+const DIVIDER = "━━━━━━━━━━━━━━━━━━━━━━━━━";
+const FOOTER = "╰━━━━ 🤖 𝙕𝙤𝙧𝙚𝙭 𝘼𝙄 ━━━━╯";
+
 function notRegisteredMessage() {
     return `╭━━━━ ⚠️ 𝗥𝗘𝗚𝗜𝗦𝗧𝗥𝗔𝗧𝗜𝗢𝗡 ━━━━╮
 👤 Please register your account. ✨
@@ -96,6 +104,11 @@ function formatDuration(ms) {
     return `${hours}h ${minutes}m`;
 
 }
+
+const {
+    startEmployment,
+    updatePosition
+} = require("../lib/portfolioHistory");
 
 // Random 4-digit code, unique within this company, assigned once at hire
 // and never changed. This is what .oversee looks employees up by.
@@ -754,7 +767,11 @@ async function companyOffersCommand(sock, msg) {
 
     const income = incomeAtLevel(company.level);
 
-    const openLines = Object.keys(company.offers).map(positionKey => {
+    // Every offer gets its own card — position, slots, live pay, and its
+    // own pending applicants underneath (pending is tracked per-offer in
+    // the real data, so applicants are shown per-card rather than merged
+    // into one global list).
+    const offerCards = Object.keys(company.offers).map(positionKey => {
 
         const offer = company.offers[positionKey];
         const rate = positionRate(company.industry, positionKey);
@@ -764,7 +781,11 @@ async function companyOffersCommand(sock, msg) {
         const pendingCount = offer.pending.length;
         const pendingNames = offer.pending.map(p => `@${p.userId.split("@")[0]}`).join(", ");
 
-        return `#${offer.id} ${titleCase(positionKey)} [${filledCount}/${maxSlots}] — ~${amount.toLocaleString()} 🌙/payout — ${pendingCount} pending${pendingCount ? ` (${pendingNames})` : ""}`;
+        return `📋 *[ 𝙊𝙁𝙁𝙀𝙍 #${offer.id} ]*
+💼 𝙋𝙤𝙨𝙞𝙩𝙞𝙤𝙣 : ${titleCase(positionKey)}
+👥 𝙎𝙡𝙤𝙩𝙨    : ${filledCount}/${maxSlots}
+💰 𝙋𝙖𝙮      : ~${amount.toLocaleString()} 🌙/payout
+📥 𝙋𝙚𝙣𝙙𝙞𝙣𝙜  : ${pendingCount} applicant${pendingCount === 1 ? "" : "s"}${pendingCount ? `\n   ${pendingNames}` : ""}`;
 
     });
 
@@ -777,23 +798,39 @@ async function companyOffersCommand(sock, msg) {
 
     });
 
+    const openBlock = offerCards.length
+        ? offerCards.join(`\n\n${DIVIDER}\n\n`)
+        : "  📭 none right now";
+
+    const filledBlock = filledLines.length
+        ? filledLines.join("\n")
+        : "  none";
+
     const mentions = [
         ...Object.keys(company.offers).flatMap(k => company.offers[k].pending.map(p => p.userId)),
         ...Object.values(company.employees).map(e => e.userId)
     ];
 
     await sock.sendMessage(msg.key.remoteJid, {
-        text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
-   🗂️ ${company.name} — 𝗥𝗢𝗦𝗧𝗘𝗥
-╰━━━━━━━━━━━━━━━━━━━━━━━╮
-📢 Open Offers
-${openLines.length ? openLines.join("\n") : "  none"}
+        text: `╭━━━ 🏢 𝘾𝙊𝙈𝙋𝘼𝙉𝙔 𝙊𝙁𝙁𝙀𝙍𝙎 ━━━╮
+   ${company.name}
 
-👥 Filled Positions
-${filledLines.length ? filledLines.join("\n") : "  none"}
-━━━━━━━━━━━━━━━━━━━━━━━━━
-.hire <offer #> to hire everyone pending on it (up to remaining slots)
-.companyapprove <position> @user to hire one specific applicant`,
+📢 *𝙊𝙋𝙀𝙉 𝙊𝙁𝙁𝙀𝙍𝙎*
+
+${openBlock}
+
+${DIVIDER}
+👥 *𝙁𝙄𝙇𝙇𝙀𝘿 𝙋𝙊𝙎𝙄𝙏𝙄𝙊𝙉𝙎*
+
+${filledBlock}
+
+${DIVIDER}
+🛠️ *𝙈𝘼𝙉𝘼𝙂𝙀𝙈𝙀𝙉𝙏*
+
+📥 .hire <offer #> — hire everyone pending on it
+📥 .companyapprove <position> @user — hire one specific applicant
+
+${FOOTER}`,
         mentions
     }, { quoted: msg });
 
@@ -806,22 +843,54 @@ ${filledLines.length ? filledLines.join("\n") : "  none"}
 // one applicant while .hire may drain several in one call.
 function hireOneApplicant(company, positionKey, userId) {
 
-    const rate = positionRate(company.industry, positionKey);
+    const rate =
+        positionRate(
+            company.industry,
+            positionKey
+        );
 
-    company.employeeSeq = (company.employeeSeq || 0) + 1;
+    company.employeeSeq =
+        (company.employeeSeq || 0) + 1;
 
-    const employeeId = `emp_${Date.now()}_${Math.floor(Math.random() * 1000)}_${company.employeeSeq}`;
-    const code = generateEmployeeCode(company);
+    const employeeId =
+        `emp_${Date.now()}_${Math.floor(Math.random() * 1000)}_${company.employeeSeq}`;
+
+    const code =
+        generateEmployeeCode(company);
+
+    const hiredAt =
+        Date.now();
 
     company.employees[employeeId] = {
+
         num: company.employeeSeq,
+
         code,
+
         userId,
+
         position: positionKey,
+
         salaryRate: rate,
+
         role: null,
-        hiredAt: Date.now()
+
+        hiredAt
+
     };
+
+    // ========================================================
+    // PORTFOLIO HISTORY
+    // ========================================================
+
+    startEmployment({
+        userId,
+        companyName: company.name,
+        position: positionKey,
+        tier: tierForLevel(company.level),
+        hiredAt,
+        companyType: "player"
+    });
 
     return company.employees[employeeId];
 
@@ -1163,22 +1232,30 @@ async function companyOverseeCommand(sock, msg, text) {
     const lastDuty = dutyLog.length ? new Date(dutyLog[dutyLog.length - 1]).toLocaleString() : "never";
     const currentlyOnDuty = wasOnDutyDuring(employee, company.lastPayout, company.lastPayout + PAYOUT_INTERVAL_MS);
 
+    const statusLine = currentlyOnDuty
+        ? "✅ on duty — will be paid"
+        : "❌ hasn't checked in yet";
+
     await sock.sendMessage(msg.key.remoteJid, {
-        text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
-   🔎 𝗢𝗩𝗘𝗥𝗦𝗘𝗘𝗜𝗡𝗚 #${employee.num}
-╰━━━━━━━━━━━━━━━━━━━━━━━╮
-» Name     : ${registeredName}
-» Employee : @${employee.userId.split("@")[0]}
-» Code     : ${employee.code}
-» Position : ${titleCase(employee.position)}
-» Role     : ${employee.role || "none"}
-» Salary   : ~${amount.toLocaleString()} 🌙 per payout (only paid if on duty)
-» Hired    : ${hiredDate}
-» This period: ${currentlyOnDuty ? "✅ on duty — will be paid" : "❌ hasn't checked in yet"}
-» This week: ${weeklyCount}/${DUTY_WEEKLY_BONUS_THRESHOLD} check-ins toward bonus
-» Last duty: ${lastDuty}
-━━━━━━━━━━━━━━━━━━━━━━━━━
-.promote ${employee.num} to promote this employee.`,
+        text: `╭━━━ 🔎 𝙊𝙑𝙀𝙍𝙎𝙀𝙀𝙄𝙉𝙂 #${employee.num} ━━━╮
+
+👤 𝙉𝙖𝙢𝙚      : ${registeredName}
+📱 𝙀𝙢𝙥𝙡𝙤𝙮𝙚𝙚  : @${employee.userId.split("@")[0]}
+🔑 𝘾𝙤𝙙𝙚      : ${employee.code}
+💼 𝙋𝙤𝙨𝙞𝙩𝙞𝙤𝙣  : ${titleCase(employee.position)}
+🎭 𝙍𝙤𝙡𝙚      : ${employee.role || "none"}
+💰 𝙎𝙖𝙡𝙖𝙧𝙮    : ~${amount.toLocaleString()} 🌙/payout (only if on duty)
+📅 𝙃𝙞𝙧𝙚𝙙     : ${hiredDate}
+
+${DIVIDER}
+✅ 𝙏𝙝𝙞𝙨 𝙥𝙚𝙧𝙞𝙤𝙙 : ${statusLine}
+📊 𝙏𝙝𝙞𝙨 𝙬𝙚𝙚𝙠   : ${weeklyCount}/${DUTY_WEEKLY_BONUS_THRESHOLD} check-ins toward bonus
+🕐 𝙇𝙖𝙨𝙩 𝙙𝙪𝙩𝙮   : ${lastDuty}
+
+${DIVIDER}
+📥 .promote ${employee.num} to promote this employee.
+
+${FOOTER}`,
         mentions: [employee.userId]
     }, { quoted: msg });
 
@@ -1264,6 +1341,16 @@ async function companyPromoteCommand(sock, msg, text) {
     employee.position = nextPosition;
     employee.salaryRate = positionRate(company.industry, nextPosition);
     employee.promotedAt = Date.now();
+
+updatePosition({
+    userId: employee.userId,
+    companyName: company.name,
+    oldPosition,
+    newPosition: nextPosition,
+    tier: tierForLevel(company.level),
+    changedAt: employee.promotedAt,
+    companyType: "player"
+});
 
     // The old position is now vacant — close any stray open offer for it,
     // but do NOT auto-reopen it; owner runs .companyoffer again if they

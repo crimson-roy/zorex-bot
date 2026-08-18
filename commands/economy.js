@@ -7,6 +7,13 @@ const { getPartner } = require("./marry");
 // the attached Railway Volume instead. See lib/dataPath.js.
 const dataPath = require("../lib/dataPath");
 
+// FIX: isOwner() below reads MAIN_OWNER, but this file never imported it —
+// that made isOwner() throw a ReferenceError the instant .addcrescent ran,
+// which the global uncaughtException handler in index.js swallows silently
+// (logs to console, sends no reply). That's why .addcrescent looked like it
+// was doing nothing.
+const { MAIN_OWNER } = require("../config");
+
 const OWNERS_FILE = dataPath("owners.json");
 
 function loadOwners() {

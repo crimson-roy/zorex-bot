@@ -61,9 +61,9 @@ async function execute(sock, msg, args) {
     } else if (TIER_ORDER.includes(arg.toUpperCase())) {
 
         // .spawn SSR / SR / S / R / C — random card from that tier.
-        const tier = arg.toUpperCase();
-        picked = getRandomCardByTier(tier);
-
+       const tier = arg.toUpperCase();
+        picked = getRandomCardByTier(tier, true);
+        
         if (!picked) {
 
             return await sock.sendMessage(chatJid, {

@@ -162,10 +162,24 @@ const {
     companyUpgradeCommand,
     companyOfferCommand,
     companyOffersCommand,
-    companyApproveCommand
+    companyApproveCommand,
+    companyHireCommand,
+    companyEmployeesCommand,
+    companyOverseeCommand,
+    companyPromoteCommand
 } = require("./commands/company");
 
-const { jobOffersCommand, jobApplyCommand } = require("./commands/jobs");
+const { portfolioCommand } =
+    require("./commands/portfolio");
+
+const {
+    jobOffersCommand,
+    jobApplyCommand,
+    jobCommand,
+    jobInfoCommand,
+    resumeMajorApplications,
+    startMajorAttendanceMonitor
+} = require("./commands/jobs");
 
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = dataPath("owners.json");
@@ -430,6 +444,23 @@ async function startBot() {
 
                 }
 
+                try {
+
+    resumeMajorApplications(sock);
+
+    startMajorAttendanceMonitor(sock);
+
+    console.log("🏢 Major employment systems resumed.");
+
+} catch (err) {
+
+    console.error(
+        "⚠️ Failed to start Major employment systems:",
+        err.message
+    );
+
+}
+
             }
 
 
@@ -619,22 +650,6 @@ Please behave yourself. 💙`
         return;
     }
 
-    if (
-        msg.key.remoteJid.endsWith("@g.us") &&
-        isCrimsonMentioned
-    ) {
-
-        await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text: reply
-            },
-            {
-                quoted: msg
-            }
-        );
-
-    }
 
     if (text === ".ping") {
 
@@ -1884,6 +1899,29 @@ else if (text.startsWith(".mem")) {
 
     await companyApproveCommand(sock, msg, text);
 
+} else if (text.startsWith(".hire")) {
+
+    await companyHireCommand(sock, msg, text);
+
+} else if (text.startsWith(".employees")) {
+
+    await companyEmployeesCommand(sock, msg, text);
+
+} else if (text.startsWith(".oversee")) {
+
+    await companyOverseeCommand(sock, msg, text);
+
+} else if (text.startsWith(".companypromote")) {
+
+    await companyPromoteCommand(sock, msg, text);
+
+    } else if (
+    text === ".portfolio" ||
+    text.startsWith(".portfolio ")
+) {
+
+    await portfolioCommand(sock, msg);
+
 } else if (text === ".company" || text.startsWith(".company ")) {
 
     // FIX: this used to be `text === ".company"` only, and companyCommand()
@@ -1898,6 +1936,14 @@ else if (text.startsWith(".mem")) {
 } else if (text.startsWith(".jobapply")) {
 
     await jobApplyCommand(sock, msg, text);
+
+} else if (text === ".job") {
+
+    await jobCommand(sock, msg);
+
+} else if (text === ".jobinfo") {
+
+    await jobInfoCommand(sock, msg);
 
    } else if (text === ".enhance" || text === ".fix" || text === ".fixquality") {
 
@@ -2198,12 +2244,14 @@ ROY AI SYSTEM
 © ROY TRADING GROUP
 `
         },
-        {
+               {
             quoted: msg
         }
     );
 
-     if (
+    }
+
+    if (
         msg.key.remoteJid.endsWith("@g.us") &&
         isCrimsonMentioned
     ) {
@@ -2218,7 +2266,6 @@ ROY AI SYSTEM
             }
         );
 
-    }
     }
 
     });
