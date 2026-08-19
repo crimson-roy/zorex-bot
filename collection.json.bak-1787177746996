@@ -1,0 +1,100 @@
+{
+    "164317513175043@lid": [
+        {
+            "id": "59e04c5d",
+            "name": "Aqua",
+            "type": "card",
+            "image": null,
+            "video": "./aqua.mp4",
+            "obtainedFrom": "auction",
+            "obtainedAt": 1784514598374
+        },
+        {
+            "id": "49d04a9a",
+            "name": "Satoru Gojou",
+            "type": "card",
+            "image": "./satoru_gojou_jujutsu_kaisen.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785631206097
+        },
+        {
+            "id": "333f558c",
+            "name": "Emilia",
+            "type": "card",
+            "image": "./emilia_re_zero_starting_life_in_another_world.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785679393394
+        }
+    ],
+    "44620616589409@lid": [
+        {
+            "id": "59e04c5d",
+            "name": "Aqua",
+            "type": "card",
+            "image": null,
+            "video": "./aqua.mp4",
+            "obtainedFrom": "auction",
+            "obtainedAt": 1784519520230
+        }
+    ],
+    "204552246693986@lid": [
+        {
+            "id": "59e04c5d",
+            "name": "Aqua",
+            "type": "card",
+            "image": null,
+            "video": "./aqua.mp4",
+            "obtainedFrom": "auction",
+            "obtainedAt": 1784520096825
+        },
+        {
+            "id": "f74cc7a4",
+            "name": "Koujirou Shinomiya",
+            "type": "card",
+            "image": "./koujirou_shinomiya_food_wars.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785679067989
+        },
+        {
+            "id": "3dbc1b5d",
+            "name": "Yuki",
+            "type": "card",
+            "image": "./yuki_czn.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785679555467
+        },
+        {
+            "id": "27cea9b9",
+            "name": "Yuki",
+            "type": "card",
+            "image": "./yuki_idolish7.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785679830591
+        },
+        {
+            "id": "18200489",
+            "name": "Char Aznable",
+            "type": "card",
+            "image": "./char_aznable_mobile_suit_gundam.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785679858460
+        }
+    ],
+    "11944874475623@lid": [
+        {
+            "id": "65e42a49",
+            "name": "Mai Cai Laoban",
+            "type": "card",
+            "image": "./mai_cai_laoban_scissor_seven_season_2.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785682110063
+        }
+    ]
+}

@@ -1,29 +1,5 @@
 {
-  "11684109": {
-    "name": "Edith Synthesis Ten",
-    "series": "Sword Art Online",
-    "tier": "R",
-    "valueMin": 200000,
-    "valueMax": 350000,
-    "type": "card",
-    "image": "./cards/29684701.jpg",
-    "mazokuId": "4246bcc1-1543-4d7a-84fa-23ff380faf4e",
-    "eventName": "halloween_2024",
-    "special": false
-  },
-  "48167573": {
-    "name": "Tomioka Giyu",
-    "series": "Demon Slayer",
-    "tier": "C",
-    "valueMin": 50000,
-    "valueMax": 100000,
-    "type": "card",
-    "image": "./cards/68525327.jpg",
-    "mazokuId": "d043cf65-cc2a-4a2b-9c75-a937e22a3b9f",
-    "eventName": "default",
-    "special": false
-  },
-  "568ada98": {
+  "10024770": {
     "name": "The Royal Candidates",
     "series": "Re:Zero",
     "tier": "R",
@@ -35,7 +11,7 @@
     "eventName": "default",
     "special": false
   },
-  "c7dc6190": {
+  "14129593": {
     "name": "Kana Arima",
     "series": "Oshi no Ko",
     "tier": "SR",
@@ -47,7 +23,7 @@
     "eventName": "default",
     "special": false
   },
-  "edbbd46e": {
+  "16998638": {
     "name": "Alisa Mikhailovna Kujou",
     "series": "Roshidere",
     "tier": "R",
@@ -59,7 +35,7 @@
     "eventName": "default",
     "special": false
   },
-  "2dc32ddc": {
+  "18911040": {
     "name": "Obanai Iguro",
     "series": "Demon Slayer",
     "tier": "C",
@@ -71,7 +47,7 @@
     "eventName": "maid_2025",
     "special": false
   },
-  "f696d8ff": {
+  "20127954": {
     "name": "Kana Arima",
     "series": "Oshi no Ko",
     "tier": "SR",
@@ -83,7 +59,7 @@
     "eventName": "maid_2025",
     "special": false
   },
-  "79a1a634": {
+  "23697166": {
     "name": "Makima",
     "series": "Chainsaw Man",
     "tier": "C",
@@ -95,7 +71,7 @@
     "eventName": "halloween_2025",
     "special": false
   },
-  "733687b7": {
+  "24019538": {
     "name": "Aether and Albedo",
     "series": "Genshin Impact",
     "tier": "R",
@@ -107,7 +83,19 @@
     "eventName": "default",
     "special": false
   },
-  "417513ba": {
+  "29684701": {
+    "name": "Edith Synthesis Ten",
+    "series": "Sword Art Online",
+    "tier": "R",
+    "valueMin": 200000,
+    "valueMax": 350000,
+    "type": "card",
+    "image": "./cards/29684701.jpg",
+    "mazokuId": "4246bcc1-1543-4d7a-84fa-23ff380faf4e",
+    "eventName": "halloween_2024",
+    "special": false
+  },
+  "32734922": {
     "name": "Enrico Pucci",
     "series": "JoJo's Bizarre Adventure",
     "tier": "C",
@@ -119,7 +107,7 @@
     "eventName": "default",
     "special": false
   },
-  "018a0af0": {
+  "36576404": {
     "name": "Maki Zenin",
     "series": "Jujutsu Kaisen",
     "tier": "C",
@@ -131,7 +119,7 @@
     "eventName": "default",
     "special": false
   },
-  "495338ea": {
+  "39649770": {
     "name": "Hyakutarou Onigawara",
     "series": "Tomodachi Game",
     "tier": "C",
@@ -143,7 +131,7 @@
     "eventName": "default",
     "special": false
   },
-  "7ae2d231": {
+  "41325937": {
     "name": "Rimuru and Shinsha",
     "series": "Tensei Shitara Slime Datta Ken",
     "tier": "R",
@@ -155,7 +143,7 @@
     "eventName": "default",
     "special": false
   },
-  "bb0c2ce6": {
+  "41651665": {
     "name": "Ichigo Kurosaki",
     "series": "Bleach",
     "tier": "SR",
@@ -167,7 +155,7 @@
     "eventName": "default",
     "special": false
   },
-  "89b0d6dc": {
+  "42998273": {
     "name": "Nayuta Yatonokami",
     "series": "Paradox Live",
     "tier": "R",
@@ -179,7 +167,7 @@
     "eventName": "default",
     "special": false
   },
-  "80ef8d15": {
+  "47166679": {
     "name": "Selvie",
     "series": "Unicorn Overlord",
     "tier": "C",
@@ -191,7 +179,7 @@
     "eventName": "default",
     "special": false
   },
-  "95352c52": {
+  "48422255": {
     "name": "Akaza",
     "series": "Demon Slayer",
     "tier": "C",
@@ -203,7 +191,7 @@
     "eventName": "default",
     "special": false
   },
-  "570c53b2": {
+  "49970584": {
     "name": "Albedo",
     "series": "Overlord",
     "tier": "SR",
@@ -215,7 +203,7 @@
     "eventName": "halloween_2025",
     "special": false
   },
-  "6bd9d330": {
+  "51555719": {
     "name": "Nami",
     "series": "One Piece",
     "tier": "C",
@@ -227,7 +215,7 @@
     "eventName": "halloween_2025",
     "special": false
   },
-  "29e0ef1a": {
+  "53128415": {
     "name": "Akeno Himejima",
     "series": "High School DxD",
     "tier": "C",
@@ -239,7 +227,7 @@
     "eventName": "special",
     "special": true
   },
-  "d288d1a6": {
+  "56074743": {
     "name": "Yukika Saegusa",
     "series": "Fate Series",
     "tier": "C",
@@ -251,7 +239,7 @@
     "eventName": "default",
     "special": false
   },
-  "a871db2b": {
+  "59226889": {
     "name": "Gojo Satoru",
     "series": "Jujutsu Kaisen",
     "tier": "C",
@@ -263,7 +251,7 @@
     "eventName": "christmas_2024",
     "special": false
   },
-  "660c0532": {
+  "63170424": {
     "name": "Ken Kaneki",
     "series": "Tokyo Ghoul",
     "tier": "SR",
@@ -275,7 +263,7 @@
     "eventName": "default",
     "special": false
   },
-  "e4fc3de6": {
+  "63656062": {
     "name": "Darkness",
     "series": "KonoSuba",
     "tier": "R",
@@ -287,7 +275,7 @@
     "eventName": "christmas_2024",
     "special": false
   },
-  "39597b03": {
+  "68269541": {
     "name": "Ako Tamaki",
     "series": "Netoge no Yome",
     "tier": "C",
@@ -299,7 +287,19 @@
     "eventName": "default",
     "special": false
   },
-  "57609acc": {
+  "68525327": {
+    "name": "Tomioka Giyu",
+    "series": "Demon Slayer",
+    "tier": "C",
+    "valueMin": 50000,
+    "valueMax": 100000,
+    "type": "card",
+    "image": "./cards/68525327.jpg",
+    "mazokuId": "d043cf65-cc2a-4a2b-9c75-a937e22a3b9f",
+    "eventName": "default",
+    "special": false
+  },
+  "75688326": {
     "name": "Yoshiyuki Kidai",
     "series": "Hareoto Project",
     "tier": "C",
@@ -311,7 +311,7 @@
     "eventName": "default",
     "special": false
   },
-  "fa37c327": {
+  "78726624": {
     "name": "Rias Gremory",
     "series": "High School DxD",
     "tier": "SR",
@@ -323,7 +323,7 @@
     "eventName": "christmas_2024",
     "special": false
   },
-  "6e02c1b4": {
+  "80034629": {
     "name": "Rengoku Kyoujuro",
     "series": "Demon Slayer",
     "tier": "R",
@@ -335,7 +335,7 @@
     "eventName": "default",
     "special": false
   },
-  "f7996b12": {
+  "81824738": {
     "name": "Sakura Haruno",
     "series": "Naruto",
     "tier": "C",
@@ -347,7 +347,7 @@
     "eventName": "summer_2025",
     "special": false
   },
-  "2d156be2": {
+  "84102954": {
     "name": "Kuroka",
     "series": "High School DxD",
     "tier": "SR",
@@ -359,7 +359,7 @@
     "eventName": "maid_2025",
     "special": false
   },
-  "8e8de489": {
+  "84143647": {
     "name": "Kakashi, Obito & Rin",
     "series": "Naruto",
     "tier": "R",
@@ -371,7 +371,7 @@
     "eventName": "default",
     "special": false
   },
-  "455a4806": {
+  "86645999": {
     "name": "Renner Vaiself",
     "series": "Overlord",
     "tier": "C",
@@ -383,7 +383,7 @@
     "eventName": "requiem-corruption",
     "special": false
   },
-  "74cef834": {
+  "88581968": {
     "name": "Crab Long Bao",
     "series": "Food Fantasy",
     "tier": "C",
@@ -395,7 +395,7 @@
     "eventName": "default",
     "special": false
   },
-  "e8412b8e": {
+  "89103177": {
     "name": "Enri and Nfirea",
     "series": "Overlord",
     "tier": "R",
@@ -407,7 +407,7 @@
     "eventName": "default",
     "special": false
   },
-  "11c1e705": {
+  "93625325": {
     "name": "Gyoumei Himejima",
     "series": "Demon Slayer",
     "tier": "R",
@@ -419,7 +419,7 @@
     "eventName": "default",
     "special": false
   },
-  "36499c7a": {
+  "96382359": {
     "name": "Maki Nishikino",
     "series": "Love Live!",
     "tier": "C",
@@ -431,7 +431,7 @@
     "eventName": "default",
     "special": false
   },
-  "8b4d1744": {
+  "97734233": {
     "name": "Akeno Himejima",
     "series": "High School DxD",
     "tier": "R",
@@ -443,7 +443,7 @@
     "eventName": "summer_2025",
     "special": false
   },
-  "816684e5": {
+  "97944281": {
     "name": "Yukino Yukinoshita",
     "series": "My Teen Romantic Comedy SNAFU",
     "tier": "C",
@@ -5483,7 +5483,7 @@
     "eventName": "default",
     "special": false
   },
-  "68b7f81b": {
+  "02362044": {
     "name": "Akuta Isotake",
     "series": "18TRIP",
     "tier": "C",
@@ -7403,7 +7403,7 @@
     "eventName": "default",
     "special": false
   },
-  "1b5542d7": {
+  "05422597": {
     "name": "Bao",
     "series": "VTuber Series",
     "tier": "SSR",
@@ -13259,7 +13259,7 @@
     "eventName": "default",
     "special": false
   },
-  "a227c81e": {
+  "03123673": {
     "name": "Leviathan",
     "series": "Obey Me!",
     "tier": "C",
@@ -13955,7 +13955,7 @@
     "eventName": "default",
     "special": false
   },
-  "7a674881": {
+  "03665847": {
     "name": "Kakeru Sengoku",
     "series": "Horimiya",
     "tier": "C",
@@ -14831,7 +14831,7 @@
     "eventName": "default",
     "special": false
   },
-  "955ac27e": {
+  "05939723": {
     "name": "Marin Kitagawa",
     "series": "My Dress-Up Darling",
     "tier": "UR",
@@ -16211,7 +16211,7 @@
     "eventName": "gala-2026",
     "special": false
   },
-  "0436f459": {
+  "00898793": {
     "name": "Eren Yeager",
     "series": "Attack on Titan",
     "tier": "R",
@@ -16307,7 +16307,7 @@
     "eventName": "default",
     "special": false
   },
-  "db2d7e18": {
+  "09171105": {
     "name": "Colossal Titan",
     "series": "Attack on Titan",
     "tier": "R",
@@ -19991,7 +19991,7 @@
     "eventName": "default",
     "special": false
   },
-  "952ead00": {
+  "09184602": {
     "name": "Kirito",
     "series": "Sword Art Online",
     "tier": "SR",
@@ -21923,7 +21923,7 @@
     "eventName": "default",
     "special": false
   },
-  "69dae8fc": {
+  "03851190": {
     "name": "Akira Otoishi & Red Hot Chili Pepper",
     "series": "Jojo's Bizarre Adventure",
     "tier": "C",
@@ -23999,7 +23999,7 @@
     "eventName": "default",
     "special": false
   },
-  "5fe0202f": {
+  "04527220": {
     "name": "Calca Bessarez",
     "series": "Overlord",
     "tier": "C",
