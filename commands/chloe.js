@@ -16,7 +16,7 @@
 const fs = require('fs');
 const { CHLOE_SYSTEM_PROMPT } = require('../lib/chloePersona');
 const memory = require('../lib/chloeMemory');
-const { callAI } = require('../aiClient');
+const { callAI } = require('../lib/aiClient');
 const { judgeExchange } = require('../lib/relationshipEngine');
 const { recordExchange, getRelationship, getTier } = require('../lib/relationshipStore');
 const { pickSticker } = require('../lib/chloeStickers');
