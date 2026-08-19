@@ -1923,6 +1923,17 @@ else if (text.startsWith(".mem")) {
 
     await companyPromoteCommand(sock, msg, text);
 
+// FIX: .company was previously only reachable from INSIDE the
+// .auction/.col/.inv block below, whose own outer `else if` condition
+// never tested for ".company" — so typing .company never even entered
+// that block, and the inner "if (text === '.company' ...)" check inside
+// it was dead code. Moved here as its own clean top-level branch,
+// alongside the other .company* commands, and removed from inside the
+// auction block (see the comment there).
+} else if (text === ".company" || text.startsWith(".company ")) {
+
+    await companyCommand(sock, msg, text);
+
     } else if (
     text === ".portfolio" ||
     text.startsWith(".portfolio ")
@@ -1946,9 +1957,12 @@ else if (text.startsWith(".mem")) {
 
     await jobCommand(sock, msg);
 
-} else if (text === ".jobinfo") {
+} else if (
+    text === ".jobinfo" ||
+    text.startsWith(".jobinfo ")
+) {
 
-    await jobInfoCommand(sock, msg);
+    await jobInfoCommand(sock, msg, text);
 
    } else if (text === ".enhance" || text === ".fix" || text === ".fixquality") {
 
@@ -2005,13 +2019,12 @@ else if (text.startsWith(".mem")) {
 
         await auctionStatus(sock, msg);
 
-} else if (text === ".company" || text.startsWith(".company ")) {
-
-    // FIX: this used to be `text === ".company"` only, and companyCommand()
-    // was called with no `text` arg at all — so .company deposit/distribute/
-    // assign could never actually be reached. Both are fixed here.
-    await companyCommand(sock, msg, text);
-
+    // FIX: the ".company" branch that used to live here has been removed.
+    // Its outer `else if` above (the block this comment sits inside) never
+    // tested for ".company"/".company ", so this inner check could never
+    // actually be reached — see the new top-level ".company" branch added
+    // earlier in the chain, right after .companypromote, which is now the
+    // real route for .company.
 
     } else if (text.startsWith(".auctioncards")) {
 

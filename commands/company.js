@@ -15,11 +15,11 @@ const MAX_EMPLOYEES = 50;
 const USERS_FILE = dataPath("users.json");
 
 // ---------- Tunable economy constants ----------
-const CREATE_COST = 100000000;
-const BASE_INCOME = 100000;
-const INCOME_MULTIPLIER = 1.15;
-const BASE_UPGRADE_COST = 35000;
-const UPGRADE_COST_MULTIPLIER = 1.07;
+const CREATE_COST = 2000000000;
+const BASE_INCOME = 500000;
+const INCOME_MULTIPLIER = 1.17;
+const BASE_UPGRADE_COST = 100000;
+const UPGRADE_COST_MULTIPLIER = 1.09;
 
 // STEP 1 CHANGE: 12h -> 24h, per the company/employment spec.
 const PAYOUT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -1515,104 +1515,306 @@ async function companyHireCommand(sock, msg, text) {
 // still an open question (rolling vs. calendar call-in window). Rather
 // than fake numbers, both views say so plainly instead of showing a
 // stat that doesn't exist yet.
+// ---------- .employees [num] — owner-only roster / employee detail ----------
+// Bare .employees -> styled employee roster.
+// .employees <num> -> styled detail card for one employee.
+//
+// The detail view intentionally mirrors .oversee so there is one consistent
+// employee-card design; only the lookup method differs.
 async function companyEmployeesCommand(sock, msg, text) {
 
-    const sender = msg.key.participant || msg.key.remoteJid;
+    const sender =
+        msg.key.participant ||
+        msg.key.remoteJid;
+
     const users = loadUsers();
 
-    if (!users[sender]) return await replyNotRegistered(sock, msg);
+    if (!users[sender]) {
+        return await replyNotRegistered(sock, msg);
+    }
 
-    const company = users[sender].company;
-    if (!company) return await replyNoCompany(sock, msg);
+    const company =
+        users[sender].company;
 
-    company.employees = company.employees || {};
+    if (!company) {
+        return await replyNoCompany(sock, msg);
+    }
 
-    const arg = text.replace(".employees", "").trim();
-    const employeeEntries = Object.entries(company.employees);
+    company.employees =
+        company.employees || {};
 
-    // ---- Detail view: .employees <num> ----
+    const arg =
+        text.replace(".employees", "").trim();
+
+    const employeeEntries =
+        Object.entries(company.employees);
+
+
+    // ========================================================
+    // .employees <num>
+    // ========================================================
+
     if (arg) {
 
-        const num = Number(arg);
+        const num =
+            Number(arg);
 
         if (!Number.isInteger(num)) {
-            return await sock.sendMessage(msg.key.remoteJid, {
-                text: errorBox("𝗘𝗠𝗣𝗟𝗢𝗬𝗘𝗘𝗦", "Enter an employee number from .employees.", [".employees 3"])
-            }, { quoted: msg });
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: errorBox(
+                        "𝗘𝗠𝗣𝗟𝗢𝗬𝗘𝗘𝗦",
+                        "Enter an employee number from the roster.",
+                        [
+                            ".employees 3"
+                        ]
+                    )
+                },
+                { quoted: msg }
+            );
+
         }
 
-        const found = employeeEntries.find(([, e]) => e.num === num);
+        const found =
+            employeeEntries.find(
+                ([, employee]) =>
+                    employee.num === num
+            );
 
         if (!found) {
-            return await sock.sendMessage(msg.key.remoteJid, {
-                text: `⚠️ *${company.name}* has no employee #${num}. Check .employees for the current roster.`
-            }, { quoted: msg });
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`╭━━━ ⚠️ 𝙀𝙈𝙋𝙇𝙊𝙔𝙀𝙀 𝙉𝙊𝙏 𝙁𝙊𝙐𝙉𝘿 ━━━╮
+
+*${company.name}* has no employee #${num}.
+
+📥 Check .employees for the current roster.
+
+${FOOTER}`
+                },
+                { quoted: msg }
+            );
+
         }
 
-        const [, employee] = found;
-        const rate = positionRate(company.industry, employee.position);
-        const amount = Math.round(incomeAtLevel(company.level) * (rate / 100));
-        const hiredDate = new Date(employee.hiredAt).toDateString();
-        const registeredName = users[employee.userId]?.name || "not registered";
+        const [, employee] =
+            found;
 
-        const dutyLog = employee.dutyLog || [];
-        const now = Date.now();
-        const weeklyCount = dutyLog.filter(ts => ts >= now - DUTY_WEEKLY_BONUS_WINDOW_MS).length;
-        const lastDuty = dutyLog.length ? new Date(dutyLog[dutyLog.length - 1]).toLocaleString() : "never";
-        const currentlyOnDuty = wasOnDutyDuring(employee, company.lastPayout, company.lastPayout + PAYOUT_INTERVAL_MS);
+        const rate =
+            positionRate(
+                company.industry,
+                employee.position
+            );
 
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
-   👤 𝗘𝗠𝗣𝗟𝗢𝗬𝗘𝗘 #${employee.num}
-╰━━━━━━━━━━━━━━━━━━━━━━━╮
-» Name     : ${registeredName}
-» Employee : @${employee.userId.split("@")[0]}
-» Code     : ${employee.code || "n/a"}
-» Position : ${titleCase(employee.position)}
-» Role     : ${employee.role || "none"}
-» Salary   : ~${amount.toLocaleString()} 🌙 per payout (only paid if on duty)
-» Hired    : ${hiredDate}
-» This period: ${currentlyOnDuty ? "✅ on duty — will be paid" : "❌ hasn't checked in yet"}
-» This week: ${weeklyCount}/${DUTY_WEEKLY_BONUS_THRESHOLD} check-ins toward bonus
-» Last duty: ${lastDuty}
-━━━━━━━━━━━━━━━━━━━━━━━━━
-.promote ${employee.num} to promote this employee.`,
-            mentions: [employee.userId]
-        }, { quoted: msg });
+        const amount =
+            Math.round(
+                incomeAtLevel(company.level) *
+                (rate / 100)
+            );
+
+        const hiredDate =
+            new Date(
+                employee.hiredAt
+            ).toDateString();
+
+        const registeredName =
+            users[employee.userId]?.name ||
+            "not registered";
+
+        const dutyLog =
+            employee.dutyLog || [];
+
+        const now =
+            Date.now();
+
+        const weeklyCount =
+            dutyLog.filter(
+                ts =>
+                    ts >=
+                    now -
+                    DUTY_WEEKLY_BONUS_WINDOW_MS
+            ).length;
+
+        const lastDuty =
+            dutyLog.length
+                ? new Date(
+                    dutyLog[
+                        dutyLog.length - 1
+                    ]
+                ).toLocaleString()
+                : "never";
+
+        const currentlyOnDuty =
+            wasOnDutyDuring(
+                employee,
+                company.lastPayout,
+                company.lastPayout +
+                PAYOUT_INTERVAL_MS
+            );
+
+        const statusLine =
+            currentlyOnDuty
+                ? "✅ on duty — will be paid"
+                : "❌ hasn't checked in yet";
+
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`╭━━━ 👤 𝙀𝙈𝙋𝙇𝙊𝙔𝙀𝙀 #${employee.num} ━━━╮
+        ${company.name}
+
+👤 𝙉𝙖𝙢𝙚      : ${registeredName}
+📱 𝙀𝙢𝙥𝙡𝙤𝙮𝙚𝙚  : @${employee.userId.split("@")[0]}
+🔑 𝘾𝙤𝙙𝙚      : ${employee.code || "n/a"}
+💼 𝙋𝙤𝙨𝙞𝙩𝙞𝙤𝙣  : ${titleCase(employee.position)}
+🎭 𝙍𝙤𝙡𝙚      : ${employee.role || "none"}
+💰 𝙎𝙖𝙡𝙖𝙧𝙮    : ~${amount.toLocaleString()} 🌙/payout
+📅 𝙃𝙞𝙧𝙚𝙙     : ${hiredDate}
+
+${DIVIDER}
+
+✅ 𝙏𝙝𝙞𝙨 𝙥𝙚𝙧𝙞𝙤𝙙 : ${statusLine}
+📊 𝙏𝙝𝙞𝙨 𝙬𝙚𝙚𝙠   : ${weeklyCount}/${DUTY_WEEKLY_BONUS_THRESHOLD} check-ins
+🕐 𝙇𝙖𝙨𝙩 𝙙𝙪𝙩𝙮   : ${lastDuty}
+
+${DIVIDER}
+
+📥 .promote ${employee.num}
+🔎 .oversee ${employee.code || "EMP-XXXX"}
+
+${FOOTER}`,
+                mentions: [
+                    employee.userId
+                ]
+            },
+            { quoted: msg }
+        );
 
     }
 
-    // ---- Roster view: bare .employees ----
+
+    // ========================================================
+    // BARE .employees — ROSTER
+    // ========================================================
+
     if (employeeEntries.length === 0) {
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `👥 *${company.name}* has no employees yet.\n\nOpen a position with .companyoffer <position>.`
-        }, { quoted: msg });
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`╭━━━ 👥 𝙀𝙈𝙋𝙇𝙊𝙔𝙀 𝙍𝙊𝙎𝙏𝙀𝙍 ━━━╮
+        ${company.name}
+
+📭 No employees yet.
+
+📥 Open a position with:
+.companyoffer <position>
+
+${FOOTER}`
+            },
+            { quoted: msg }
+        );
+
     }
 
-    const income = incomeAtLevel(company.level);
 
-    const lines = employeeEntries
-        .sort(([, a], [, b]) => a.num - b.num)
-        .map(([, e]) => {
-            const rate = positionRate(company.industry, e.position);
-            const amount = Math.round(income * (rate / 100));
-            return `#${e.num} [${e.code || "n/a"}] ${titleCase(e.position)} — @${e.userId.split("@")[0]} (~${amount.toLocaleString()} 🌙/payout)`;
-        });
+    const income =
+        incomeAtLevel(
+            company.level
+        );
 
-    const mentions = employeeEntries.map(([, e]) => e.userId);
+    const sortedEntries =
+        [...employeeEntries].sort(
+            ([, a], [, b]) =>
+                a.num - b.num
+        );
 
-    await sock.sendMessage(msg.key.remoteJid, {
-        text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
-   👥 ${company.name} — 𝗘𝗠𝗣𝗟𝗢𝗬𝗘𝗘𝗦
-╰━━━━━━━━━━━━━━━━━━━━━━━╮
-${lines.join("\n")}
-━━━━━━━━━━━━━━━━━━━━━━━━━
-.employees <num> for details, or .oversee <code>`,
-        mentions
-    }, { quoted: msg });
+
+    const employeeBlocks =
+        sortedEntries.map(
+            ([, employee]) => {
+
+                const rate =
+                    positionRate(
+                        company.industry,
+                        employee.position
+                    );
+
+                const amount =
+                    Math.round(
+                        income *
+                        (rate / 100)
+                    );
+
+                const hiredDate =
+                    new Date(
+                        employee.hiredAt
+                    ).toDateString();
+
+                const registeredName =
+                    users[
+                        employee.userId
+                    ]?.name ||
+                    "not registered";
+
+                return `👤 *#${employee.num} — ${registeredName}*
+📱 @${employee.userId.split("@")[0]}
+💼 𝙋𝙤𝙨𝙞𝙩𝙞𝙤𝙣 : ${titleCase(employee.position)}
+🔑 𝘾𝙤𝙙𝙚      : ${employee.code || "n/a"}
+💰 𝙋𝙖𝙮      : ~${amount.toLocaleString()} 🌙/payout
+📅 𝙃𝙞𝙧𝙚𝙙     : ${hiredDate}`;
+
+            }
+        );
+
+
+    const rosterBlock =
+        employeeBlocks.join(
+            `\n\n${DIVIDER}\n\n`
+        );
+
+
+    const mentions =
+        sortedEntries.map(
+            ([, employee]) =>
+                employee.userId
+        );
+
+
+    await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text:
+`╭━━━ 👥 𝙀𝙈𝙋𝙇𝙊𝙔𝙀𝙀 𝙍𝙊𝙎𝙏𝙀𝙍 ━━━╮
+        ${company.name}
+
+👥 𝙀𝙈𝙋𝙇𝙊𝙔𝙀𝙀𝙎 : ${employeeEntries.length}/${MAX_EMPLOYEES}
+
+${DIVIDER}
+
+${rosterBlock}
+
+${DIVIDER}
+
+🔎 .employees <num> — full employee details
+🔑 .oversee <code> — lookup by employee code
+📢 .companyoffers — manage positions
+
+${FOOTER}`,
+            mentions
+        },
+        { quoted: msg }
+    );
 
 }
-
 // ---------- .oversee <code> — owner-only lookup by employee code ----------
 // Same detail view as .employees <num>, just looked up by the random
 // per-hire code instead of hire-order number — meant for an owner with a

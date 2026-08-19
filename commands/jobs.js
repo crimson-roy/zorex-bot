@@ -1420,7 +1420,9 @@ async function jobInfoCommand(
 ) {
 
     const query =
-        text.replace(".jobinfo", "").trim();
+        text
+            .replace(".jobinfo", "")
+            .trim();
 
     if (!query) {
 
@@ -1430,7 +1432,9 @@ async function jobInfoCommand(
                 text: errorBox(
                     "𝙅𝙊𝘽 𝙄𝙉𝙁𝙊",
                     "Enter a company name.",
-                    [".jobinfo Roy Trading Group"]
+                    [
+                        ".jobinfo Roy Trading Group"
+                    ]
                 )
             },
             { quoted: msg }
@@ -1449,47 +1453,66 @@ async function jobInfoCommand(
     // MAJOR LOOKUP
     // ========================================================
 
-    // Major keys are used for persistent state.
-    // We first check exact key/name matches.
+    let majorMatch =
+        null;
 
-    let majorMatch = null;
-    let majorKey = null;
+    let majorKey =
+        null;
 
-    for (const key of Object.keys(MAJORS)) {
+
+    for (
+        const key
+        of Object.keys(MAJORS)
+    ) {
 
         const major =
             getMajor(key);
 
-        if (!major) continue;
+        if (!major) {
+            continue;
+        }
 
         if (
             key.toLowerCase() === q ||
             major.name.toLowerCase() === q
         ) {
 
-            majorMatch = major;
-            majorKey = key;
+            majorMatch =
+                major;
+
+            majorKey =
+                key;
+
             break;
 
         }
 
     }
 
-    // Also allow a unique substring match for majors.
+
+    // Unique substring match
     if (!majorMatch) {
 
         const majorMatches =
             Object.keys(MAJORS)
                 .map(key => ({
                     key,
-                    major: getMajor(key)
+                    major:
+                        getMajor(key)
                 }))
-                .filter(({ key, major }) =>
-                    key.toLowerCase().includes(q) ||
-                    major.name.toLowerCase().includes(q)
+                .filter(
+                    ({ key, major }) =>
+                        key.toLowerCase()
+                            .includes(q) ||
+                        major.name
+                            .toLowerCase()
+                            .includes(q)
                 );
 
-        if (majorMatches.length === 1) {
+
+        if (
+            majorMatches.length === 1
+        ) {
 
             majorKey =
                 majorMatches[0].key;
@@ -1499,7 +1522,10 @@ async function jobInfoCommand(
 
         }
 
-        if (majorMatches.length > 1) {
+
+        if (
+            majorMatches.length > 1
+        ) {
 
             const names =
                 majorMatches
@@ -1509,16 +1535,18 @@ async function jobInfoCommand(
                     )
                     .join("\n");
 
+
             return await sock.sendMessage(
                 msg.key.remoteJid,
                 {
-                    text: noticeBox(
-                        "⚠️",
-                        "𝙈𝙐𝙇𝙏𝙄𝙋𝙇𝙀 𝙈𝘼𝙏𝘾𝙃𝙀𝙎",
-                        `"${query}" matches more than one Major — be more specific:
+                    text:
+`╭━━━ ⚠️ 𝙈𝙐𝙇𝙏𝙄𝙋𝙇𝙀 𝙈𝘼𝙏𝘾𝙃𝙀𝙎 ━━━╮
 
-${names}`
-                    )
+"${query}" matches more than one Major.
+
+${names}
+
+${FOOTER}`
                 },
                 { quoted: msg }
             );
@@ -1536,63 +1564,75 @@ ${names}`
 
         const industry =
             majorMatch.industry
-                ? getIndustry(majorMatch.industry)
+                ? getIndustry(
+                    majorMatch.industry
+                )
                 : null;
+
 
         const majorOpen =
             listMajorOpenOffers()
                 .filter(
-                    o => o.majorKey === majorKey
+                    offer =>
+                        offer.majorKey ===
+                        majorKey
                 );
 
+
         const openLines =
-            majorOpen.map(o => {
+            majorOpen.map(
+                offer => {
 
-                const rate =
-                    majorPositionRate(
-                        o.majorKey,
-                        o.positionKey
-                    );
+                    const rate =
+                        majorPositionRate(
+                            offer.majorKey,
+                            offer.positionKey
+                        );
 
-                const amount =
-                    Math.round(
-                        o.major.income *
-                        (rate / 100)
-                    );
+                    const amount =
+                        Math.round(
+                            offer.major.income *
+                            (rate / 100)
+                        );
 
-                return `📋 *[ 𝙊𝙁𝙁𝙀𝙍 #${o.offerId} ]*
-💼 𝙋𝙤𝙨𝙞𝙩𝙞𝙤𝙣 : ${titleCase(o.positionKey)}
-👥 𝙎𝙡𝙤𝙩𝙨    : ${o.filledCount}/${o.maxSlots}
+                    return `📋 *#${offer.offerId}*
+💼 𝙋𝙤𝙨𝙞𝙩𝙞𝙤𝙣 : ${titleCase(offer.positionKey)}
+👥 𝙎𝙡𝙤𝙩𝙨    : ${offer.filledCount}/${offer.maxSlots}
 💰 𝙋𝙖𝙮      : ~${amount.toLocaleString()} 🌙/payout`;
 
-            });
+                }
+            );
+
 
         const openBlock =
             openLines.length
                 ? openLines.join(
                     `\n\n${DIVIDER}\n\n`
                 )
-                : "  📭 none right now";
+                : "📭 No open positions right now.";
+
 
         return await sock.sendMessage(
             msg.key.remoteJid,
             {
-                text: `╭━━━ 🏢 ${majorMatch.name.toUpperCase()} ━━━╮
+                text:
+`╭━━━ 🏢 ${majorMatch.name.toUpperCase()} ━━━╮
+        𝙈𝘼𝙅𝙊𝙍 𝙀𝙈𝙋𝙇𝙊𝙔𝙀𝙍
 
-🏭 𝙄𝙣𝙙𝙪𝙨𝙩𝙧𝙮 : ${industry ? industry.label : "—"}
-⭐ 𝙍𝙖𝙩𝙞𝙣𝙜   : 🌟 Major
-📝 𝘽𝙞𝙤      : not set
+🏭 𝙄𝙣𝙙𝙪𝙨𝙩𝙧𝙔 : ${industry ? industry.label : "Unspecified"}
+⭐ 𝙏𝙮𝙥𝙚     : Major
+💰 𝙄𝙣𝙘𝙤𝙢𝙚    : ${majorMatch.income.toLocaleString()} 🌙/payout
 
 ${DIVIDER}
-💰 𝘽𝙖𝙨𝙚 𝙄𝙣𝙘𝙤𝙢𝙚 : ${majorMatch.income.toLocaleString()} 🌙/payout
 
-${DIVIDER}
 📢 *𝙊𝙋𝙀𝙉 𝙋𝙊𝙎𝙄𝙏𝙄𝙊𝙉𝙎*
 
 ${openBlock}
 
 ${DIVIDER}
-📥 Apply with: .jobapply <offer number>
+
+📥 .jobapply <offer number>
+🔎 .jobinfo ${majorMatch.name}
 
 ${FOOTER}`
             },
@@ -1603,78 +1643,92 @@ ${FOOTER}`
 
 
     // ========================================================
-    // ORIGINAL PLAYER-COMPANY LOOKUP
+    // PLAYER COMPANY LOOKUP
     // ========================================================
 
     const exactMatches =
         Object.entries(users)
             .filter(
-                ([, u]) =>
-                    u.company &&
-                    u.company.name.toLowerCase() === q
+                ([, user]) =>
+                    user.company &&
+                    user.company.name
+                        .toLowerCase() === q
             );
+
 
     let match =
         exactMatches[0];
+
 
     if (!match) {
 
         const substrMatches =
             Object.entries(users)
                 .filter(
-                    ([, u]) =>
-                        u.company &&
-                        u.company.name
+                    ([, user]) =>
+                        user.company &&
+                        user.company.name
                             .toLowerCase()
                             .includes(q)
                 );
 
-        if (substrMatches.length > 1) {
+
+        if (
+            substrMatches.length > 1
+        ) {
 
             const names =
                 substrMatches
                     .map(
-                        ([, u]) =>
-                            `👉 ${u.company.name}`
+                        ([, user]) =>
+                            `👉 ${user.company.name}`
                     )
                     .join("\n");
+
 
             return await sock.sendMessage(
                 msg.key.remoteJid,
                 {
-                    text: noticeBox(
-                        "⚠️",
-                        "𝙈𝙐𝙇𝙏𝙄𝙋𝙇𝙀 𝙈𝘼𝙏𝘾𝙃𝙀𝙎",
-                        `"${query}" matches more than one company — be more specific:
+                    text:
+`╭━━━ ⚠️ 𝙈𝙐𝙇𝙏𝙄𝙋𝙇𝙀 𝙈𝘼𝙏𝘾𝙃𝙀𝙎 ━━━╮
 
-${names}`
-                    )
+"${query}" matches more than one company.
+
+${names}
+
+${FOOTER}`
                 },
                 { quoted: msg }
             );
 
         }
 
+
         match =
             substrMatches[0];
 
     }
+
 
     if (!match) {
 
         return await sock.sendMessage(
             msg.key.remoteJid,
             {
-                text: noticeBox(
-                    "📭",
-                    "𝘾𝙊𝙈𝙋𝘼𝙉𝙔 𝙉𝙊𝙏 𝙁𝙊𝙐𝙉𝘿",
-                    `No company found matching "${query}".`
-                )
+                text:
+`╭━━━ 📭 𝘾𝙊𝙈𝙋𝘼𝙉𝙔 𝙉𝙊𝙏 𝙁𝙊𝙐𝙉𝘿 ━━━╮
+
+No company found matching:
+
+*${query}*
+
+${FOOTER}`
             },
             { quoted: msg }
         );
 
     }
+
 
     const [, ownerData] =
         match;
@@ -1682,83 +1736,97 @@ ${names}`
     const company =
         ownerData.company;
 
+
     const industry =
         getIndustry(
             company.industry
         );
+
 
     const stars =
         tierForLevel(
             company.level
         );
 
+
     const income =
         incomeAtLevel(
             company.level
         );
 
+
     const openLines =
         Object.values(
             company.offers || {}
-        ).map(offer => {
+        ).map(
+            offer => {
 
-            const rate =
-                positionRate(
-                    company.industry,
-                    offer.position
-                );
-
-            const amount =
-                Math.round(
-                    income *
-                    (rate / 100)
-                );
-
-            const maxSlots =
-                getMaxSlots(
-                    company.industry,
-                    offer.position
-                );
-
-            const filledCount =
-                Object.values(
-                    company.employees || {}
-                ).filter(
-                    e =>
-                        e.position ===
+                const rate =
+                    positionRate(
+                        company.industry,
                         offer.position
-                ).length;
+                    );
 
-            return `📋 *[ 𝙊𝙁𝙁𝙀𝙍 #${offer.id} ]*
+                const amount =
+                    Math.round(
+                        income *
+                        (rate / 100)
+                    );
+
+                const maxSlots =
+                    getMaxSlots(
+                        company.industry,
+                        offer.position
+                    );
+
+                const filledCount =
+                    Object.values(
+                        company.employees || {}
+                    ).filter(
+                        employee =>
+                            employee.position ===
+                            offer.position
+                    ).length;
+
+
+                return `📋 *#${offer.id}*
 💼 𝙋𝙤𝙨𝙞𝙩𝙞𝙤𝙣 : ${titleCase(offer.position)}
 👥 𝙎𝙡𝙤𝙩𝙨    : ${filledCount}/${maxSlots}
 💰 𝙋𝙖𝙮      : ~${amount.toLocaleString()} 🌙/payout`;
 
-        });
+            }
+        );
+
 
     const openBlock =
         openLines.length
             ? openLines.join(
                 `\n\n${DIVIDER}\n\n`
             )
-            : "  📭 none right now";
+            : "📭 No open positions right now.";
+
 
     await sock.sendMessage(
         msg.key.remoteJid,
         {
-            text: `╭━━━ 🏢 ${company.name.toUpperCase()} ━━━╮
+            text:
+`╭━━━ 🏢 ${company.name.toUpperCase()} ━━━╮
+        𝙅𝙊𝘽 𝙄𝙉𝙁𝙊
 
-🏭 𝙄𝙣𝙙𝙪𝙨𝙩𝙧𝙮 : ${industry ? industry.label : "unknown"}
+🏭 𝙄𝙣𝙙𝙪𝙨𝙩𝙧𝙮 : ${industry ? industry.label : "Unknown"}
 ⭐ 𝙍𝙖𝙩𝙞𝙣𝙜   : ${"⭐".repeat(stars)} (${stars}-Star)
-📝 𝘽𝙞𝙤      : not set
+💰 𝙄𝙣𝙘𝙤𝙢𝙚    : ${income.toLocaleString()} 🌙/24h
 
 ${DIVIDER}
+
 📢 *𝙊𝙋𝙀𝙉 𝙋𝙊𝙎𝙄𝙏𝙄𝙊𝙉𝙎*
 
 ${openBlock}
 
 ${DIVIDER}
-📥 Apply with: .jobapply <offer number>
+
+📥 .jobapply <offer number>
+🔎 .jobinfo ${company.name}
 
 ${FOOTER}`
         },
@@ -1766,7 +1834,6 @@ ${FOOTER}`
     );
 
 }
-
 
 // ============================================================
 // EXPORTS
