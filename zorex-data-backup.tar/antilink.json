@@ -1,0 +1,28 @@
+{
+    "120363409279119201@g.us": {
+        "enabled": false
+    },
+    "120363407050898509@g.us": {
+        "enabled": true,
+        "limit": 3
+    },
+    "120363411274705121@g.us": {
+        "enabled": true,
+        "limit": 2
+    },
+    "120363430362856614@g.us": {
+        "enabled": true,
+        "limit": 3
+    },
+    "120363428635395657@g.us": {
+        "enabled": true,
+        "limit": 3
+    },
+    "120363428089400077@g.us": {
+        "enabled": true,
+        "limit": 3
+    },
+    "120363430170489380@g.us": {
+        "enabled": true
+    }
+}

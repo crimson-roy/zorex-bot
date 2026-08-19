@@ -3,6 +3,8 @@ const dataPath = require("../lib/dataPath");
 const { isValidIndustry, getIndustry, listIndustryKeys, isValidPosition, positionRate, getMaxSlots, titleCase } = require("../lib/industries");
 const { getNextOfferId } = require("../lib/jobOffers");
 const { tierForLevel } = require("../lib/tierStar");
+const { loadInventory, saveInventory } = require("./inventory");
+const { ASSETS } = require("./invest");
 
 // Company-wide employee cap (spec §7) — applies across ALL positions
 // combined, not per-position.
@@ -273,8 +275,20 @@ ${industryLine}» Level   : ${company.level}
 }
 
 
-// ---------- .company deposit <amount> — personal wallet -> company wallet ----------
-async function companyDeposit(sock, msg, amountArg) {
+// ---------- .company deposit crescent <amount> | .company deposit <assetId> <amount> ----------
+// Two very different transfers under one subcommand, disambiguated by
+// the first word:
+//   - "crescent" -> money, personal wallet -> company wallet (this is
+//     the ORIGINAL .company deposit <amount> behavior, unchanged in
+//     substance — just re-routed behind the "crescent" keyword instead
+//     of being the bare default).
+//   - any valid asset ID (gold, land, etc., from invest.js's ASSETS
+//     catalog) -> a straight quantity transfer, personal inventory ->
+//     company.assets. No money changes hands and no market rate is
+//     involved — this is NOT the same as .companyinvest buy, which
+//     spends company wallet to buy NEW assets from the market. This
+//     only moves assets the person already owns.
+async function companyDeposit(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
     const users = loadUsers();
@@ -284,27 +298,101 @@ async function companyDeposit(sock, msg, amountArg) {
     const company = users[sender].company;
     if (!company) return await replyNoCompany(sock, msg);
 
-    const amount = Number(amountArg);
+    company.assets = company.assets || [];
 
-    if (!amountArg || isNaN(amount) || amount <= 0) {
+    const args = text
+        .replace(".company", "")
+        .replace("deposit", "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    const kind = (args[0] || "").toLowerCase();
+
+    if (!kind) {
         return await sock.sendMessage(msg.key.remoteJid, {
-            text: errorBox("𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗘𝗣𝗢𝗦𝗜𝗧", "Enter a valid amount.", [".company deposit 50000"])
+            text: errorBox("𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗘𝗣𝗢𝗦𝗜𝗧", "Specify what to deposit — crescent (money) or an asset ID.", [".company deposit crescent 50000", ".company deposit gold 2"])
         }, { quoted: msg });
     }
 
-    if (users[sender].wallet < amount) {
+    // ---- crescent: personal wallet -> company wallet ----
+    if (kind === "crescent") {
+
+        const amount = Number(args[1]);
+
+        if (!args[1] || isNaN(amount) || amount <= 0) {
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: errorBox("𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗘𝗣𝗢𝗦𝗜𝗧", "Enter a valid amount.", [".company deposit crescent 50000"])
+            }, { quoted: msg });
+        }
+
+        if (users[sender].wallet < amount) {
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ You don't have that much in your personal wallet.\n\n💳 Wallet: ${users[sender].wallet.toLocaleString()} 🌙`
+            }, { quoted: msg });
+        }
+
+        company.wallet = (company.wallet || 0) + amount;
+        users[sender].wallet -= amount;
+
+        saveUsers(users);
+
         return await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ You don't have that much in your personal wallet.\n\n💳 Wallet: ${users[sender].wallet.toLocaleString()} 🌙`
+            text: `✅ Deposited ${amount.toLocaleString()} 🌙 into *${company.name}*'s company wallet.\n\n🏢 Company Wallet : ${company.wallet.toLocaleString()} 🌙\n💳 Personal Wallet: ${users[sender].wallet.toLocaleString()} 🌙`
+        }, { quoted: msg });
+
+    }
+
+    // ---- asset ID: personal inventory -> company.assets, straight transfer ----
+    const def = ASSETS[kind];
+
+    if (!def) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: errorBox("𝗨𝗡𝗞𝗡𝗢𝗪𝗡 𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗧𝗬𝗣𝗘", `"${args[0]}" isn't "crescent" or a valid asset ID.\n\n📚 Assets: ${Object.keys(ASSETS).join(", ")}`, [".company deposit crescent 50000", ".company deposit gold 2"])
         }, { quoted: msg });
     }
 
-    company.wallet = (company.wallet || 0) + amount;
-    users[sender].wallet -= amount;
+    const amount = Number(args[1]);
+
+    if (!args[1] || !Number.isInteger(amount) || amount <= 0) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: errorBox("𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗘𝗣𝗢𝗦𝗜𝗧", "Enter a valid amount to deposit.", [`.company deposit ${kind} 2`])
+        }, { quoted: msg });
+    }
+
+    const inventory = loadInventory();
+    const items = inventory[sender] || [];
+    const holding = items.find(it => it.id === kind && it.type === "asset");
+    const owned = holding ? holding.quantity : 0;
+
+    if (owned < amount) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ You only hold ${owned} ${def.name} — can't deposit ${amount}.`
+        }, { quoted: msg });
+    }
+
+    holding.quantity -= amount;
+
+    if (holding.quantity <= 0) {
+        inventory[sender] = items.filter(it => !(it.id === kind && it.type === "asset"));
+    }
+
+    saveInventory(inventory);
+
+    const companyHolding = company.assets.find(a => a.id === kind);
+
+    if (companyHolding) {
+        companyHolding.quantity += amount;
+    } else {
+        company.assets.push({ id: kind, quantity: amount, obtainedAt: Date.now() });
+    }
 
     saveUsers(users);
 
+    const companyNowHolds = companyHolding ? companyHolding.quantity : amount;
+
     return await sock.sendMessage(msg.key.remoteJid, {
-        text: `✅ Deposited ${amount.toLocaleString()} 🌙 into *${company.name}*'s company wallet.\n\n🏢 Company Wallet : ${company.wallet.toLocaleString()} 🌙\n💳 Personal Wallet: ${users[sender].wallet.toLocaleString()} 🌙`
+        text: `${def.emoji} *DEPOSITED*\n» Asset   : ${def.name} x${amount}\n\n🏢 ${company.name} now holds: ${companyNowHolds} ${def.name}\n💼 You now hold: ${holding.quantity} ${def.name}`
     }, { quoted: msg });
 
 }
@@ -463,6 +551,10 @@ async function companyAssign(sock, msg, text) {
 // ".company deposit/distribute/assign" are new subcommands added for
 // the company/employment spec — everything else about how .company is
 // invoked is unchanged.
+//
+// CHANGE: "deposit" now passes the full `trimmed` text (like distribute
+// and assign already did), not just parts[2] — companyDeposit needs to
+// see the "crescent"/asset-id keyword that comes before the amount now.
 async function companyCommand(sock, msg, text) {
 
     const trimmed = (text || ".company").trim();
@@ -470,7 +562,7 @@ async function companyCommand(sock, msg, text) {
     const sub = (parts[1] || "").toLowerCase();
 
     if (sub === "deposit") {
-        return await companyDeposit(sock, msg, parts[2]);
+        return await companyDeposit(sock, msg, trimmed);
     }
 
     if (sub === "distribute") {

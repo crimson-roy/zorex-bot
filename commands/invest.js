@@ -134,7 +134,7 @@ async function investCommand(sock, msg, text) {
         {
             text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
      📈 𝗚𝗟𝗢𝗕𝗔𝗟 𝗠𝗔𝗥𝗞𝗘𝗧
-╰━━━━━━━━━━━━━━━━━━━━━━━╯
+╰━━━━━━━━━━━━━━━━━━━━━━━╮
 ${lines.join("\n")}
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 .invest buy <id> <amount>
@@ -486,8 +486,80 @@ ${lines.join("\n")}
 
 }
 
+// ---------- .companyassets — company's asset portfolio ----------
+// Same shape as .assets (personal), but reads company.assets instead of
+// inventory.json, and has no "liquid reserves"/bank line — companies
+// only ever have company.wallet (already shown by bare .company).
+// Same owner-or-investor-role authorization as .companyinvest.
+async function companyAssetsCommand(sock, msg) {
+
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const users = loadUsers();
+
+    if (!users[sender]) {
+        return await sock.sendMessage(msg.key.remoteJid, { text: notRegisteredMessage() }, { quoted: msg });
+    }
+
+    const resolved = await resolveInvestingCompany(users, sender);
+
+    if (!resolved) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `⚠️ You need to own a company, or hold the *investor* role at one (via .company assign investor), to use .companyassets.`
+        }, { quoted: msg });
+    }
+
+    const { company } = resolved;
+    company.wallet = company.wallet || 0;
+    company.assets = company.assets || [];
+
+    const market = tickMarket();
+    const holdings = company.assets.filter(a => ASSETS[a.id]);
+
+    if (holdings.length === 0) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
+   🏢 𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗔𝗦𝗦𝗘𝗧𝗦 🏢
+╰━━━━━━━━━━━━━━━━━━━━━━━╮
+ℹ️ ${company.name} holds no assets right now.
+━━━━━━━━━━━━━━━━━━━━━━━━━
+» Company Wallet : ${company.wallet.toLocaleString()} 🌙
+» Asset Value     : 0 🌙
+» Total Net Worth : ${company.wallet.toLocaleString()} 🌙`
+        }, { quoted: msg });
+    }
+
+    let assetValue = 0;
+
+    const lines = holdings.map(h => {
+        const def = ASSETS[h.id];
+        const rate = market[h.id].rate;
+        const value = rate * h.quantity;
+        assetValue += value;
+        return `${def.emoji} ${def.name} x${h.quantity}
+   Value: ${value.toLocaleString()} 🌙 (${rate.toLocaleString()} 🌙 each)`;
+    });
+
+    const netWorth = company.wallet + assetValue;
+
+    await sock.sendMessage(msg.key.remoteJid, {
+        text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
+   🏢 𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗔𝗦𝗦𝗘𝗧𝗦 🏢
+╰━━━━━━━━━━━━━━━━━━━━━━━╮
+   ${company.name}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+${lines.join("\n")}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+» Company Wallet : ${company.wallet.toLocaleString()} 🌙
+» Asset Value     : ${assetValue.toLocaleString()} 🌙
+» Total Net Worth : ${netWorth.toLocaleString()} 🌙`
+    }, { quoted: msg });
+
+}
+
 module.exports = {
     investCommand,
     assetsCommand,
-    companyInvestCommand
+    companyInvestCommand,
+    companyAssetsCommand,
+    ASSETS
 };

@@ -1,0 +1,3075 @@
+{
+    "66370632994983@lid": [
+        {
+            "id": "4e8cc27b",
+            "name": "Tsukasa Gojouin",
+            "type": "card",
+            "image": "./tsukasa_gojouin_the_maid_i_hired_recently_is_mysterious.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785695875027
+        },
+        {
+            "id": "72296865",
+            "name": "Enoki Yukigaya",
+            "type": "card",
+            "image": "./cards/72296865.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786915857830
+        }
+    ],
+    "251272968016096@lid": [
+        {
+            "id": "18200489",
+            "name": "Char Aznable",
+            "type": "card",
+            "image": "./char_aznable_mobile_suit_gundam.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785696614687
+        },
+        {
+            "id": "96697f07",
+            "name": "Mikasa Ackerman",
+            "type": "card",
+            "image": "./mikasa_ackerman_attack_on_titan.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785735947964
+        },
+        {
+            "id": "f03fffc0",
+            "name": "Tooru Rikiishi",
+            "type": "card",
+            "image": "./tooru_rikiishi_tomorrow_s_joe.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785739046408
+        },
+        {
+            "id": "0ccc3f6f",
+            "name": "Fluffy",
+            "type": "card",
+            "image": "./fluffy_mr_a_s_farm.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785746362776
+        }
+    ],
+    "64480545378405@lid": [],
+    "168659188191402@lid": [
+        {
+            "id": "6c54bedf",
+            "name": "Rias Gremory",
+            "type": "card",
+            "image": "./rias_gremory_high_school_dxd.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785700268297
+        },
+        {
+            "id": "76269373",
+            "name": "Liliweiss vs Mass Produced Heretic",
+            "type": "card",
+            "image": "./cards/76269373.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786281931680
+        },
+        {
+            "id": "38337074",
+            "name": "Rin Tohsaka",
+            "type": "card",
+            "image": null,
+            "video": "./cards/38337074.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786466036146
+        },
+        {
+            "id": "90558135",
+            "name": "Nami",
+            "type": "card",
+            "image": "./cards/90558135.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786307709724
+        },
+        {
+            "id": "68943328",
+            "name": "Yuki Rurikawa",
+            "type": "card",
+            "image": "./cards/68943328.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786357641694
+        },
+        {
+            "id": "55360530",
+            "name": "Hinata and Sakurako",
+            "type": "card",
+            "image": "./cards/55360530.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786397729181
+        },
+        {
+            "id": "35755250",
+            "name": "Nanami (Startrail)",
+            "type": "card",
+            "image": "./cards/35755250.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786454331484
+        },
+        {
+            "id": "70270496",
+            "name": "CZ2128 Delta",
+            "type": "card",
+            "image": "./cards/70270496.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786489041320
+        },
+        {
+            "id": "77941575",
+            "name": "Ruan Mei",
+            "type": "card",
+            "image": null,
+            "video": "./cards/77941575.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786539766468
+        },
+        {
+            "id": "54587344",
+            "name": "Aki Minami",
+            "type": "card",
+            "image": "./cards/54587344.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786623413165
+        }
+    ],
+    "115251806732415@lid": [
+        {
+            "id": "53817948",
+            "name": "Gojo Satoru",
+            "type": "card",
+            "image": "./cards/53817948.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786033512953
+        },
+        {
+            "id": "12119594",
+            "name": "Kokoro Tsurumaki",
+            "type": "card",
+            "image": "./cards/12119594.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786035330327
+        },
+        {
+            "id": "47737750",
+            "name": "Yuki",
+            "type": "card",
+            "image": "./cards/47737750.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786046054990
+        },
+        {
+            "id": "95441409",
+            "name": "Emilia and Rem",
+            "type": "card",
+            "image": "./cards/95441409.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786047819421
+        },
+        {
+            "id": "96240600",
+            "name": "Alpha (Inverse Crown)",
+            "type": "card",
+            "image": "./cards/96240600.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786087813300
+        },
+        {
+            "id": "67751395",
+            "name": "Miku Kohinata",
+            "type": "card",
+            "image": "./cards/67751395.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786091845721
+        },
+        {
+            "id": "60499173",
+            "name": "Sakurako Mikage",
+            "type": "card",
+            "image": "./cards/60499173.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786053660760
+        },
+        {
+            "id": "82495874",
+            "name": "Sana Futaba",
+            "type": "card",
+            "image": "./cards/82495874.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786117089239
+        },
+        {
+            "id": "20134932",
+            "name": "Roronoa Zoro",
+            "type": "card",
+            "image": "./cards/20134932.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786213281146
+        },
+        {
+            "id": "90812350",
+            "name": "Rem",
+            "type": "card",
+            "image": null,
+            "video": "./cards/90812350.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786220476799
+        },
+        {
+            "id": "17126316",
+            "name": "Rias and Akeno",
+            "type": "card",
+            "image": null,
+            "video": "./cards/17126316.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786225580164
+        },
+        {
+            "id": "30679245",
+            "name": "Aqua",
+            "type": "card",
+            "image": null,
+            "video": "./cards/30679245.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786233923499
+        },
+        {
+            "id": "20670175",
+            "name": "Leviathan",
+            "type": "card",
+            "image": "./cards/20670175.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786131689944
+        },
+        {
+            "id": "22008321",
+            "name": "Chuuya Nakahara & Ryuunosuke Akutagawa",
+            "type": "card",
+            "image": "./cards/22008321.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786089729133
+        },
+        {
+            "id": "24348763",
+            "name": "Gin Akutagawa",
+            "type": "card",
+            "image": "./cards/24348763.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786187605871
+        },
+        {
+            "id": "71387048",
+            "name": "Ayato Sakamaki and Yui Komori",
+            "type": "card",
+            "image": "./cards/71387048.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786254516089
+        },
+        {
+            "id": "33441740",
+            "name": "Makima",
+            "type": "card",
+            "image": null,
+            "video": "./cards/33441740.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786272888533
+        },
+        {
+            "id": "42051899",
+            "name": "Goku",
+            "type": "card",
+            "image": null,
+            "video": "./cards/42051899.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786316000889
+        },
+        {
+            "id": "81729939",
+            "name": "Albedo",
+            "type": "card",
+            "image": null,
+            "video": "./cards/81729939.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786367166506
+        },
+        {
+            "id": "87073701",
+            "name": "Ken Kaneki",
+            "type": "card",
+            "image": "./cards/87073701.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786393609294
+        },
+        {
+            "id": "58092214",
+            "name": "Uta",
+            "type": "card",
+            "image": null,
+            "video": "./cards/58092214.mp4",
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786395195164
+        },
+        {
+            "id": "83052088",
+            "name": "Yuuta Okkotsu and Rika",
+            "type": "card",
+            "image": null,
+            "video": "./cards/83052088.mp4",
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786395217158
+        },
+        {
+            "id": "11586566",
+            "name": "Tsukushi Futaba",
+            "type": "card",
+            "image": "./cards/11586566.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786453641638
+        },
+        {
+            "id": "92280105",
+            "name": "Ukinami Yuzuha",
+            "type": "card",
+            "image": null,
+            "video": "./cards/92280105.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786540441026
+        },
+        {
+            "id": "92520272",
+            "name": "Night Raid: Frieren",
+            "type": "card",
+            "image": null,
+            "video": "./cards/92520272.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786207074834
+        },
+        {
+            "id": "75795443",
+            "name": "Makima",
+            "type": "card",
+            "image": null,
+            "video": "./cards/75795443.mp4",
+            "obtainedFrom": "auction",
+            "obtainedAt": 1786541805849
+        },
+        {
+            "id": "22795911",
+            "name": "Hibiki Sakura",
+            "type": "card",
+            "image": "./cards/22795911.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786570260139
+        },
+        {
+            "id": "21062517",
+            "name": "Ann Takamaki",
+            "type": "card",
+            "image": "./cards/21062517.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786622897362
+        },
+        {
+            "id": "47f20284",
+            "name": "Irina Shidou",
+            "type": "card",
+            "image": null,
+            "video": "./cards/36785615.mp4",
+            "obtainedFrom": "auction",
+            "obtainedAt": 1786974224076
+        }
+    ],
+    "204552246693986@lid": [
+        {
+            "id": "4ab55392",
+            "name": "Rias Gremory",
+            "type": "card",
+            "image": "./rias_gremory_high_school_dxd.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785733765307
+        },
+        {
+            "id": "e71a1077",
+            "name": "Gojo Satoru",
+            "type": "card",
+            "image": null,
+            "video": "./gojo.mp4",
+            "obtainedFrom": "auction",
+            "obtainedAt": 1785937587964
+        },
+        {
+            "id": "46085700",
+            "name": "Giriko, Yukio & Riruka",
+            "type": "card",
+            "image": "./cards/46085700.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786018337520
+        }
+    ],
+    "164317513175043@lid": [
+        {
+            "id": "24070458",
+            "name": "Tempest, Dragon Ruler of Storms",
+            "type": "card",
+            "image": "./cards/24070458.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786624800626
+        },
+        {
+            "id": "79551977",
+            "name": "Sangonomiya Kokomi",
+            "type": "card",
+            "image": "./cards/79551977.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786632270102
+        },
+        {
+            "id": "97026858",
+            "name": "Gin Akutagawa",
+            "type": "card",
+            "image": "./cards/97026858.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786722548075
+        },
+        {
+            "id": "51455888",
+            "name": "Saki and Honami",
+            "type": "card",
+            "image": "./cards/51455888.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786800883960
+        }
+    ],
+    "196396489654337@lid": [
+        {
+            "id": "95efdc4d",
+            "name": "Momonga",
+            "type": "card",
+            "image": "./momonga_overlord.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785760071248
+        }
+    ],
+    "147073185894631@lid": [
+        {
+            "id": "aea4ee75",
+            "name": "Wada Akinori",
+            "type": "card",
+            "image": "./wada_akinori_goodnight_punpun.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785772584524
+        },
+        {
+            "id": "fe42df31",
+            "name": "Emile Crossfode",
+            "type": "card",
+            "image": "./emile_crossfode_hundred.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785854246497
+        },
+        {
+            "id": "8a8f56a4",
+            "name": "Emilia",
+            "type": "card",
+            "image": "./emilia_after_school_dice_club.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785869154589
+        },
+        {
+            "id": "22795911",
+            "name": "Hibiki Sakura",
+            "type": "card",
+            "image": "./cards/22795911.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786004879391
+        },
+        {
+            "id": "79531567",
+            "name": "Sakura Haruyanaginomiya",
+            "type": "card",
+            "image": "./cards/79531567.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786034035423
+        },
+        {
+            "id": "62509241",
+            "name": "Artoria Pendragon (Lancer Alter)",
+            "type": "card",
+            "image": "./cards/62509241.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786037589118
+        },
+        {
+            "id": "93745819",
+            "name": "Tsunade",
+            "type": "card",
+            "image": "./cards/93745819.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786042553139
+        },
+        {
+            "id": "30679245",
+            "name": "Aqua",
+            "type": "card",
+            "image": null,
+            "video": "./cards/30679245.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786081822090
+        },
+        {
+            "id": "29856181",
+            "name": "Muni Ohnaruto",
+            "type": "card",
+            "image": "./cards/29856181.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786096852822
+        },
+        {
+            "id": "83863392",
+            "name": "Crimson Dragon",
+            "type": "card",
+            "image": "./cards/83863392.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786273965224
+        }
+    ],
+    "25353745596565@lid": [
+        {
+            "id": "21a12a6c",
+            "name": "Vegeta",
+            "type": "card",
+            "image": "./vegeta_dragon_ball_gt.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785952166149
+        },
+        {
+            "id": "97cfeb2b",
+            "name": "Sukuna Gojou",
+            "type": "card",
+            "image": "./sukuna_gojou_k_return_of_kings.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785965181151
+        },
+        {
+            "id": "58679702",
+            "name": "Sakura Haruno",
+            "type": "card",
+            "image": "./cards/58679702.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786005919186
+        }
+    ],
+    "172726958485682@lid": [
+        {
+            "id": "65700267",
+            "name": "Toru Asakura",
+            "type": "card",
+            "image": "./cards/65700267.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786055346895
+        },
+        {
+            "id": "48132342",
+            "name": "Pitaya Dragon Cookie",
+            "type": "card",
+            "image": "./cards/48132342.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786060074147
+        },
+        {
+            "id": "73112312",
+            "name": "Futaba and Wakaba",
+            "type": "card",
+            "image": "./cards/73112312.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786062173521
+        },
+        {
+            "id": "62151101",
+            "name": "Cinderella",
+            "type": "card",
+            "image": "./cards/62151101.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786477265518
+        },
+        {
+            "id": "84710442",
+            "name": "Rias Gremory",
+            "type": "card",
+            "image": "./cards/84710442.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786819971471
+        },
+        {
+            "id": "72296865",
+            "name": "Enoki Yukigaya",
+            "type": "card",
+            "image": "./cards/72296865.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786903664565
+        }
+    ],
+    "241364948238449@lid": [
+        {
+            "id": "0473d734",
+            "name": "Wakana Gojou",
+            "type": "card",
+            "image": "./wakana_gojou_my_dress_up_darling.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785790176817
+        },
+        {
+            "id": "87872029",
+            "name": "Shouma Toriashi",
+            "type": "card",
+            "image": "./cards/87872029.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786039253802
+        },
+        {
+            "id": "33762873",
+            "name": "Ruan Mei",
+            "type": "card",
+            "image": "./cards/33762873.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786099043235
+        }
+    ],
+    "162977433018581@lid": [
+        {
+            "id": "34917051",
+            "name": "Blaster, Dragon Ruler of Infernos",
+            "type": "card",
+            "image": "./cards/34917051.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786006077502
+        },
+        {
+            "id": "35140907",
+            "name": "Hinata Hyuuga",
+            "type": "card",
+            "image": "./cards/35140907.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786002186569
+        },
+        {
+            "id": "18252864",
+            "name": "Ken Kaneki",
+            "type": "card",
+            "image": "./cards/18252864.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786008407770
+        },
+        {
+            "id": "10798355",
+            "name": "Ren Shiranami",
+            "type": "card",
+            "image": "./cards/10798355.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786008462006
+        },
+        {
+            "id": "10732639",
+            "name": "Honami Mochizuki",
+            "type": "card",
+            "image": "./cards/10732639.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786008491734
+        },
+        {
+            "id": "11532815",
+            "name": "Kanami",
+            "type": "card",
+            "image": "./cards/11532815.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786008527689
+        },
+        {
+            "id": "68295197",
+            "name": "Tatsuta Ootori",
+            "type": "card",
+            "image": "./cards/68295197.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786013900816
+        },
+        {
+            "id": "36865032",
+            "name": "Yukino Yukinoshita",
+            "type": "card",
+            "image": "./cards/36865032.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786016307780
+        },
+        {
+            "id": "67473091",
+            "name": "Boa Hancock",
+            "type": "card",
+            "image": null,
+            "video": "./cards/67473091.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786019849844
+        },
+        {
+            "id": "37826794",
+            "name": "Reze",
+            "type": "card",
+            "image": "./cards/37826794.jpg",
+            "video": null,
+            "obtainedFrom": "auction",
+            "obtainedAt": 1786020032962
+        },
+        {
+            "id": "74322984",
+            "name": "Gojo Satoru",
+            "type": "card",
+            "image": "./cards/74322984.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786029698031
+        },
+        {
+            "id": "68567002",
+            "name": "Anastasia & Viy",
+            "type": "card",
+            "image": "./cards/68567002.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786099734061
+        },
+        {
+            "id": "75671899",
+            "name": "Kushina Uzumaki",
+            "type": "card",
+            "image": "./cards/75671899.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786100803610
+        },
+        {
+            "id": "23276381",
+            "name": "Yuki",
+            "type": "card",
+            "image": "./cards/23276381.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786103637413
+        },
+        {
+            "id": "93745819",
+            "name": "Tsunade",
+            "type": "card",
+            "image": "./cards/93745819.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786105936930
+        },
+        {
+            "id": "80845468",
+            "name": "Kyoko Sakura",
+            "type": "card",
+            "image": "./cards/80845468.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786132269352
+        },
+        {
+            "id": "46234867",
+            "name": "Yuki Rurikawa",
+            "type": "card",
+            "image": "./cards/46234867.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786137129464
+        },
+        {
+            "id": "21615948",
+            "name": "Prika",
+            "type": "card",
+            "image": "./cards/21615948.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786137968570
+        },
+        {
+            "id": "51031250",
+            "name": "Bao",
+            "type": "card",
+            "image": null,
+            "video": "./cards/51031250.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786035652530
+        },
+        {
+            "id": "32568704",
+            "name": "Makima",
+            "type": "card",
+            "image": null,
+            "video": "./cards/32568704.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786068948860
+        },
+        {
+            "id": "78839512",
+            "name": "Emilia",
+            "type": "card",
+            "image": null,
+            "video": "./cards/78839512.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786069019119
+        },
+        {
+            "id": "67473091",
+            "name": "Boa Hancock",
+            "type": "card",
+            "image": null,
+            "video": "./cards/67473091.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786069045516
+        },
+        {
+            "id": "51031250",
+            "name": "Bao",
+            "type": "card",
+            "image": null,
+            "video": "./cards/51031250.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786069080713
+        },
+        {
+            "id": "45068778",
+            "name": "Asuka Langley & Rei Ayanami",
+            "type": "card",
+            "image": "./cards/45068778.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786069117970
+        },
+        {
+            "id": "16451092",
+            "name": "Serafall Leviathan",
+            "type": "card",
+            "image": "./cards/16451092.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786069308270
+        },
+        {
+            "id": "12182805",
+            "name": "Ibuki Tonami",
+            "type": "card",
+            "image": "./cards/12182805.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786119639183
+        },
+        {
+            "id": "10641873",
+            "name": "Yuta Aoi",
+            "type": "card",
+            "image": "./cards/10641873.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786123391195
+        },
+        {
+            "id": "93647063",
+            "name": "Maki Harukawa",
+            "type": "card",
+            "image": "./cards/93647063.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786128055777
+        },
+        {
+            "id": "61763317",
+            "name": "Hyouta Ashikaga",
+            "type": "card",
+            "image": "./cards/61763317.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786093689290
+        },
+        {
+            "id": "77025484",
+            "name": "Rinami Himesaki",
+            "type": "card",
+            "image": "./cards/77025484.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786128594599
+        },
+        {
+            "id": "53487959",
+            "name": "Anya Melfissa",
+            "type": "card",
+            "image": "./cards/53487959.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786141181835
+        },
+        {
+            "id": "93166941",
+            "name": "Furutaka",
+            "type": "card",
+            "image": "./cards/93166941.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786146506203
+        },
+        {
+            "id": "53487959",
+            "name": "Anya Melfissa",
+            "type": "card",
+            "image": "./cards/53487959.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786200895451
+        },
+        {
+            "id": "c3ee2a70",
+            "name": "Hanamichi Sakuragi",
+            "type": "card",
+            "image": "./hanamichi_sakuragi_slam_dunk.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785971994256
+        },
+        {
+            "id": "36387416",
+            "name": "Matsutake Dobinmushi",
+            "type": "card",
+            "image": "./cards/36387416.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786284709986
+        },
+        {
+            "id": "93092780",
+            "name": "Murasaki and Sakura",
+            "type": "card",
+            "image": "./cards/93092780.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786785553942
+        },
+        {
+            "id": "30120384",
+            "name": "Himiko and Ochaco",
+            "type": "card",
+            "image": "./cards/30120384.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786831034556
+        }
+    ],
+    "9312227324019@lid": [
+        {
+            "id": "13861882",
+            "name": "Frieren",
+            "type": "card",
+            "image": null,
+            "video": "./cards/13861882.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786868982178
+        },
+        {
+            "id": "33146899",
+            "name": "Tsutamachi Chitose",
+            "type": "card",
+            "image": "./cards/33146899.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786876886011
+        }
+    ],
+    "102285350834387@lid": [],
+    "195623479410728@lid": [
+        {
+            "id": "11291036",
+            "name": "Baobhan Sith",
+            "type": "card",
+            "image": "./cards/11291036.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786009744461
+        },
+        {
+            "id": "18706618",
+            "name": "Alpha",
+            "type": "card",
+            "image": "./cards/18706618.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786011877139
+        },
+        {
+            "id": "39454042",
+            "name": "Ryomen Sukuna",
+            "type": "card",
+            "image": "./cards/39454042.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786037452801
+        },
+        {
+            "id": "82034453",
+            "name": "Rias Gremory",
+            "type": "card",
+            "image": "./cards/82034453.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786049134802
+        },
+        {
+            "id": "93745819",
+            "name": "Tsunade",
+            "type": "card",
+            "image": "./cards/93745819.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786085577006
+        },
+        {
+            "id": "49655283",
+            "name": "Iru, Utau, Eru and Amu",
+            "type": "card",
+            "image": "./cards/49655283.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786105789068
+        },
+        {
+            "id": "71017608",
+            "name": "Rem",
+            "type": "card",
+            "image": "./cards/71017608.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786108177824
+        },
+        {
+            "id": "14993660",
+            "name": "Nobara Kugisaki",
+            "type": "card",
+            "image": "./cards/14993660.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786107851310
+        },
+        {
+            "id": "24790122",
+            "name": "Aqua & Ruby",
+            "type": "card",
+            "image": null,
+            "video": "./cards/24790122.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786125289336
+        },
+        {
+            "id": "25261164",
+            "name": "Nerimaki",
+            "type": "card",
+            "image": "./cards/25261164.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786136515273
+        },
+        {
+            "id": "86200535",
+            "name": "Toge Inumaki",
+            "type": "card",
+            "image": "./cards/86200535.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786173157655
+        },
+        {
+            "id": "52753332",
+            "name": "Minami Miyashita",
+            "type": "card",
+            "image": "./cards/52753332.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786187789920
+        },
+        {
+            "id": "49424175",
+            "name": "Rem Galleu",
+            "type": "card",
+            "image": "./cards/49424175.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786195359097
+        },
+        {
+            "id": "70392649",
+            "name": "Mai Sakurajima",
+            "type": "card",
+            "image": null,
+            "video": "./cards/70392649.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786205275825
+        },
+        {
+            "id": "79551977",
+            "name": "Sangonomiya Kokomi",
+            "type": "card",
+            "image": "./cards/79551977.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786213479744
+        },
+        {
+            "id": "13537376",
+            "name": "Gojo Satoru",
+            "type": "card",
+            "image": null,
+            "video": "./cards/13537376.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786266881288
+        },
+        {
+            "id": "11182628",
+            "name": "Miyu Sakurada",
+            "type": "card",
+            "image": "./cards/11182628.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786114510224
+        },
+        {
+            "id": "82589429",
+            "name": "Nezuko Kamado",
+            "type": "card",
+            "image": "./cards/82589429.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786277504829
+        },
+        {
+            "id": "75041923",
+            "name": "Yuki Susa",
+            "type": "card",
+            "image": "./cards/75041923.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786301683265
+        },
+        {
+            "id": "87889447",
+            "name": "Dragon's Beard Candy",
+            "type": "card",
+            "image": "./cards/87889447.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786306103150
+        },
+        {
+            "id": "73842465",
+            "name": "Naruto and Sasuke",
+            "type": "card",
+            "image": "./cards/73842465.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786307100373
+        },
+        {
+            "id": "36759660",
+            "name": "Fanzell and Asta",
+            "type": "card",
+            "image": "./cards/36759660.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786308882708
+        },
+        {
+            "id": "23299477",
+            "name": "Rias Gremory",
+            "type": "card",
+            "image": null,
+            "video": "./cards/23299477.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786346826582
+        },
+        {
+            "id": "23688232",
+            "name": "Sakura Matou",
+            "type": "card",
+            "image": null,
+            "video": "./cards/23688232.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786349863980
+        },
+        {
+            "id": "10529767",
+            "name": "Frieren",
+            "type": "card",
+            "image": "./cards/10529767.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786358212140
+        },
+        {
+            "id": "39156258",
+            "name": "Pain de Campagne Cookie",
+            "type": "card",
+            "image": "./cards/39156258.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786375039048
+        },
+        {
+            "id": "46578528",
+            "name": "Sakura Matou",
+            "type": "card",
+            "image": "./cards/46578528.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786382249394
+        },
+        {
+            "id": "72131383",
+            "name": "Hinata Sakaguchi",
+            "type": "card",
+            "image": "./cards/72131383.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786447188054
+        },
+        {
+            "id": "82276478",
+            "name": "Rin Tohsaka",
+            "type": "card",
+            "image": "./cards/82276478.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786521840745
+        },
+        {
+            "id": "54949963",
+            "name": "Vegeta",
+            "type": "card",
+            "image": "./cards/54949963.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786521902040
+        },
+        {
+            "id": "29697722",
+            "name": "Rem",
+            "type": "card",
+            "image": null,
+            "video": "./cards/29697722.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786254805826
+        },
+        {
+            "id": "88415496",
+            "name": "Megumi Sakura",
+            "type": "card",
+            "image": "./cards/88415496.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786613565112
+        },
+        {
+            "id": "83510144",
+            "name": "Cinderella",
+            "type": "card",
+            "image": "./cards/83510144.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786618907051
+        },
+        {
+            "id": "30591692",
+            "name": "Frieren",
+            "type": "card",
+            "image": null,
+            "video": "./cards/30591692.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786630538573
+        },
+        {
+            "id": "82936536",
+            "name": "Tanya Von Degurechaff",
+            "type": "card",
+            "image": "./cards/82936536.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786630646694
+        },
+        {
+            "id": "90812350",
+            "name": "Rem",
+            "type": "card",
+            "image": null,
+            "video": "./cards/90812350.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786644566340
+        },
+        {
+            "id": "72705248",
+            "name": "Spyro The Dragon",
+            "type": "card",
+            "image": "./cards/72705248.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786656297242
+        },
+        {
+            "id": "80617851",
+            "name": "Makima",
+            "type": "card",
+            "image": "./cards/80617851.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786690678935
+        },
+        {
+            "id": "77871576",
+            "name": "Levi, Eren & Jean",
+            "type": "card",
+            "image": "./cards/77871576.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786732003690
+        },
+        {
+            "id": "52591809",
+            "name": "Chaos Emperor Dragon - Envoy of the End",
+            "type": "card",
+            "image": "./cards/52591809.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786741529529
+        },
+        {
+            "id": "46036613",
+            "name": "Kurisu Makise",
+            "type": "card",
+            "image": null,
+            "video": "./cards/46036613.mp4",
+            "obtainedFrom": "auction",
+            "obtainedAt": 1786801077964
+        },
+        {
+            "id": "27185579",
+            "name": "Sakura Haruyanaginomiya",
+            "type": "card",
+            "image": "./cards/27185579.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786808310389
+        },
+        {
+            "id": "68188653",
+            "name": "Frieren",
+            "type": "card",
+            "image": "./cards/68188653.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786815547852
+        },
+        {
+            "id": "42965647",
+            "name": "Kaede Makidera",
+            "type": "card",
+            "image": "./cards/42965647.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786823012285
+        },
+        {
+            "id": "25935935",
+            "name": "Shirayuki Himeji",
+            "type": "card",
+            "image": "./cards/25935935.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786896719132
+        },
+        {
+            "id": "69959061",
+            "name": "Marin Kitagawa",
+            "type": "card",
+            "image": null,
+            "video": "./cards/69959061.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786906811372
+        },
+        {
+            "id": "88be6d62",
+            "name": "Rias and Akeno",
+            "type": "card",
+            "image": null,
+            "video": "./cards/17126316.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786921042905
+        }
+    ],
+    "233548091019322@lid": [
+        {
+            "id": "73842465",
+            "name": "Naruto and Sasuke",
+            "type": "card",
+            "image": "./cards/73842465.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786904838877
+        },
+        {
+            "id": "18464777",
+            "name": "Subaru Sakamaki",
+            "type": "card",
+            "image": "./cards/18464777.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786903654193
+        }
+    ],
+    "217012433375436@lid": [
+        {
+            "id": "b68b55bd",
+            "name": "Rem",
+            "type": "card",
+            "image": "./rem_re_zero_starting_life_in_another_world.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785888517448
+        },
+        {
+            "id": "53932926",
+            "name": "Makina Umezawa",
+            "type": "card",
+            "image": "./cards/53932926.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786058146640
+        },
+        {
+            "id": "66871479",
+            "name": "Cyber Dragon",
+            "type": "card",
+            "image": "./cards/66871479.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786060014160
+        },
+        {
+            "id": "45187951",
+            "name": "Goku",
+            "type": "card",
+            "image": "./cards/45187951.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786406716910
+        }
+    ],
+    "44620616589409@lid": [
+        {
+            "id": "47668613",
+            "name": "Crab Long Bao",
+            "type": "card",
+            "image": "./cards/47668613.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786035645218
+        },
+        {
+            "id": "90232496",
+            "name": "Tamaki Nikaido",
+            "type": "card",
+            "image": "./cards/90232496.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786041243571
+        },
+        {
+            "id": "30591692",
+            "name": "Frieren",
+            "type": "card",
+            "image": null,
+            "video": "./cards/30591692.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786047158454
+        },
+        {
+            "id": "38355377",
+            "name": "Emilia",
+            "type": "card",
+            "image": "./cards/38355377.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786056150825
+        },
+        {
+            "id": "48103166",
+            "name": "Yukina Himeragi",
+            "type": "card",
+            "image": "./cards/48103166.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786008546596
+        },
+        {
+            "id": "10799122",
+            "name": "Bananya",
+            "type": "card",
+            "image": "./cards/10799122.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786011344665
+        },
+        {
+            "id": "15102286",
+            "name": "Naruto Uzumaki",
+            "type": "card",
+            "image": "./cards/15102286.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786300479070
+        },
+        {
+            "id": "78839512",
+            "name": "Emilia",
+            "type": "card",
+            "image": null,
+            "video": "./cards/78839512.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786304332358
+        },
+        {
+            "id": "91550477",
+            "name": "Rem",
+            "type": "card",
+            "image": "./cards/91550477.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786366751030
+        },
+        {
+            "id": "80617851",
+            "name": "Makima",
+            "type": "card",
+            "image": "./cards/80617851.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786370249688
+        },
+        {
+            "id": "19934035",
+            "name": "Yuno Sengoku",
+            "type": "card",
+            "image": "./cards/19934035.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786330470221
+        },
+        {
+            "id": "66939007",
+            "name": "Naruto Uzumaki",
+            "type": "card",
+            "image": "./cards/66939007.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370037853
+        },
+        {
+            "id": "35524867",
+            "name": "Wakana Gojou",
+            "type": "card",
+            "image": "./cards/35524867.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370079811
+        },
+        {
+            "id": "36613322",
+            "name": "Remilia Scarlet",
+            "type": "card",
+            "image": "./cards/36613322.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370118834
+        },
+        {
+            "id": "15156263",
+            "name": "Remi Ayasaki",
+            "type": "card",
+            "image": "./cards/15156263.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370148479
+        },
+        {
+            "id": "31009540",
+            "name": "Aqua and Megumin",
+            "type": "card",
+            "image": "./cards/31009540.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370207899
+        },
+        {
+            "id": "12213630",
+            "name": "Rena Minami",
+            "type": "card",
+            "image": "./cards/12213630.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370225944
+        },
+        {
+            "id": "85812246",
+            "name": "Reze  Denji",
+            "type": "card",
+            "image": "./cards/85812246.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370293214
+        },
+        {
+            "id": "54949963",
+            "name": "Vegeta",
+            "type": "card",
+            "image": "./cards/54949963.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370337731
+        },
+        {
+            "id": "75233150",
+            "name": "Gon Freecss",
+            "type": "card",
+            "image": "./cards/75233150.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370398785
+        },
+        {
+            "id": "49630804",
+            "name": "Killua Zoldyck",
+            "type": "card",
+            "image": "./cards/49630804.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370438643
+        },
+        {
+            "id": "49791849",
+            "name": "Sakura Ichijouji",
+            "type": "card",
+            "image": "./cards/49791849.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370546133
+        },
+        {
+            "id": "31784830",
+            "name": "Megumin and Aqua",
+            "type": "card",
+            "image": "./cards/31784830.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370574898
+        },
+        {
+            "id": "38355377",
+            "name": "Emilia",
+            "type": "card",
+            "image": "./cards/38355377.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370623114
+        },
+        {
+            "id": "12631792",
+            "name": "Tsunagu, Kisara, Mari, and Yukihiro",
+            "type": "card",
+            "image": "./cards/12631792.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370775022
+        },
+        {
+            "id": "20130519",
+            "name": "Aqua",
+            "type": "card",
+            "image": "./cards/20130519.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370810509
+        },
+        {
+            "id": "26270608",
+            "name": "Tanya Degurechaff",
+            "type": "card",
+            "image": "./cards/26270608.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370848147
+        },
+        {
+            "id": "15943548",
+            "name": "Goku",
+            "type": "card",
+            "image": "./cards/15943548.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370865136
+        },
+        {
+            "id": "15102286",
+            "name": "Naruto Uzumaki",
+            "type": "card",
+            "image": "./cards/15102286.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370900382
+        },
+        {
+            "id": "73842465",
+            "name": "Naruto and Sasuke",
+            "type": "card",
+            "image": "./cards/73842465.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370921564
+        },
+        {
+            "id": "13537376",
+            "name": "Gojo Satoru",
+            "type": "card",
+            "image": null,
+            "video": "./cards/13537376.mp4",
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786370952595
+        },
+        {
+            "id": "15943548",
+            "name": "Goku",
+            "type": "card",
+            "image": "./cards/15943548.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786371009982
+        },
+        {
+            "id": "29363379",
+            "name": "Reze",
+            "type": "card",
+            "image": "./cards/29363379.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786372021788
+        },
+        {
+            "id": "47335953",
+            "name": "Itachi Uchiha",
+            "type": "card",
+            "image": "./cards/47335953.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786372053581
+        },
+        {
+            "id": "92280105",
+            "name": "Ukinami Yuzuha",
+            "type": "card",
+            "image": null,
+            "video": "./cards/92280105.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786541702134
+        },
+        {
+            "id": "26704766",
+            "name": "Itachi Uchiha",
+            "type": "card",
+            "image": "./cards/26704766.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786565425899
+        },
+        {
+            "id": "48132342",
+            "name": "Pitaya Dragon Cookie",
+            "type": "card",
+            "image": "./cards/48132342.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786808715085
+        },
+        {
+            "id": "95540991",
+            "name": "Marin Kitagawa",
+            "type": "card",
+            "image": "./cards/95540991.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786817251910
+        },
+        {
+            "id": "92280105",
+            "name": "Ukinami Yuzuha",
+            "type": "card",
+            "image": null,
+            "video": "./cards/92280105.mp4",
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786540640116
+        },
+        {
+            "id": "29697722",
+            "name": "Rem",
+            "type": "card",
+            "image": null,
+            "video": "./cards/29697722.mp4",
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786540871172
+        }
+    ],
+    "175359588839642@lid": [],
+    "177477276196865@lid": [
+        {
+            "id": "cc422ac7",
+            "name": "Power",
+            "type": "card",
+            "image": "./power_chainsaw_man.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785921973593
+        },
+        {
+            "id": "10157860",
+            "name": "Emilia",
+            "type": "card",
+            "image": "./cards/10157860.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786076682236
+        },
+        {
+            "id": "77033659",
+            "name": "Tenji Mikasa",
+            "type": "card",
+            "image": "./cards/77033659.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786102735124
+        },
+        {
+            "id": "83601660",
+            "name": "Sasuke Uchiha",
+            "type": "card",
+            "image": null,
+            "video": "./cards/83601660.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786110806667
+        },
+        {
+            "id": "74140153",
+            "name": "Marina Ikekura",
+            "type": "card",
+            "image": "./cards/74140153.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786114559476
+        },
+        {
+            "id": "30179557",
+            "name": "Yuki Nonaka",
+            "type": "card",
+            "image": "./cards/30179557.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786120186976
+        },
+        {
+            "id": "70007676",
+            "name": "Akemi Homura",
+            "type": "card",
+            "image": "./cards/70007676.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786129867261
+        }
+    ],
+    "170549108023512@lid": [
+        {
+            "id": "2e74b086",
+            "name": "Yuki",
+            "type": "card",
+            "image": "./yuki_monmusu.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785924417340
+        },
+        {
+            "id": "24630119",
+            "name": "Roronoa Zoro",
+            "type": "card",
+            "image": "./cards/24630119.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786439644331
+        }
+    ],
+    "139166201470981@lid": [],
+    "149027278561479@lid": [
+        {
+            "id": "29628742",
+            "name": "Rem",
+            "type": "card",
+            "image": "./cards/29628742.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786007885859
+        },
+        {
+            "id": "66663665",
+            "name": "Ruan Mei",
+            "type": "card",
+            "image": "./cards/66663665.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786033667069
+        },
+        {
+            "id": "25886208",
+            "name": "Cinderella",
+            "type": "card",
+            "image": "./cards/25886208.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786020343401
+        },
+        {
+            "id": "94355166",
+            "name": "Anya Forger",
+            "type": "card",
+            "image": "./cards/94355166.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786043002904
+        },
+        {
+            "id": "90493339",
+            "name": "Sakura & Kero",
+            "type": "card",
+            "image": "./cards/90493339.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786087376767
+        },
+        {
+            "id": "76149228",
+            "name": "Yoichi Isagi",
+            "type": "card",
+            "image": "./cards/76149228.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786099597826
+        },
+        {
+            "id": "54756589",
+            "name": "Emilia Ludowell",
+            "type": "card",
+            "image": "./cards/54756589.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786014148742
+        },
+        {
+            "id": "81793991",
+            "name": "Estelle Marino",
+            "type": "card",
+            "image": "./cards/81793991.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786036026371
+        },
+        {
+            "id": "87504312",
+            "name": "Itachi Uchiha",
+            "type": "card",
+            "image": "./cards/87504312.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786094468196
+        },
+        {
+            "id": "10803320",
+            "name": "Rimuru Tempest",
+            "type": "card",
+            "image": "./cards/10803320.jpg",
+            "video": null,
+            "obtainedFrom": "owner_gift",
+            "obtainedAt": 1786034392662
+        },
+        {
+            "id": "83589544",
+            "name": "Subaru Sakamaki",
+            "type": "card",
+            "image": "./cards/83589544.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786082307868
+        },
+        {
+            "id": "73516519",
+            "name": "Yuki and Mio",
+            "type": "card",
+            "image": "./cards/73516519.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786166584911
+        },
+        {
+            "id": "36847740",
+            "name": "Utage Kinoshita",
+            "type": "card",
+            "image": "./cards/36847740.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786049624225
+        },
+        {
+            "id": "27308702",
+            "name": "Michica Gokubara",
+            "type": "card",
+            "image": "./cards/27308702.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786256268388
+        },
+        {
+            "id": "23299477",
+            "name": "Rias Gremory",
+            "type": "card",
+            "image": null,
+            "video": "./cards/23299477.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786316216825
+        },
+        {
+            "id": "70530006",
+            "name": "Albedo",
+            "type": "card",
+            "image": "./cards/70530006.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786323668516
+        },
+        {
+            "id": "72338094",
+            "name": "Rin Tohsaka",
+            "type": "card",
+            "image": null,
+            "video": "./cards/72338094.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786467294876
+        },
+        {
+            "id": "83456959",
+            "name": "Mikan Akemi",
+            "type": "card",
+            "image": "./cards/83456959.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786480711189
+        },
+        {
+            "id": "33654433",
+            "name": "Daki and Gyutaro",
+            "type": "card",
+            "image": "./cards/33654433.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786530305539
+        },
+        {
+            "id": "24064591",
+            "name": "Redox, Dragon Ruler of Boulders",
+            "type": "card",
+            "image": "./cards/24064591.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786122080864
+        },
+        {
+            "id": "75902531",
+            "name": "Sousuke Aizen",
+            "type": "card",
+            "image": "./cards/75902531.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786173834655
+        },
+        {
+            "id": "67473091",
+            "name": "Boa Hancock",
+            "type": "card",
+            "image": null,
+            "video": "./cards/67473091.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786710312292
+        }
+    ],
+    "48267580702866@lid": [
+        {
+            "id": "65af702a",
+            "name": "Konjiki no Yami",
+            "type": "card",
+            "image": "./konjiki_no_yami_to_love_ru.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785925272689
+        }
+    ],
+    "59047847932052@lid": [
+        {
+            "id": "6d9c22d4",
+            "name": "Chopper Tony Tony",
+            "type": "card",
+            "image": "./chopper_tony_tony_one_piece.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785956169696
+        }
+    ],
+    "47159311343813@lid": [
+        {
+            "id": "5f66b497",
+            "name": "Tanjirou Kamado",
+            "type": "card",
+            "image": "./tanjirou_kamado_demon_slayer_kimetsu_no_yaiba.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785808045823
+        },
+        {
+            "id": "46296353",
+            "name": "Marin Kitagawa",
+            "type": "card",
+            "image": "./cards/46296353.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786003983171
+        },
+        {
+            "id": "47627884",
+            "name": "Miyuki Sakaigawa",
+            "type": "card",
+            "image": "./cards/47627884.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786007877227
+        },
+        {
+            "id": "73516519",
+            "name": "Yuki and Mio",
+            "type": "card",
+            "image": "./cards/73516519.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786005956033
+        },
+        {
+            "id": "68879178",
+            "name": "Argon",
+            "type": "card",
+            "image": "./cards/68879178.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786027887472
+        },
+        {
+            "id": "54373842",
+            "name": "Nami",
+            "type": "card",
+            "image": "./cards/54373842.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786028731443
+        },
+        {
+            "id": "93405758",
+            "name": "Levi Ackerman",
+            "type": "card",
+            "image": "./cards/93405758.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786031672129
+        }
+    ],
+    "135485062140136@lid": [],
+    "159073425166417@lid": [
+        {
+            "id": "61950044",
+            "name": "Vegeta",
+            "type": "card",
+            "image": "./cards/61950044.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785998709292
+        },
+        {
+            "id": "91579877",
+            "name": "Anya Melfissa",
+            "type": "card",
+            "image": "./cards/91579877.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786297328964
+        }
+    ],
+    "64833370255602@lid": [
+        {
+            "id": "839d5fc4",
+            "name": "Gojouno Kaguya",
+            "type": "card",
+            "image": "./gojouno_kaguya_is_it_wrong_to_try_to_pick_up_girls_in_a_dungeon.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785793852957
+        },
+        {
+            "id": "be728bf0",
+            "name": "Jung-Hyeok Yu",
+            "type": "card",
+            "image": "./jung_hyeok_yu_omniscient_reader.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785796724792
+        },
+        {
+            "id": "a69d0846",
+            "name": "Marin Kitagawa",
+            "type": "card",
+            "image": "./marin_kitagawa_my_dress_up_darling.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785836707687
+        },
+        {
+            "id": "0473d734",
+            "name": "Wakana Gojou",
+            "type": "card",
+            "image": "./wakana_gojou_my_dress_up_darling.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785876079391
+        },
+        {
+            "id": "30d95324",
+            "name": "Denjirou Ookouchi",
+            "type": "card",
+            "image": "./denjirou_ookouchi_dai_guard.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785876257045
+        },
+        {
+            "id": "839d5fc4",
+            "name": "Gojouno Kaguya",
+            "type": "card",
+            "image": "./gojouno_kaguya_is_it_wrong_to_try_to_pick_up_girls_in_a_dungeon.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785759130694
+        },
+        {
+            "id": "610ad8da",
+            "name": "Denji",
+            "type": "card",
+            "image": "./denji_pok_mon_the_series_diamond_and_pearl.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785838575980
+        },
+        {
+            "id": "a69d0846",
+            "name": "Marin Kitagawa",
+            "type": "card",
+            "image": "./marin_kitagawa_my_dress_up_darling.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785856548173
+        },
+        {
+            "id": "9d4d2836",
+            "name": "Luffy Monkey",
+            "type": "card",
+            "image": "./luffy_monkey_one_piece.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785860930912
+        },
+        {
+            "id": "fdb12657",
+            "name": "Chika Fujiwara",
+            "type": "card",
+            "image": "./chika_fujiwara_kaguya_sama_love_is_war.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785931119503
+        },
+        {
+            "id": "bdb0a008",
+            "name": "Rem",
+            "type": "card",
+            "image": "./rem_death_note.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785936610459
+        },
+        {
+            "id": "2e74b086",
+            "name": "Yuki",
+            "type": "card",
+            "image": "./yuki_monmusu.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785946175183
+        },
+        {
+            "id": "610ad8da",
+            "name": "Denji",
+            "type": "card",
+            "image": "./denji_pok_mon_the_series_diamond_and_pearl.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785927166290
+        },
+        {
+            "id": "5f66b497",
+            "name": "Tanjirou Kamado",
+            "type": "card",
+            "image": "./tanjirou_kamado_demon_slayer_kimetsu_no_yaiba.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785928491168
+        },
+        {
+            "id": "1dd7ae96",
+            "name": "Demalo Black",
+            "type": "card",
+            "image": "./demalo_black_one_piece.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785919411968
+        },
+        {
+            "id": "beaaace5",
+            "name": "Yuuma Gojou",
+            "type": "card",
+            "image": "./yuuma_gojou_hinomaru_sumo.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785952378075
+        },
+        {
+            "id": "9e21a96d",
+            "name": "Megumi Jinno",
+            "type": "card",
+            "image": "./megumi_jinno_eromanga_sensei.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785929122645
+        },
+        {
+            "id": "e4f5b31d",
+            "name": "Chopper Tony Tony",
+            "type": "card",
+            "image": "./chopper_tony_tony_one_piece.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785938523789
+        },
+        {
+            "id": "18138a28",
+            "name": "Rimuru Tempest",
+            "type": "card",
+            "image": "./rimuru_tempest_that_time_i_got_reincarnated_as_a_slime.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785956070072
+        },
+        {
+            "id": "ae42bf90",
+            "name": "Remilia Scarlet",
+            "type": "card",
+            "image": "./remilia_scarlet_touhou_sangetsusei_eastern_and_little_nature_deity.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785874736747
+        },
+        {
+            "id": "aea4ee75",
+            "name": "Wada Akinori",
+            "type": "card",
+            "image": "./wada_akinori_goodnight_punpun.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785921463917
+        },
+        {
+            "id": "0473d734",
+            "name": "Wakana Gojou",
+            "type": "card",
+            "image": "./wakana_gojou_my_dress_up_darling.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785968489410
+        },
+        {
+            "id": "28a529d7",
+            "name": "Rem Galleu",
+            "type": "card",
+            "image": "./rem_galleu_how_not_to_summon_a_demon_lord.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785954265686
+        },
+        {
+            "id": "0c679c3a",
+            "name": "Denji no Chichi",
+            "type": "card",
+            "image": "./denji_no_chichi_chainsaw_man.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785964102921
+        },
+        {
+            "id": "bdb0a008",
+            "name": "Rem",
+            "type": "card",
+            "image": "./rem_death_note.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785950338633
+        },
+        {
+            "id": "de598753",
+            "name": "Denjirou Tatsumi",
+            "type": "card",
+            "image": "./denjirou_tatsumi_battle_spirits_heroes.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785966675402
+        },
+        {
+            "id": "dc8e8076",
+            "name": "Megumi Minami",
+            "type": "card",
+            "image": "./megumi_minami_detective_school_q.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785776760720
+        },
+        {
+            "id": "66f31543",
+            "name": "Power Joe",
+            "type": "card",
+            "image": "./power_joe_yuusha_keisatsu_j_decker.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785972335378
+        },
+        {
+            "id": "6d80d2c9",
+            "name": "Kaoru Gojou",
+            "type": "card",
+            "image": "./kaoru_gojou_my_dress_up_darling.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785979824936
+        },
+        {
+            "id": "2e74b086",
+            "name": "Yuki",
+            "type": "card",
+            "image": "./yuki_monmusu.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785871917405
+        },
+        {
+            "id": "30d95324",
+            "name": "Denjirou Ookouchi",
+            "type": "card",
+            "image": "./denjirou_ookouchi_dai_guard.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785915824505
+        },
+        {
+            "id": "aea4ee75",
+            "name": "Wada Akinori",
+            "type": "card",
+            "image": "./wada_akinori_goodnight_punpun.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785936452436
+        },
+        {
+            "id": "793dd480",
+            "name": "Hawk",
+            "type": "card",
+            "image": "./hawk_the_seven_deadly_sins.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785938240102
+        },
+        {
+            "id": "bb7b0a87",
+            "name": "Naruto Uzumaki",
+            "type": "card",
+            "image": "./naruto_uzumaki_naruto.jpg",
+            "video": null,
+            "obtainedFrom": "auction",
+            "obtainedAt": 1785938298039
+        },
+        {
+            "id": "beaaace5",
+            "name": "Yuuma Gojou",
+            "type": "card",
+            "image": "./yuuma_gojou_hinomaru_sumo.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785942008544
+        },
+        {
+            "id": "2090d728",
+            "name": "Erza Scarlet",
+            "type": "card",
+            "image": "./erza_scarlet_fairy_tail.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785957919856
+        },
+        {
+            "id": "d5231e8f",
+            "name": "Ponta",
+            "type": "card",
+            "image": "./ponta_skeleton_knight_in_another_world.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785963168177
+        },
+        {
+            "id": "f9f20fcd",
+            "name": "Remi Ayasaki",
+            "type": "card",
+            "image": "./remi_ayasaki_hori_san_to_miyamura_kun.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785924916929
+        },
+        {
+            "id": "dc8e8076",
+            "name": "Megumi Minami",
+            "type": "card",
+            "image": "./megumi_minami_detective_school_q.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785774631604
+        },
+        {
+            "id": "f9fc0be4",
+            "name": "Denji Kudou",
+            "type": "card",
+            "image": "./denji_kudou_abara.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785965413119
+        },
+        {
+            "id": "efd71b3f",
+            "name": "Vegeta Jr.",
+            "type": "card",
+            "image": "./vegeta_jr_dragon_ball_gt.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785799803861
+        },
+        {
+            "id": "70b21e65",
+            "name": "Gon Freecss",
+            "type": "card",
+            "image": "./gon_freecss_hunter_x_hunter.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785964873447
+        },
+        {
+            "id": "80aa2dcf",
+            "name": "Killua Zoldyck",
+            "type": "card",
+            "image": "./killua_zoldyck_hunter_x_hunter.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785803759762
+        },
+        {
+            "id": "132d4bb2",
+            "name": "Tohru Ichijou",
+            "type": "card",
+            "image": "./tohru_ichijou_welcome_to_japan_ms_elf.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785960779066
+        },
+        {
+            "id": "9e21a96d",
+            "name": "Megumi Jinno",
+            "type": "card",
+            "image": "./megumi_jinno_eromanga_sensei.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785961764034
+        },
+        {
+            "id": "333f558c",
+            "name": "Emilia",
+            "type": "card",
+            "image": "./emilia_re_zero_starting_life_in_another_world.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785969913917
+        },
+        {
+            "id": "beaaace5",
+            "name": "Yuuma Gojou",
+            "type": "card",
+            "image": "./yuuma_gojou_hinomaru_sumo.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785959953458
+        },
+        {
+            "id": "8a8f56a4",
+            "name": "Emilia",
+            "type": "card",
+            "image": "./emilia_after_school_dice_club.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785697646838
+        },
+        {
+            "id": "793dd480",
+            "name": "Hawk",
+            "type": "card",
+            "image": "./hawk_the_seven_deadly_sins.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785958156339
+        },
+        {
+            "id": "beaaace5",
+            "name": "Yuuma Gojou",
+            "type": "card",
+            "image": "./yuuma_gojou_hinomaru_sumo.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785792023926
+        },
+        {
+            "id": "f2c070bc",
+            "name": "Denjirou Shiba",
+            "type": "card",
+            "image": "./denjirou_shiba_coppelion.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785967423283
+        },
+        {
+            "id": "7b5eda7a",
+            "name": "Tooru Honda",
+            "type": "card",
+            "image": "./tooru_honda_fruits_basket.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785933602117
+        },
+        {
+            "id": "87228ad5",
+            "name": "Vegetarian no Kainushi",
+            "type": "card",
+            "image": "./vegetarian_no_kainushi_hensuki_are_you_willing_to_fall_in_love_with_a_pervert_as_long_as_she_s_a_cutie.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785923470578
+        },
+        {
+            "id": "df2eb585",
+            "name": "Yuki",
+            "type": "card",
+            "image": "./yuki_mazoku.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785713285354
+        },
+        {
+            "id": "aea4ee75",
+            "name": "Wada Akinori",
+            "type": "card",
+            "image": "./wada_akinori_goodnight_punpun.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785910048391
+        },
+        {
+            "id": "59e04c5d",
+            "name": "Aqua",
+            "type": "card",
+            "image": null,
+            "video": "./aqua.mp4",
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785932382096
+        },
+        {
+            "id": "b0573756",
+            "name": "Loid Forger",
+            "type": "card",
+            "image": "./loid_forger_spy_x_family.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785970599855
+        },
+        {
+            "id": "36f52f83",
+            "name": "Vegeta Ou",
+            "type": "card",
+            "image": "./vegeta_ou_dragon_ball_z.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785856163223
+        },
+        {
+            "id": "4ab55392",
+            "name": "Rias Gremory",
+            "type": "card",
+            "image": "./rias_gremory_high_school_dxd.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785801940383
+        },
+        {
+            "id": "36173684",
+            "name": "Mano Sakuragi",
+            "type": "card",
+            "image": "./cards/36173684.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786051552396
+        },
+        {
+            "id": "1dd7ae96",
+            "name": "Demalo Black",
+            "type": "card",
+            "image": "./demalo_black_one_piece.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1785840758772
+        }
+    ],
+    "154945693167845@lid": [
+        {
+            "id": "70203103",
+            "name": "Ryouta Watari",
+            "type": "card",
+            "image": "./cards/70203103.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786058440724
+        },
+        {
+            "id": "70183175",
+            "name": "Miyazu Atsuta",
+            "type": "card",
+            "image": "./cards/70183175.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786299742849
+        },
+        {
+            "id": "66458422",
+            "name": "Tanya and Viktoriya",
+            "type": "card",
+            "image": "./cards/66458422.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786301596401
+        },
+        {
+            "id": "55862130",
+            "name": "Kaname Madoka and Akemi Homura",
+            "type": "card",
+            "image": "./cards/55862130.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786105900032
+        },
+        {
+            "id": "93923831",
+            "name": "Monkey D. Luffy",
+            "type": "card",
+            "image": "./cards/93923831.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786819532267
+        },
+        {
+            "id": "75041923",
+            "name": "Yuki Susa",
+            "type": "card",
+            "image": "./cards/75041923.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786858538280
+        }
+    ],
+    "137289351082175@lid": [],
+    "198857153581163@lid": [
+        {
+            "id": "12122522",
+            "name": "Kanata Minato",
+            "type": "card",
+            "image": "./cards/12122522.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786177779671
+        },
+        {
+            "id": "48132342",
+            "name": "Pitaya Dragon Cookie",
+            "type": "card",
+            "image": "./cards/48132342.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786212241937
+        },
+        {
+            "id": "55318116",
+            "name": "Anjuuro Katagiri and Aqua Necklace",
+            "type": "card",
+            "image": "./cards/55318116.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786097201032
+        },
+        {
+            "id": "47805969",
+            "name": "Minato Takahashi",
+            "type": "card",
+            "image": "./cards/47805969.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786267609117
+        },
+        {
+            "id": "71790920",
+            "name": "Gon Freecss",
+            "type": "card",
+            "image": "./cards/71790920.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786243980189
+        },
+        {
+            "id": "12119594",
+            "name": "Kokoro Tsurumaki",
+            "type": "card",
+            "image": "./cards/12119594.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786394288678
+        },
+        {
+            "id": "49896395",
+            "name": "Shadow the Hedgehog",
+            "type": "card",
+            "image": "./cards/49896395.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786700420629
+        },
+        {
+            "id": "24403997",
+            "name": "Kamakiri",
+            "type": "card",
+            "image": "./cards/24403997.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786793095304
+        },
+        {
+            "id": "93405758",
+            "name": "Levi Ackerman",
+            "type": "card",
+            "image": "./cards/93405758.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786909861584
+        }
+    ],
+    "155736051036381@lid": [
+        {
+            "id": "88373754",
+            "name": "Maximilian Calypse",
+            "type": "card",
+            "image": "./cards/88373754.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786104139981
+        },
+        {
+            "id": "65415964",
+            "name": "Rem",
+            "type": "card",
+            "image": "./cards/65415964.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786116509580
+        },
+        {
+            "id": "19965174",
+            "name": "Anos Voldigoad",
+            "type": "card",
+            "image": "./cards/19965174.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786122070101
+        },
+        {
+            "id": "10528272",
+            "name": "Artoria Pendragon (Lancer Alter)",
+            "type": "card",
+            "image": "./cards/10528272.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786230300768
+        },
+        {
+            "id": "88691930",
+            "name": "Sakura Ichijoji",
+            "type": "card",
+            "image": "./cards/88691930.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786832440216
+        }
+    ],
+    "250852447154267@lid": [],
+    "251754323169335@lid": [
+        {
+            "id": "79148815",
+            "name": "Alpha",
+            "type": "card",
+            "image": "./cards/79148815.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786220439278
+        }
+    ],
+    "275252273786994@lid": [
+        {
+            "id": "87743252",
+            "name": "Toki Sakurai",
+            "type": "card",
+            "image": "./cards/87743252.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786125617644
+        },
+        {
+            "id": "11153959",
+            "name": "Seishiro Jigoku",
+            "type": "card",
+            "image": "./cards/11153959.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786087526383
+        },
+        {
+            "id": "39246301",
+            "name": "Sanosuke Harada",
+            "type": "card",
+            "image": "./cards/39246301.jpg",
+            "video": null,
+            "obtainedFrom": "spawn",
+            "obtainedAt": 1786085843518
+        }
+    ]
+}

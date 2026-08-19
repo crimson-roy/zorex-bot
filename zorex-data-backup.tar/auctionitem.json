@@ -1,0 +1,32 @@
+{
+    "37826794": {
+        "name": "Reze",
+        "type": "card",
+        "image": "./cards/37826794.jpg"
+    },
+    "46036613": {
+        "name": "Kurisu Makise",
+        "type": "card",
+        "video": "./cards/46036613.mp4"
+    },
+    "75795443": {
+        "name": "Makima",
+        "type": "card",
+        "video": "./cards/75795443.mp4"
+    },
+    "e71a1077": {
+        "name": "Gojo Satoru",
+        "type": "card",
+        "video": "./gojo.mp4"
+    },
+    "bb7b0a87": {
+        "name": "Naruto Uzumaki",
+        "type": "card",
+        "image": "./naruto_uzumaki_naruto.jpg"
+    },
+    "47f20284": {
+        "name": "Irina Shidou",
+        "type": "card",
+        "video": "./cards/36785615.mp4"
+    }
+}

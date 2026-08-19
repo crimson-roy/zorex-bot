@@ -1,0 +1,224 @@
+{
+    "164317513175043@lid": [
+        {
+            "id": "fishing_rod",
+            "name": "Fishing Rod",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786922020934
+        },
+        {
+            "id": "shovel",
+            "name": "Shovel",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786922025251
+        },
+        {
+            "id": "gun",
+            "name": "Gun",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786922028800
+        },
+        {
+            "id": "lottery_ticket",
+            "name": "Lottery Ticket",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786973381352
+        }
+    ],
+    "115251806732415@lid": [
+        {
+            "id": "fishing_rod",
+            "name": "Fishing Rod",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786922037364
+        },
+        {
+            "id": "gun",
+            "name": "Gun",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786922044006
+        },
+        {
+            "id": "shovel",
+            "name": "Shovel",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786922054208
+        },
+        {
+            "id": "golden_fish",
+            "name": "Golden Fish",
+            "type": "resource",
+            "value": 15000,
+            "quantity": 2,
+            "obtainedFrom": "fishing",
+            "obtainedAt": 1786992376702
+        }
+    ],
+    "66370632994983@lid": [
+        {
+            "id": "gun",
+            "name": "Gun",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786923444244
+        },
+        {
+            "id": "shovel",
+            "name": "Shovel",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786996877214
+        }
+    ],
+    "195623479410728@lid": [
+        {
+            "id": "gun",
+            "name": "Gun",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786923503262
+        },
+        {
+            "id": "fishing_rod",
+            "name": "Fishing Rod",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786923543339
+        },
+        {
+            "id": "shovel",
+            "name": "Shovel",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786923553916
+        },
+        {
+            "id": "fish",
+            "name": "Fish",
+            "type": "resource",
+            "value": 5000,
+            "quantity": 1,
+            "obtainedFrom": "fishing",
+            "obtainedAt": 1786923565879
+        }
+    ],
+    "198857153581163@lid": [
+        {
+            "id": "shovel",
+            "name": "Shovel",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786958875916
+        },
+        {
+            "id": "gun",
+            "name": "Gun",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786958943256
+        },
+        {
+            "id": "fishing_rod",
+            "name": "Fishing Rod",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786958979699
+        },
+        {
+            "id": "fish",
+            "name": "Fish",
+            "type": "resource",
+            "value": 5000,
+            "quantity": 3,
+            "obtainedFrom": "fishing",
+            "obtainedAt": 1786958984407
+        }
+    ],
+    "137289351082175@lid": [
+        {
+            "id": "shovel",
+            "name": "Shovel",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786960245218
+        },
+        {
+            "id": "fishing_rod",
+            "name": "Fishing Rod",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786960256089
+        },
+        {
+            "id": "gun",
+            "name": "Gun",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786960261953
+        },
+        {
+            "id": "fish",
+            "name": "Fish",
+            "type": "resource",
+            "value": 5000,
+            "quantity": 5,
+            "obtainedFrom": "fishing",
+            "obtainedAt": 1786960275287
+        }
+    ],
+    "64480545378405@lid": [
+        {
+            "id": "fishing_rod",
+            "name": "Fishing Rod",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786973414766
+        },
+        {
+            "id": "shovel",
+            "name": "Shovel",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786981638173
+        },
+        {
+            "id": "fish",
+            "name": "Fish",
+            "type": "resource",
+            "value": 5000,
+            "quantity": 1,
+            "obtainedFrom": "fishing",
+            "obtainedAt": 1786998739326
+        },
+        {
+            "id": "lottery_ticket",
+            "name": "Lottery Ticket",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786998802574
+        }
+    ],
+    "154945693167845@lid": [
+        {
+            "id": "shovel",
+            "name": "Shovel",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786994043215
+        },
+        {
+            "id": "fishing_rod",
+            "name": "Fishing Rod",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1786996792904
+        }
+    ]
+}

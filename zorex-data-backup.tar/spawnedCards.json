@@ -1,0 +1,167 @@
+{
+    "120363405497854448@g.us": {
+        "cardId": "495342bc",
+        "card": {
+            "name": "Darkness",
+            "series": "KONOSUBA -God's blessing on this wonderful world!",
+            "tier": "S",
+            "valueMin": 350000,
+            "valueMax": 500000,
+            "type": "card",
+            "image": "./darkness_konosuba_god_s_blessing_on_this_wonderful_world.jpg"
+        },
+        "value": 350182,
+        "spawnedAt": 1785753995084,
+        "expiresAt": 1785761195084,
+        "groupJid": "120363405497854448@g.us"
+    },
+    "120363429249172061@g.us": {
+        "cardId": "a69d0846",
+        "card": {
+            "name": "Marin Kitagawa",
+            "series": "My Dress-Up Darling",
+            "tier": "S",
+            "valueMin": 350000,
+            "valueMax": 500000,
+            "type": "card",
+            "image": "./marin_kitagawa_my_dress_up_darling.jpg"
+        },
+        "value": 398360,
+        "spawnedAt": 1785851824093,
+        "expiresAt": 1785859024093,
+        "groupJid": "120363429249172061@g.us"
+    },
+    "120363426833239694@g.us": {
+        "cardId": "46325241",
+        "card": {
+            "name": "Maki Nishikino",
+            "series": "Love Live!",
+            "tier": "R",
+            "valueMin": 200000,
+            "valueMax": 350000,
+            "type": "card",
+            "image": "./cards/46325241.jpg",
+            "mazokuId": "2999f2ce-63be-4575-a58f-f18208f96bd6",
+            "eventName": "default",
+            "special": false
+        },
+        "value": 231942,
+        "spawnedAt": 1786042108451,
+        "expiresAt": 1786049308451,
+        "groupJid": "120363426833239694@g.us"
+    },
+    "120363428095357636@g.us": {
+        "cardId": "87346237",
+        "card": {
+            "name": "Albedo",
+            "series": "Overlord",
+            "tier": "UR",
+            "valueMin": 1500000,
+            "valueMax": 2000000,
+            "type": "card",
+            "image": "./cards/87346237.jpg",
+            "mazokuId": "44a1df9d-95a9-44d5-9765-c1965f3996d4",
+            "eventName": "special",
+            "special": true
+        },
+        "value": 389529,
+        "spawnedAt": 1786139277089,
+        "expiresAt": 1786141077089,
+        "groupJid": "120363428095357636@g.us"
+    },
+    "120363427413987686@g.us": {
+        "cardId": "93871828",
+        "card": {
+            "name": "Tatsuki and Sakura",
+            "series": "We Can't Do Just Plain Love",
+            "tier": "SR",
+            "valueMin": 500000,
+            "valueMax": 800000,
+            "type": "card",
+            "image": "./cards/93871828.jpg",
+            "mazokuId": "6e1c5e56-837d-45e3-88db-b5987cb382ae",
+            "eventName": "default",
+            "special": false
+        },
+        "value": 258160,
+        "spawnedAt": 1786306261108,
+        "expiresAt": 1786308061108,
+        "groupJid": "120363427413987686@g.us"
+    },
+    "120363406268872804@g.us": {
+        "cardId": "33654433",
+        "card": {
+            "name": "Daki and Gyutaro",
+            "series": "Demon Slayer",
+            "tier": "SR",
+            "valueMin": 500000,
+            "valueMax": 800000,
+            "type": "card",
+            "image": "./cards/33654433.jpg",
+            "mazokuId": "198758d0-4381-4761-9645-f8a74ef422a4",
+            "eventName": "default",
+            "special": false
+        },
+        "value": 257000,
+        "spawnedAt": 1786382367364,
+        "expiresAt": 1786384167364,
+        "groupJid": "120363406268872804@g.us"
+    },
+    "120363430362856614@g.us": {
+        "cardId": "62696969",
+        "card": {
+            "name": "Aganos",
+            "series": "Killer Instinct",
+            "tier": "C",
+            "valueMin": 50000,
+            "valueMax": 100000,
+            "type": "card",
+            "image": "./cards/62696969.jpg",
+            "mazokuId": "d5a45160-5bfc-40b8-b6df-a8462dec2e4a",
+            "eventName": "default",
+            "special": false
+        },
+        "value": 47901,
+        "spawnedAt": 1786546255077,
+        "expiresAt": 1786548055077,
+        "groupJid": "120363430362856614@g.us"
+    },
+    "120363406813245822@g.us": {
+        "cardId": "76361876",
+        "card": {
+            "name": "Frieren",
+            "series": "Sousou no Frieren",
+            "tier": "C",
+            "valueMin": 50000,
+            "valueMax": 100000,
+            "type": "card",
+            "image": "./cards/76361876.jpg",
+            "mazokuId": "2e50da26-1445-4509-8a7e-6363a8fdb043",
+            "eventName": "default",
+            "special": false
+        },
+        "value": 71281,
+        "spawnedAt": 1786649120080,
+        "expiresAt": 1786650920080,
+        "groupJid": "120363406813245822@g.us"
+    },
+    "120363409248667285@g.us": {
+        "cardId": "82651278",
+        "card": {
+            "name": "Izanami",
+            "series": "Onmyoji",
+            "tier": "R",
+            "valueMin": 200000,
+            "valueMax": 350000,
+            "type": "card",
+            "image": "./cards/82651278.jpg",
+            "mazokuId": "f8960ffd-75e6-4c59-a4d7-14423c030f14",
+            "eventName": "default",
+            "special": false
+        },
+        "value": 101652,
+        "spawnedAt": 1786802688873,
+        "expiresAt": 1786804488873,
+        "groupJid": "120363409248667285@g.us"
+    }
+}
