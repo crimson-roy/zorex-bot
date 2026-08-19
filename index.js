@@ -452,8 +452,8 @@ async function startBot() {
                 try {
 
     resumeMajorApplications(sock);
-
-    startMajorAttendanceMonitor(sock);
+startMajorAttendanceMonitor(sock);
+startJobResignationProcessor(sock);
 
     console.log("🏢 Major employment systems resumed.");
 
@@ -1953,9 +1953,11 @@ else if (text.startsWith(".mem")) {
 
     await jobApplyCommand(sock, msg, text);
 
-} else if (text === ".job") {
-
-    await jobCommand(sock, msg);
+} else if (
+    text === ".job" ||
+    text.startsWith(".job ")
+) {
+    await jobCommand(sock, msg, text);
 
 } else if (
     text === ".jobinfo" ||

@@ -189,10 +189,20 @@ function collectPendingIncome(users, userId) {
         for (const employeeId of Object.keys(company.employees)) {
 
             const employee = company.employees[employeeId];
-            const rate = employee.salaryRate || 0;
+const rate = employee.salaryRate || 0;
 
-            if (rate <= 0) continue;
-            if (!wasOnDutyDuring(employee, periodStart, periodEnd)) continue; // forfeited
+if (rate <= 0) continue;
+
+// Resigning employees forfeit their pending payout.
+if (
+    users[employee.userId]?.jobResignation
+) {
+    continue;
+}
+
+if (!wasOnDutyDuring(employee, periodStart, periodEnd)) {
+    continue;
+}
 
             const amount = Math.round(incomePerPeriod * (rate / 100));
 
@@ -891,26 +901,61 @@ async function companyAssign(sock, msg, text) {
 // see the "crescent"/asset-id keyword that comes before the amount now.
 async function companyCommand(sock, msg, text) {
 
-    const trimmed = (text || ".company").trim();
-    const parts = trimmed.split(/\s+/);
-    const sub = (parts[1] || "").toLowerCase();
+    const trimmed =
+        (text || ".company").trim();
+
+    const parts =
+        trimmed.split(/\s+/);
+
+    const sub =
+        (parts[1] || "").toLowerCase();
 
     if (sub === "deposit") {
-        return await companyDeposit(sock, msg, trimmed);
+        return await companyDeposit(
+            sock,
+            msg,
+            trimmed
+        );
     }
 
     if (sub === "distribute") {
-        return await companyDistribute(sock, msg, trimmed);
+        return await companyDistribute(
+            sock,
+            msg,
+            trimmed
+        );
     }
 
     if (sub === "assign") {
-        return await companyAssign(sock, msg, trimmed);
+        return await companyAssign(
+            sock,
+            msg,
+            trimmed
+        );
     }
 
-    return await companyStatusView(sock, msg);
+    if (sub === "promote") {
+        return await companyPromoteCommand(
+            sock,
+            msg,
+            trimmed
+        );
+    }
+
+    if (sub === "disapprove") {
+        return await companyDisapproveCommand(
+            sock,
+            msg,
+            trimmed
+        );
+    }
+
+    return await companyStatusView(
+        sock,
+        msg
+    );
 
 }
-
 
 // ---------- .companycreate <name> <industry> — start a company for 100,000,000 ----------
 // Industry is now REQUIRED and must match an entry in lib/industries.js.
@@ -1407,6 +1452,153 @@ async function companyApproveCommand(sock, msg, text) {
         text: `✅ @${target.split("@")[0]} has been hired as *${titleCase(positionKey)}* at *${company.name}*.\n\n💰 Salary: ~${liveAmount.toLocaleString()} 🌙 per payout\n📊 Slots filled: ${newFilledCount}/${maxSlots}`,
         mentions: [target]
     }, { quoted: msg });
+
+}
+
+// ---------- .company disapprove <position> @user (or reply) ----------
+// Reject ONE pending applicant from one of the owner's open offers.
+//
+// Supports:
+//   .company disapprove analyst @user
+//   reply to applicant + .company disapprove analyst
+//
+// This only removes the application. It does NOT create employment
+// history, change wallets, or change the employee roster.
+async function companyDisapproveCommand(sock, msg, text) {
+
+    const sender =
+        msg.key.participant ||
+        msg.key.remoteJid;
+
+    const users = loadUsers();
+
+    if (!users[sender]) {
+        return await replyNotRegistered(sock, msg);
+    }
+
+    const company =
+        users[sender].company;
+
+    if (!company) {
+        return await replyNoCompany(sock, msg);
+    }
+
+    company.offers =
+        company.offers || {};
+
+    company.employees =
+        company.employees || {};
+
+    const context =
+        msg.message?.extendedTextMessage?.contextInfo;
+
+    let target = null;
+
+    // Reply-to-applicant
+    if (context?.participant) {
+        target = context.participant;
+    }
+
+    // Otherwise mention applicant
+    else if (context?.mentionedJid?.length) {
+        target = context.mentionedJid[0];
+    }
+
+    const positionArg =
+        text
+            .replace(
+                /^\.company\s+disapprove\s*/i,
+                ""
+            )
+            .replace(/@\d+/g, "")
+            .trim();
+
+    const positionKey =
+        positionArg.toLowerCase();
+
+    if (!target || !positionKey) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: errorBox(
+                    "𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗜𝗦𝗔𝗣𝗣𝗥𝗢𝗩𝗘",
+                    "Specify the position and the applicant.",
+                    [
+                        ".company disapprove analyst @user"
+                    ]
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    const offer =
+        company.offers[positionKey];
+
+    if (!offer) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`⚠️ *${company.name}* has no open offer for *${titleCase(positionKey)}*.
+
+📥 Check .companyoffers for your active offers.`
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    const applicantIndex =
+        offer.pending.findIndex(
+            applicant =>
+                applicant.userId === target
+        );
+
+    if (applicantIndex === -1) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`⚠️ @${target.split("@")[0]} is not currently pending for *${titleCase(positionKey)}*.
+
+They may already have been hired, rejected, or their application may no longer exist.`,
+                mentions: [target]
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    // Remove exactly this applicant.
+    offer.pending.splice(
+        applicantIndex,
+        1
+    );
+
+    saveUsers(users);
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text:
+`╭━━━ ❌ 𝘼𝙋𝙋𝙇𝙄𝘾𝘼𝙏𝙄𝙊𝙉 𝘿𝙀𝘾𝙇𝙄𝙉𝙀𝘿 ━━━╮
+
+👤 Applicant : @${target.split("@")[0]}
+💼 Position  : ${titleCase(positionKey)}
+🏢 Company   : ${company.name}
+
+The application has been declined and removed from the pending list.
+
+${FOOTER}`,
+            mentions: [target]
+        },
+        { quoted: msg }
+    );
 
 }
 
@@ -1922,7 +2114,9 @@ async function companyPromoteCommand(sock, msg, text) {
     company.employees = company.employees || {};
     company.offers = company.offers || {};
 
-    const arg = text.replace(".promote", "").trim();
+    const arg = text
+    .replace(/^\.companypromote\s*/i, "")
+    .trim();
     const num = Number(arg);
 
     if (!arg || !Number.isInteger(num)) {
@@ -2003,6 +2197,7 @@ module.exports = {
     companyOfferCommand,
     companyOffersCommand,
     companyApproveCommand,
+    companyDisapproveCommand,
     companyHireCommand,
     companyEmployeesCommand,
     companyOverseeCommand,

@@ -9,6 +9,8 @@ const {
     formatExperience
 } = require("../lib/portfolioHistory");
 
+const { tierForLevel } = require("../lib/tierStar");
+
 const USERS_FILE = dataPath("users.json");
 
 const FOOTER =
@@ -131,7 +133,7 @@ function buildPortfolio(userId, users) {
     // EMPLOYMENT
     // ========================================================
 
-    const currentJob =
+      const currentJob =
         getCurrentEmployment(userId);
 
     const history =
@@ -147,23 +149,61 @@ function buildPortfolio(userId, users) {
 
     let currentStatus;
 
-    if (currentJob) {
 
+    // --------------------------------------------------------
+    // PLAYER COMPANY OWNER
+    // --------------------------------------------------------
+
+    if (user.company) {
+
+        // Owner is not stored as an employee.
+        // Their leadership position is derived directly from
+        // the company they own.
+
+        const company =
+            user.company;
+
+       const companyTier =
+    company.level !== undefined
+        ? tierForLevel(company.level)
+        : "—";
         currentStatus =
-`🏢 Company      : ${currentJob.companyName}
-💼 Position     : ${titleCase(currentJob.position)}
-⭐ Company Tier : ${currentJob.tier ?? "—"}`;
-
-    } else {
-
-        currentStatus =
-`🏢 Company      : Unemployed
-💼 Position     : —
-⭐ Company Tier : —`;
+`🏢 Company      : ${company.name}
+💼 Position     : Managing Director
+⭐ Company Tier : ${companyTier}
+👑 Status       : Company Owner`;
 
     }
 
 
+    // --------------------------------------------------------
+    // NORMAL EMPLOYEE
+    // --------------------------------------------------------
+
+    else if (currentJob) {
+
+        currentStatus =
+`🏢 Company      : ${currentJob.companyName}
+💼 Position     : ${titleCase(currentJob.position)}
+⭐ Company Tier : ${currentJob.tier ?? "—"}
+👤 Status       : Employee`;
+
+    }
+
+
+    // --------------------------------------------------------
+    // UNEMPLOYED
+    // --------------------------------------------------------
+
+    else {
+
+        currentStatus =
+`🏢 Company      : Unemployed
+💼 Position     : —
+⭐ Company Tier : —
+👤 Status       : Unemployed`;
+
+    }
     // ========================================================
     // WORK HISTORY
     // ========================================================

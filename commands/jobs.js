@@ -10,12 +10,21 @@ const dataPath = require("../lib/dataPath");
 const { getIndustry, positionRate, getMaxSlots } = require("../lib/industries");
 const { getDutyFlavor } = require("../lib/dutyFlavor");
 const { tierForLevel } = require("../lib/tierStar");
+const {
+    endEmployment
+} = require("../lib/portfolioHistory");
 
 const {
     findOfferById,
     listOpenOffers,
     findEmploymentAnywhere
 } = require("../lib/jobOffers");
+
+const JOB_RESIGN_NOTICE_MS =
+    24 * 60 * 60 * 1000;
+
+const JOB_RESIGN_SWEEP_MS =
+    30 * 1000;
 
 const {
     incomeAtLevel,
@@ -327,6 +336,250 @@ function startMajorAttendanceMonitor(sock) {
 
 }
 
+// ============================================================
+// JOB RESIGNATION PROCESSOR
+// ============================================================
+//
+// Resignations are persisted in users.json so Railway restarts
+// cannot cancel them.
+//
+// Once effectiveAt is reached:
+//   - player-company employee is removed from company.employees
+//   - Major employee is removed from majors.json
+//   - resignation marker is removed
+//   - the user becomes unemployed
+//
+// Removing the employee before the next company/Major settlement
+// means that pending salary is forfeited rather than paid after
+// resignation.
+//
+// Portfolio-history closure is delegated to closePortfolioEmployment()
+// once that helper is available in lib/portfolioHistory.js.
+//
+
+async function processPendingResignations(sock) {
+
+    const users = loadUsers();
+
+    let usersChanged = false;
+
+    for (const userId of Object.keys(users)) {
+
+        const user =
+            users[userId];
+
+        if (!user?.jobResignation) {
+            continue;
+        }
+
+        const resignation =
+            user.jobResignation;
+
+        if (
+            Date.now() <
+            resignation.effectiveAt
+        ) {
+            continue;
+        }
+
+
+        let companyName =
+            resignation.companyName ||
+            "Unknown company";
+
+        let position =
+            resignation.position ||
+            "Unknown position";
+
+        let removed = false;
+
+
+        // ====================================================
+        // PLAYER COMPANY
+        // ====================================================
+
+        if (
+            resignation.companyType ===
+            "player"
+        ) {
+
+            const companyOwner =
+                users[
+                    resignation.companyOwnerId
+                ];
+
+            const company =
+                companyOwner?.company;
+
+            if (
+                company &&
+                company.employees
+            ) {
+
+                const employee =
+                    company.employees[
+                        resignation.employeeId
+                    ];
+
+               if (employee) {
+
+    companyName = company.name;
+    position = employee.position;
+
+    delete company.employees[
+        resignation.employeeId
+    ];
+
+    endEmployment({
+        userId,
+        companyName: company.name,
+        position: employee.position,
+        endedAt: resignation.effectiveAt
+    });
+
+    removed = true;
+    usersChanged = true;
+}
+
+            }
+
+        }
+
+
+        // ====================================================
+        // MAJOR COMPANY
+        // ====================================================
+
+        else if (
+            resignation.companyType ===
+            "major"
+        ) {
+
+            const removedEmployee =
+                removeMajorEmployee(
+                    resignation.majorKey,
+                    resignation.employeeId
+                );
+
+         if (removedEmployee) {
+
+    companyName = resignation.companyName;
+    position = removedEmployee.position;
+
+    endEmployment({
+        userId,
+        companyName,
+        position,
+        endedAt: resignation.effectiveAt
+    });
+
+    removed = true;
+}
+        }
+
+
+        // ----------------------------------------------------
+        // Either way, the resignation marker is finished.
+        // ----------------------------------------------------
+
+        delete user.jobResignation;
+
+        usersChanged = true;
+
+
+        // ----------------------------------------------------
+        // Persist player-company removal.
+        // Major removal already saves majors.json.
+        // ----------------------------------------------------
+
+        delete user.jobResignation;
+usersChanged = true;
+
+saveUsers(users);
+
+
+        // ----------------------------------------------------
+        // Portfolio closure hook.
+        //
+        // Do NOT invent portfolio data here. Once
+        // portfolioHistory.js exposes its actual close helper,
+        // call it here.
+        // ----------------------------------------------------
+
+        console.log(
+            `📤 Resignation completed: ${userId} -> ${companyName} / ${position}`
+        );
+
+
+        // ----------------------------------------------------
+        // Notify the former employee.
+        // ----------------------------------------------------
+
+        if (removed) {
+
+            try {
+
+                await sock.sendMessage(
+                    userId,
+                    {
+                        text: noticeBox(
+                            "📤",
+                            "𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉 𝘾𝙊𝙈𝙋𝙇𝙀𝙏𝙀",
+                            `You have been officially relieved from:
+
+🏢 Company  : ${companyName}
+💼 Position : ${titleCase(position)}
+
+✅ Employment status: Unemployed
+💰 Pending payout: Forfeited
+
+You may apply for another position through .joboffers.`
+                        )
+                    }
+                );
+
+            } catch (err) {
+
+                console.error(
+                    "[job resignation] failed to notify user:",
+                    err.message
+                );
+
+            }
+
+        }
+
+    }
+
+}
+
+
+// ============================================================
+// START RESIGNATION PROCESSOR
+// ============================================================
+
+function startJobResignationProcessor(sock) {
+
+    // Process anything that became effective while the bot was offline.
+    processPendingResignations(sock).catch(err => {
+        console.error(
+            "[job resignation] startup sweep failed:",
+            err.message
+        );
+    });
+
+    setInterval(() => {
+
+        processPendingResignations(sock).catch(err => {
+            console.error(
+                "[job resignation] sweep failed:",
+                err.message
+            );
+        });
+
+    }, JOB_RESIGN_SWEEP_MS);
+
+}
 
 // ============================================================
 // .joboffers
@@ -759,8 +1012,7 @@ The owner will review it via .companyoffers.`
 // .job
 // ============================================================
 
-async function jobCommand(sock, msg) {
-
+async function jobCommand(sock, msg, text = ".job") {
     const sender =
         msg.key.participant ||
         msg.key.remoteJid;
@@ -783,6 +1035,21 @@ async function jobCommand(sock, msg) {
 
     }
 
+
+    const subcommand =
+    text
+        .trim()
+        .split(/\s+/)[1]
+        ?.toLowerCase();
+
+if (subcommand === "resign") {
+
+    return await jobResignCommand(
+        sock,
+        msg
+    );
+
+}
     // Check both employment systems.
     const job =
         findEmploymentAnywhere(users, sender) ||
@@ -995,6 +1262,236 @@ ${FOOTER}`
 
 }
 
+async function jobResignCommand(sock, msg) {
+
+    const sender =
+        msg.key.participant ||
+        msg.key.remoteJid;
+
+    const users =
+        loadUsers();
+
+    if (!users[sender]) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "👤",
+                    "𝙉𝙊𝙏 𝙍𝙀𝙂𝙄𝙎𝙏𝙀𝙍𝙀𝘿",
+                    "Please register first.\n\n📥 .register YOUR_NAME"
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    const user =
+        users[sender];
+
+    if (user.company) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "👑",
+                    "𝘾𝙊𝙈𝙋𝘼𝙉𝙔 𝙊𝙒𝙉𝙀𝙍",
+                    `You own *${user.company.name}*.
+
+You are the Managing Director, not an employee of the company, so there is no job to resign from.`
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    if (user.jobResignation) {
+
+        const remaining =
+            Math.max(
+                0,
+                user.jobResignation.effectiveAt -
+                Date.now()
+            );
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "⏳",
+                    "𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉 𝙋𝙀𝙉𝘿𝙄𝙉𝙂",
+                    `Your resignation from *${user.jobResignation.companyName}* is already pending.
+
+💼 Position : ${titleCase(user.jobResignation.position)}
+⏳ Effective in : ${formatDuration(remaining)}`
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    const job =
+        findEmploymentAnywhere(
+            users,
+            sender
+        ) ||
+        findMajorEmploymentForUser(
+            sender
+        );
+
+    if (!job) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "📭",
+                    "𝙉𝙊 𝙅𝙊𝘽",
+                    "You don't currently have a job to resign from."
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    const now =
+        Date.now();
+
+    const effectiveAt =
+        now +
+        JOB_RESIGN_NOTICE_MS;
+
+
+    // --------------------------------------------------------
+    // MAJOR
+    // --------------------------------------------------------
+
+    if (job.isMajor) {
+
+        const state =
+            loadMajorsState();
+
+        const bucket =
+            state[job.majorKey];
+
+        const employee =
+            bucket?.employees?.[
+                job.employeeId
+            ];
+
+        if (!employee) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: noticeBox(
+                        "⚠️",
+                        "𝙅𝙊𝘽 𝙉𝙊𝙏 𝙁𝙊𝙐𝙉𝘿",
+                        "Your Major employment record could not be found."
+                    )
+                },
+                { quoted: msg }
+            );
+
+        }
+
+        user.jobResignation = {
+            companyType: "major",
+            majorKey: job.majorKey,
+            employeeId: job.employeeId,
+            companyName: job.companyName,
+            position: employee.position,
+            submittedAt: now,
+            effectiveAt
+        };
+
+        saveUsers(users);
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "📤",
+                    "𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉 𝙎𝙐𝘽𝙈𝙄𝙏𝙏𝙀𝘿",
+                    `Your resignation from *${job.companyName}* has been submitted.
+
+💼 Position : ${titleCase(employee.position)}
+⏳ Notice  : 24 hours
+💰 Current payout : ❌ forfeited
+
+You will be officially relieved from your position when the notice period ends.`
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+
+    // --------------------------------------------------------
+    // PLAYER COMPANY
+    // --------------------------------------------------------
+
+    const company =
+        users[job.ownerId]?.company;
+
+    const employee =
+        company?.employees?.[
+            job.employeeId
+        ];
+
+    if (!company || !employee) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "⚠️",
+                    "𝙅𝙊𝘽 𝙉𝙊𝙏 𝙁𝙊𝙐𝙉𝘿",
+                    "Your employment record could not be found."
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    user.jobResignation = {
+        companyType: "player",
+        companyOwnerId: job.ownerId,
+        employeeId: job.employeeId,
+        companyName: company.name,
+        position: employee.position,
+        submittedAt: now,
+        effectiveAt
+    };
+
+    saveUsers(users);
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text: noticeBox(
+                "📤",
+                "𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉 𝙎𝙐𝘽𝙈𝙄𝙏𝙏𝙀𝘿",
+                `Your resignation from *${company.name}* has been submitted.
+
+💼 Position : ${titleCase(employee.position)}
+⏳ Notice  : 24 hours
+💰 Current payout : ❌ forfeited
+
+You will be officially relieved from your position when the notice period ends.`
+            )
+        },
+        { quoted: msg }
+    );
+
+}
 
 // ============================================================
 // .duty
@@ -1007,6 +1504,36 @@ async function dutyCommand(sock, msg) {
         msg.key.remoteJid;
 
     const users = loadUsers();
+
+if (users[sender].jobResignation) {
+
+    const resignation =
+        users[sender].jobResignation;
+
+    const remaining =
+        Math.max(
+            0,
+            resignation.effectiveAt - Date.now()
+        );
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text: noticeBox(
+                "📤",
+                "𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉 𝙋𝙀𝙉𝘿𝙄𝙉𝙂",
+                `Your resignation from *${resignation.companyName}* has been submitted.
+
+💼 Position : ${titleCase(resignation.position)}
+⏳ Effective in : ${formatDuration(remaining)}
+
+You are no longer accepting duty check-ins during your notice period.`
+            )
+        },
+        { quoted: msg }
+    );
+
+}
 
     if (!users[sender]) {
 
@@ -1840,15 +2367,12 @@ ${FOOTER}`
 // ============================================================
 
 module.exports = {
-
     jobOffersCommand,
     jobApplyCommand,
     jobCommand,
     dutyCommand,
     jobInfoCommand,
-
-    // Major background systems.
     resumeMajorApplications,
-    startMajorAttendanceMonitor
-
+    startMajorAttendanceMonitor,
+    startJobResignationProcessor
 };
