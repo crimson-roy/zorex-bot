@@ -72,7 +72,11 @@ const { fishCommand, sellCommand } = require("./commands/fish");
 const { digCommand } = require("./commands/dig");
 
 // .invest (buy/sell) / .assets — global market + personal portfolio
-const { investCommand, assetsCommand } = require("./commands/invest");
+const {
+    investCommand,
+    assetsCommand,
+    companyAssetsCommand
+} = require("./commands/invest");
 
 // Chloe (AI companion) — handleMessage decides on its own whether to reply.
 // setBotJid lets us hand her the bot's real WhatsApp id once Baileys connects,
@@ -176,6 +180,7 @@ const {
     jobOffersCommand,
     jobApplyCommand,
     jobCommand,
+    dutyCommand,
     jobInfoCommand,
     resumeMajorApplications,
     startMajorAttendanceMonitor
@@ -542,7 +547,10 @@ async function startBot() {
         // prefix-command routing. handleMessage decides internally whether she
         // should actually reply (chaton/chatoff state, name mention, tag, reply,
         // or explicit ".chloe <msg>"), so this is always safe to call.
-        await handleChloeMessage(sock, msg);
+        // Chloe should never block command processing.
+handleChloeMessage(sock, msg).catch(err => {
+    console.error("⚠️ Chloe error:", err.message);
+});
 
         await trackActivityAndMaybeSpawn(sock, msg);   // add this line
 
@@ -1922,12 +1930,9 @@ else if (text.startsWith(".mem")) {
 
     await portfolioCommand(sock, msg);
 
-} else if (text === ".company" || text.startsWith(".company ")) {
+    } else if (text === ".duty") {
 
-    // FIX: this used to be `text === ".company"` only, and companyCommand()
-    // was called with no `text` arg at all — so .company deposit/distribute/
-    // assign could never actually be reached. Both are fixed here.
-    await companyCommand(sock, msg, text);
+    await dutyCommand(sock, msg);
 
 } else if (text === ".joboffers") {
 
@@ -1979,6 +1984,10 @@ else if (text.startsWith(".mem")) {
 
     await assetsCommand(sock, msg);
 
+} else if (text === ".companyassets") {
+
+    await companyAssetsCommand(sock, msg);
+
 } else if (
 
     text === ".auction" ||
@@ -1995,6 +2004,14 @@ else if (text.startsWith(".mem")) {
     if (text === ".auction") {
 
         await auctionStatus(sock, msg);
+
+} else if (text === ".company" || text.startsWith(".company ")) {
+
+    // FIX: this used to be `text === ".company"` only, and companyCommand()
+    // was called with no `text` arg at all — so .company deposit/distribute/
+    // assign could never actually be reached. Both are fixed here.
+    await companyCommand(sock, msg, text);
+
 
     } else if (text.startsWith(".auctioncards")) {
 

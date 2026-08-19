@@ -288,112 +288,363 @@ ${industryLine}» Level   : ${company.level}
 //     involved — this is NOT the same as .companyinvest buy, which
 //     spends company wallet to buy NEW assets from the market. This
 //     only moves assets the person already owns.
+// ---------- .company deposit crescent <amount> | .company deposit <assetId> <amount> ----------
 async function companyDeposit(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
     const users = loadUsers();
 
-    if (!users[sender]) return await replyNotRegistered(sock, msg);
+    if (!users[sender]) {
+        return await replyNotRegistered(sock, msg);
+    }
 
     const company = users[sender].company;
-    if (!company) return await replyNoCompany(sock, msg);
 
+    if (!company) {
+        return await replyNoCompany(sock, msg);
+    }
+
+    company.wallet = Number(company.wallet) || 0;
     company.assets = company.assets || [];
 
-    const args = text
-        .replace(".company", "")
-        .replace("deposit", "")
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean);
+    // .company deposit crescent 50000
+    // .company deposit gold 2
+    const parts = text.trim().split(/\s+/);
 
-    const kind = (args[0] || "").toLowerCase();
+    // Expected:
+    // parts[0] = .company
+    // parts[1] = deposit
+    // parts[2] = crescent / assetId
+    // parts[3] = amount
+
+    const kind = (parts[2] || "").toLowerCase();
+    const amountText = parts[3] || "";
 
     if (!kind) {
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: errorBox("𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗘𝗣𝗢𝗦𝗜𝗧", "Specify what to deposit — crescent (money) or an asset ID.", [".company deposit crescent 50000", ".company deposit gold 2"])
-        }, { quoted: msg });
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: errorBox(
+                    "𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗘𝗣𝗢𝗦𝗜𝗧",
+                    "Specify what you want to deposit.",
+                    [
+                        ".company deposit crescent 50000",
+                        ".company deposit gold 2"
+                    ]
+                )
+            },
+            { quoted: msg }
+        );
+
     }
 
-    // ---- crescent: personal wallet -> company wallet ----
+
+    // ========================================================
+    // CRESCENT DEPOSIT
+    // Personal wallet -> company wallet
+    // ========================================================
+
     if (kind === "crescent") {
 
-        const amount = Number(args[1]);
+        const amount = Number(
+            amountText.replace(/,/g, "")
+        );
 
-        if (!args[1] || isNaN(amount) || amount <= 0) {
-            return await sock.sendMessage(msg.key.remoteJid, {
-                text: errorBox("𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗘𝗣𝗢𝗦𝗜𝗧", "Enter a valid amount.", [".company deposit crescent 50000"])
-            }, { quoted: msg });
+        if (
+            !amountText ||
+            !Number.isFinite(amount) ||
+            amount <= 0
+        ) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: errorBox(
+                        "𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗘𝗣𝗢𝗦𝗜𝗧",
+                        "Enter a valid Crescent amount.",
+                        [
+                            ".company deposit crescent 50000"
+                        ]
+                    )
+                },
+                { quoted: msg }
+            );
+
         }
 
-        if (users[sender].wallet < amount) {
-            return await sock.sendMessage(msg.key.remoteJid, {
-                text: `❌ You don't have that much in your personal wallet.\n\n💳 Wallet: ${users[sender].wallet.toLocaleString()} 🌙`
-            }, { quoted: msg });
+
+        // Never allow the transfer if the personal wallet
+        // doesn't contain enough money.
+        const personalWallet =
+            Number(users[sender].wallet) || 0;
+
+        if (personalWallet < amount) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`❌ You don't have enough Crescents in your personal wallet.
+
+💳 Personal Wallet: ${personalWallet.toLocaleString()} 🌙
+💸 Requested: ${amount.toLocaleString()} 🌙`
+                },
+                { quoted: msg }
+            );
+
         }
 
-        company.wallet = (company.wallet || 0) + amount;
-        users[sender].wallet -= amount;
 
-        saveUsers(users);
+        // Perform the transfer.
+        users[sender].wallet =
+            personalWallet - amount;
 
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `✅ Deposited ${amount.toLocaleString()} 🌙 into *${company.name}*'s company wallet.\n\n🏢 Company Wallet : ${company.wallet.toLocaleString()} 🌙\n💳 Personal Wallet: ${users[sender].wallet.toLocaleString()} 🌙`
-        }, { quoted: msg });
+        company.wallet += amount;
+
+
+        // Save ONLY after both sides of the transfer
+        // have been updated in memory.
+        try {
+
+            saveUsers(users);
+
+        } catch (err) {
+
+            console.error(
+                "❌ Failed to save company Crescent deposit:",
+                err.message
+            );
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+                        `❌ The deposit could not be saved. Your balances were not committed.`
+                },
+                { quoted: msg }
+            );
+
+        }
+
+
+        // Success confirmation.
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`✅ *COMPANY DEPOSIT SUCCESSFUL!*
+
+🏢 Company:
+${company.name}
+
+💸 Deposited:
+${amount.toLocaleString()} 🌙
+
+💳 Personal Wallet:
+${users[sender].wallet.toLocaleString()} 🌙
+
+🏢 Company Wallet:
+${company.wallet.toLocaleString()} 🌙`
+            },
+            { quoted: msg }
+        );
 
     }
 
-    // ---- asset ID: personal inventory -> company.assets, straight transfer ----
+
+    // ========================================================
+    // ASSET DEPOSIT
+    // Personal inventory -> company assets
+    // ========================================================
+
     const def = ASSETS[kind];
 
     if (!def) {
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: errorBox("𝗨𝗡𝗞𝗡𝗢𝗪𝗡 𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗧𝗬𝗣𝗘", `"${args[0]}" isn't "crescent" or a valid asset ID.\n\n📚 Assets: ${Object.keys(ASSETS).join(", ")}`, [".company deposit crescent 50000", ".company deposit gold 2"])
-        }, { quoted: msg });
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: errorBox(
+                    "𝗨𝗡𝗞𝗡𝗢𝗪𝗡 𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗧𝗬𝗣𝗘",
+                    `"${kind}" isn't "crescent" or a valid asset ID.`,
+                    [
+                        ".company deposit crescent 50000",
+                        ".company deposit gold 2"
+                    ]
+                )
+            },
+            { quoted: msg }
+        );
+
     }
 
-    const amount = Number(args[1]);
 
-    if (!args[1] || !Number.isInteger(amount) || amount <= 0) {
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: errorBox("𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗘𝗣𝗢𝗦𝗜𝗧", "Enter a valid amount to deposit.", [`.company deposit ${kind} 2`])
-        }, { quoted: msg });
+    const amount = Number(amountText);
+
+    if (
+        !amountText ||
+        !Number.isInteger(amount) ||
+        amount <= 0
+    ) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: errorBox(
+                    "𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗘𝗣𝗢𝗦𝗜𝗧",
+                    "Enter a valid whole-number asset quantity.",
+                    [
+                        `.company deposit ${kind} 2`
+                    ]
+                )
+            },
+            { quoted: msg }
+        );
+
     }
+
 
     const inventory = loadInventory();
     const items = inventory[sender] || [];
-    const holding = items.find(it => it.id === kind && it.type === "asset");
-    const owned = holding ? holding.quantity : 0;
+
+    const holding = items.find(
+        item =>
+            item.id === kind &&
+            item.type === "asset"
+    );
+
+    const owned = holding
+        ? Number(holding.quantity) || 0
+        : 0;
 
     if (owned < amount) {
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ You only hold ${owned} ${def.name} — can't deposit ${amount}.`
-        }, { quoted: msg });
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`❌ You only hold ${owned} ${def.name}.
+
+💼 Requested: ${amount}
+📦 Available: ${owned}`
+            },
+            { quoted: msg }
+        );
+
     }
 
+
+    // Remove from personal inventory.
     holding.quantity -= amount;
 
     if (holding.quantity <= 0) {
-        inventory[sender] = items.filter(it => !(it.id === kind && it.type === "asset"));
+
+        inventory[sender] = items.filter(
+            item =>
+                !(item.id === kind && item.type === "asset")
+        );
+
     }
 
-    saveInventory(inventory);
 
-    const companyHolding = company.assets.find(a => a.id === kind);
+    // Save personal inventory first.
+    try {
+
+        saveInventory(inventory);
+
+    } catch (err) {
+
+        console.error(
+            "❌ Failed to save personal inventory:",
+            err.message
+        );
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+                    `❌ The asset deposit could not be saved.`
+            },
+            { quoted: msg }
+        );
+
+    }
+
+
+    // Add to company assets.
+    const companyHolding =
+        company.assets.find(
+            asset => asset.id === kind
+        );
 
     if (companyHolding) {
+
         companyHolding.quantity += amount;
+
     } else {
-        company.assets.push({ id: kind, quantity: amount, obtainedAt: Date.now() });
+
+        company.assets.push({
+            id: kind,
+            quantity: amount,
+            obtainedAt: Date.now()
+        });
+
     }
 
-    saveUsers(users);
 
-    const companyNowHolds = companyHolding ? companyHolding.quantity : amount;
+    try {
 
-    return await sock.sendMessage(msg.key.remoteJid, {
-        text: `${def.emoji} *DEPOSITED*\n» Asset   : ${def.name} x${amount}\n\n🏢 ${company.name} now holds: ${companyNowHolds} ${def.name}\n💼 You now hold: ${holding.quantity} ${def.name}`
-    }, { quoted: msg });
+        saveUsers(users);
+
+    } catch (err) {
+
+        console.error(
+            "❌ Failed to save company asset deposit:",
+            err.message
+        );
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+                    `⚠️ The asset was removed from your inventory, but the company update could not be saved. Check the data before retrying.`
+            },
+            { quoted: msg }
+        );
+
+    }
+
+
+    const companyNowHolds =
+        companyHolding
+            ? companyHolding.quantity
+            : amount;
+
+    const personalNowHolds =
+        Math.max(0, holding.quantity || 0);
+
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text:
+`${def.emoji} *COMPANY ASSET DEPOSITED!*
+
+🏢 Company:
+${company.name}
+
+📦 Asset:
+${def.name} x${amount}
+
+🏢 Company Holdings:
+${companyNowHolds} ${def.name}
+
+💼 Your Remaining Holdings:
+${personalNowHolds} ${def.name}`
+        },
+        { quoted: msg }
+    );
 
 }
 
@@ -426,25 +677,108 @@ async function companyDistribute(sock, msg, text) {
     else if (context?.mentionedJid?.length) target = context.mentionedJid[0];
 
     // ---- No target: withdraw everything to the owner's personal wallet ----
-    if (!target) {
+   // ---- No target: withdraw all OR a specific amount to owner's personal wallet ----
 
-        if (company.wallet <= 0) {
-            return await sock.sendMessage(msg.key.remoteJid, {
+if (!target) {
+
+    if (company.wallet <= 0) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
                 text: `⚠️ The company wallet is empty — nothing to withdraw.`
-            }, { quoted: msg });
-        }
-
-        const amount = company.wallet;
-        company.wallet = 0;
-        users[sender].wallet += amount;
-
-        saveUsers(users);
-
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `✅ Withdrew ${amount.toLocaleString()} 🌙 from *${company.name}*'s company wallet to your personal wallet.\n\n💳 Personal Wallet: ${users[sender].wallet.toLocaleString()} 🌙`
-        }, { quoted: msg });
+            },
+            { quoted: msg }
+        );
 
     }
+
+    // Get everything after ".company distribute"
+    const amountText = text
+        .replace(".company", "")
+        .replace("distribute", "")
+        .trim();
+
+    let amount;
+
+    // Bare ".company distribute" = withdraw everything
+    if (!amountText) {
+
+        amount = company.wallet;
+
+    } else {
+
+        // ".company distribute 50000" = withdraw exactly 50,000
+        amount = Number(
+            amountText.replace(/,/g, "")
+        );
+
+        if (
+            !Number.isFinite(amount) ||
+            amount <= 0
+        ) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: errorBox(
+                        "𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗜𝗦𝗧𝗥𝗜𝗕𝗨𝗧𝗘",
+                        "Enter a valid amount to withdraw.",
+                        [
+                            ".company distribute",
+                            ".company distribute 50000"
+                        ]
+                    )
+                },
+                { quoted: msg }
+            );
+
+        }
+
+        if (amount > company.wallet) {
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+`❌ Not enough in the company wallet.
+
+🏢 Company Wallet: ${company.wallet.toLocaleString()} 🌙
+💸 Requested: ${amount.toLocaleString()} 🌙`
+                },
+                { quoted: msg }
+            );
+
+        }
+
+    }
+
+    company.wallet -= amount;
+    users[sender].wallet += amount;
+
+    saveUsers(users);
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text:
+`✅ *Company Withdrawal Successful!*
+
+🏢 Company: ${company.name}
+
+💸 Withdrawn:
+${amount.toLocaleString()} 🌙
+
+🏢 Company Wallet:
+${company.wallet.toLocaleString()} 🌙
+
+💳 Personal Wallet:
+${users[sender].wallet.toLocaleString()} 🌙`
+        },
+        { quoted: msg }
+    );
+
+}
 
     // ---- Target given: pay a specific employee ----
     const employeeEntry = Object.values(company.employees).find(e => e.userId === target);
