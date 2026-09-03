@@ -287,7 +287,7 @@ function isOwner(userId) {
 
     if (!userId) return false;
 
-    const normalized = jidNormalizedUser(userId);
+    const normalized = normalizeUserId(userId);
 
     if (MAIN_OWNER && normalized === jidNormalizedUser(MAIN_OWNER)) {
         return true;

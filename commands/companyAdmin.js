@@ -4,7 +4,13 @@ const { endEmployment } = require("../lib/portfolioHistory");
 const { loadMajorsState } = require("../lib/majorsState");
 const { MAJORS, getMajor } = require("../lib/majors");
 const { MAIN_OWNER } = require("../config");
-const { jidNormalizedUser } = require("@whiskeysockets/baileys");
+function normalizeUserId(userId) {
+    if (!userId) return "";
+
+    return String(userId)
+        .trim()
+        .toLowerCase();
+}
 
 // ============================================================
 // COMPANY ADMIN COMMANDS
