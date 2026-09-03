@@ -186,6 +186,10 @@ const {
     startMajorAttendanceMonitor
 } = require("./commands/jobs");
 
+const {
+    companyAdminCommand
+} = require("./commands/companyAdmin");
+
 const { MAIN_OWNER } = require("./config");
 const OWNERS_FILE = dataPath("owners.json");
 
@@ -1977,13 +1981,51 @@ else if (text.startsWith(".mem")) {
 } else if (text.startsWith('.upscale') || text.startsWith('.fps') || text.startsWith('.bitrate')) {
     return await videoUpscaleCommands(sock, msg, text);
 
+} else if (
+    text === ".fire" ||
+    text.startsWith(".fire ")
+) {
+
+    await companyAdminCommand(
+        sock,
+        msg,
+        text
+);
+
+} else if (
+    text === ".fixcompany"
+) {
+
+    await companyAdminCommand(
+        sock,
+        msg,
+        text
+);
+
+
 } else if (text.startsWith(".reseteconomy")) {
 
     await resetEconomyCommand(sock, msg, text);
 
-} else if (text === ".yes" || text === ".no") {
+} else if (
+    text === ".yes" ||
+    text === ".no"
+) {
 
-    await resetEconomyCommand(sock, msg, text);
+    const handled =
+        await companyAdminCommand(
+            sock,
+            msg,
+            text
+        );
+
+    if (!handled) {
+        await resetEconomyCommand(
+            sock,
+            msg,
+            text
+        );
+    }
 
 } else if (text.startsWith(".sell")) {
 

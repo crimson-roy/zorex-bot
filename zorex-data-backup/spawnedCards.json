@@ -88,25 +88,6 @@
         "expiresAt": 1786308061108,
         "groupJid": "120363427413987686@g.us"
     },
-    "120363406268872804@g.us": {
-        "cardId": "33654433",
-        "card": {
-            "name": "Daki and Gyutaro",
-            "series": "Demon Slayer",
-            "tier": "SR",
-            "valueMin": 500000,
-            "valueMax": 800000,
-            "type": "card",
-            "image": "./cards/33654433.jpg",
-            "mazokuId": "198758d0-4381-4761-9645-f8a74ef422a4",
-            "eventName": "default",
-            "special": false
-        },
-        "value": 257000,
-        "spawnedAt": 1786382367364,
-        "expiresAt": 1786384167364,
-        "groupJid": "120363406268872804@g.us"
-    },
     "120363430362856614@g.us": {
         "cardId": "62696969",
         "card": {
@@ -145,23 +126,80 @@
         "expiresAt": 1786650920080,
         "groupJid": "120363406813245822@g.us"
     },
-    "120363409248667285@g.us": {
-        "cardId": "82651278",
+    "120363406268872804@g.us": {
+        "cardId": "d1cfc863",
         "card": {
-            "name": "Izanami",
-            "series": "Onmyoji",
+            "name": "Asta and Liebe",
+            "series": "Black Clover",
+            "tier": "SSR",
+            "valueMin": 1000000,
+            "valueMax": 1500000,
+            "type": "card",
+            "video": "./cards/89508047.mp4",
+            "mazokuId": "aa468775-ab88-476f-86e6-85d346fccd12",
+            "eventName": "default",
+            "special": false
+        },
+        "value": 309847,
+        "spawnedAt": 1787213374294,
+        "expiresAt": 1787215174294,
+        "groupJid": "120363406268872804@g.us"
+    },
+    "120363409248667285@g.us": {
+        "cardId": "497108d2",
+        "card": {
+            "name": "Maki Inohara",
+            "series": "Grisaia: Phantom Trigger",
             "tier": "R",
             "valueMin": 200000,
             "valueMax": 350000,
             "type": "card",
-            "image": "./cards/82651278.jpg",
-            "mazokuId": "f8960ffd-75e6-4c59-a4d7-14423c030f14",
+            "image": "./cards/67916907.jpg",
+            "mazokuId": "599f4c14-f880-4a18-a767-d303b0c18c64",
             "eventName": "default",
             "special": false
         },
-        "value": 101652,
-        "spawnedAt": 1786802688873,
-        "expiresAt": 1786804488873,
+        "value": 93910,
+        "spawnedAt": 1787430648705,
+        "expiresAt": 1787432448705,
         "groupJid": "120363409248667285@g.us"
+    },
+    "120363426956656281@g.us": {
+        "cardId": "3351fc1b",
+        "card": {
+            "name": "Rin Tohsaka",
+            "series": "Fate Series",
+            "tier": "C",
+            "valueMin": 50000,
+            "valueMax": 100000,
+            "type": "card",
+            "image": "./cards/79205885.jpg",
+            "mazokuId": "b6c86097-7dfc-4925-bc67-59cb10b7a49f",
+            "eventName": "default",
+            "special": false
+        },
+        "value": 58181,
+        "spawnedAt": 1787673129388,
+        "expiresAt": 1787674929388,
+        "groupJid": "120363426956656281@g.us"
+    },
+    "120363298022462579@g.us": {
+        "cardId": "e5a6e8ba",
+        "card": {
+            "name": "Gendou Ikari",
+            "series": "Neon Genesis Evangelion",
+            "tier": "R",
+            "valueMin": 200000,
+            "valueMax": 350000,
+            "type": "card",
+            "image": "./cards/e5a6e8ba.jpg",
+            "mazokuId": "61044377-6b2c-44cd-91b9-4099ae4c51ac",
+            "eventName": "default",
+            "special": false
+        },
+        "value": 116834,
+        "spawnedAt": 1788087837807,
+        "expiresAt": 1788089637807,
+        "groupJid": "120363298022462579@g.us"
     }
 }

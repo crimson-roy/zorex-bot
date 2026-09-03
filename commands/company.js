@@ -10,6 +10,14 @@ const { ASSETS } = require("./invest");
 // combined, not per-position.
 const MAX_EMPLOYEES = 50;
 
+// Level ceiling — a company cannot upgrade past this.
+const MAX_COMPANY_LEVEL = 100;
+
+// From this level onward, upgrading further requires a minimum
+// headcount — a company can't just buy its way to the top solo.
+const EMPLOYEE_GATE_LEVEL = 50;
+const EMPLOYEE_GATE_MIN_COUNT = 3;
+
 // PERSISTENCE FIX: real per-user state, written every payout/upgrade —
 // routed through dataPath() so it survives a redeploy. See lib/dataPath.js.
 const USERS_FILE = dataPath("users.json");
@@ -21,7 +29,6 @@ const INCOME_MULTIPLIER = 1.17;
 const BASE_UPGRADE_COST = 100000;
 const UPGRADE_COST_MULTIPLIER = 1.09;
 
-// STEP 1 CHANGE: 12h -> 24h, per the company/employment spec.
 const PAYOUT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function loadUsers() {
@@ -43,10 +50,6 @@ function saveUsers(users) {
 }
 
 // ---------- Shared Zorex visual system ----------
-// Same divider/footer/box language used across every employment command
-// (owner-side here, employee-side in commands/jobs.js) so .companyoffers,
-// .oversee, .joboffers, .jobapply, .job, .duty and .jobinfo all read as
-// one consistent product.
 const DIVIDER = "━━━━━━━━━━━━━━━━━━━━━━━━━";
 const FOOTER = "╰━━━━ 🤖 𝙕𝙤𝙧𝙚𝙭 𝘼𝙄 ━━━━╯";
 
@@ -112,8 +115,6 @@ const {
     updatePosition
 } = require("../lib/portfolioHistory");
 
-// Random 4-digit code, unique within this company, assigned once at hire
-// and never changed. This is what .oversee looks employees up by.
 function generateEmployeeCode(company) {
 
     const existing = new Set(Object.values(company.employees || {}).map(e => e.code));
@@ -127,36 +128,11 @@ function generateEmployeeCode(company) {
 
 }
 
-// Was this employee logged as on duty at any point during [start, end)?
-// Presence is checked per PAYOUT PERIOD (not calendar day) so that a
-// company payout that's overdue by several days checks each of those
-// days independently against when .duty was actually run, rather than
-// only ever looking at "today."
 function wasOnDutyDuring(employee, start, end) {
     const log = employee.dutyLog || [];
     return log.some(ts => ts >= start && ts < end);
 }
 
-// Credits any full PAYOUT_INTERVAL_MS periods that have passed since the
-// company's last payout, advances lastPayout by exactly that many
-// periods, and settles each period independently:
-//
-//   - An employee who was on duty (.duty) at any point during that
-//     specific period gets their computed cut credited DIRECTLY to their
-//     personal wallet — this is real auto-pay, not a company-wallet
-//     reservation the owner has to manually distribute later.
-//   - An employee who was NOT on duty during that period forfeits that
-//     period's cut entirely — it simply stays in the company's net
-//     (there is currently no "call-in"/excused-absence path; see the
-//     header comment in this file).
-//
-// The company wallet only ever receives income minus whatever was
-// actually paid out to present employees — it's the company's real
-// retained profit, not a salary-reserve account.
-//
-// Returns null if nothing was owed yet, otherwise
-// { totalIncome, totalSalaries, netToCompanyWallet, employeePayouts }
-// where employeePayouts is { userId: amountCreditedThisSettlement }.
 function collectPendingIncome(users, userId) {
 
     const company = users[userId].company;
@@ -189,20 +165,13 @@ function collectPendingIncome(users, userId) {
         for (const employeeId of Object.keys(company.employees)) {
 
             const employee = company.employees[employeeId];
-const rate = employee.salaryRate || 0;
+            const rate = employee.salaryRate || 0;
 
-if (rate <= 0) continue;
+            if (rate <= 0) continue;
 
-// Resigning employees forfeit their pending payout.
-if (
-    users[employee.userId]?.jobResignation
-) {
-    continue;
-}
+            if (users[employee.userId]?.jobResignation) continue;
 
-if (!wasOnDutyDuring(employee, periodStart, periodEnd)) {
-    continue;
-}
+            if (!wasOnDutyDuring(employee, periodStart, periodEnd)) continue;
 
             const amount = Math.round(incomePerPeriod * (rate / 100));
 
@@ -231,7 +200,6 @@ if (!wasOnDutyDuring(employee, periodStart, periodEnd)) {
 }
 
 
-// ---------- .company — status view (bare command, no subcommand) ----------
 async function companyStatusView(sock, msg) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -285,20 +253,6 @@ ${industryLine}» Level   : ${company.level}
 }
 
 
-// ---------- .company deposit crescent <amount> | .company deposit <assetId> <amount> ----------
-// Two very different transfers under one subcommand, disambiguated by
-// the first word:
-//   - "crescent" -> money, personal wallet -> company wallet (this is
-//     the ORIGINAL .company deposit <amount> behavior, unchanged in
-//     substance — just re-routed behind the "crescent" keyword instead
-//     of being the bare default).
-//   - any valid asset ID (gold, land, etc., from invest.js's ASSETS
-//     catalog) -> a straight quantity transfer, personal inventory ->
-//     company.assets. No money changes hands and no market rate is
-//     involved — this is NOT the same as .companyinvest buy, which
-//     spends company wallet to buy NEW assets from the market. This
-//     only moves assets the person already owns.
-// ---------- .company deposit crescent <amount> | .company deposit <assetId> <amount> ----------
 async function companyDeposit(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -317,15 +271,7 @@ async function companyDeposit(sock, msg, text) {
     company.wallet = Number(company.wallet) || 0;
     company.assets = company.assets || [];
 
-    // .company deposit crescent 50000
-    // .company deposit gold 2
     const parts = text.trim().split(/\s+/);
-
-    // Expected:
-    // parts[0] = .company
-    // parts[1] = deposit
-    // parts[2] = crescent / assetId
-    // parts[3] = amount
 
     const kind = (parts[2] || "").toLowerCase();
     const amountText = parts[3] || "";
@@ -348,12 +294,6 @@ async function companyDeposit(sock, msg, text) {
         );
 
     }
-
-
-    // ========================================================
-    // CRESCENT DEPOSIT
-    // Personal wallet -> company wallet
-    // ========================================================
 
     if (kind === "crescent") {
 
@@ -383,9 +323,6 @@ async function companyDeposit(sock, msg, text) {
 
         }
 
-
-        // Never allow the transfer if the personal wallet
-        // doesn't contain enough money.
         const personalWallet =
             Number(users[sender].wallet) || 0;
 
@@ -405,16 +342,11 @@ async function companyDeposit(sock, msg, text) {
 
         }
 
-
-        // Perform the transfer.
         users[sender].wallet =
             personalWallet - amount;
 
         company.wallet += amount;
 
-
-        // Save ONLY after both sides of the transfer
-        // have been updated in memory.
         try {
 
             saveUsers(users);
@@ -437,8 +369,6 @@ async function companyDeposit(sock, msg, text) {
 
         }
 
-
-        // Success confirmation.
         return await sock.sendMessage(
             msg.key.remoteJid,
             {
@@ -462,12 +392,6 @@ ${company.wallet.toLocaleString()} 🌙`
 
     }
 
-
-    // ========================================================
-    // ASSET DEPOSIT
-    // Personal inventory -> company assets
-    // ========================================================
-
     const def = ASSETS[kind];
 
     if (!def) {
@@ -488,7 +412,6 @@ ${company.wallet.toLocaleString()} 🌙`
         );
 
     }
-
 
     const amount = Number(amountText);
 
@@ -513,7 +436,6 @@ ${company.wallet.toLocaleString()} 🌙`
         );
 
     }
-
 
     const inventory = loadInventory();
     const items = inventory[sender] || [];
@@ -544,8 +466,6 @@ ${company.wallet.toLocaleString()} 🌙`
 
     }
 
-
-    // Remove from personal inventory.
     holding.quantity -= amount;
 
     if (holding.quantity <= 0) {
@@ -557,8 +477,6 @@ ${company.wallet.toLocaleString()} 🌙`
 
     }
 
-
-    // Save personal inventory first.
     try {
 
         saveInventory(inventory);
@@ -581,8 +499,6 @@ ${company.wallet.toLocaleString()} 🌙`
 
     }
 
-
-    // Add to company assets.
     const companyHolding =
         company.assets.find(
             asset => asset.id === kind
@@ -601,7 +517,6 @@ ${company.wallet.toLocaleString()} 🌙`
         });
 
     }
-
 
     try {
 
@@ -625,7 +540,6 @@ ${company.wallet.toLocaleString()} 🌙`
 
     }
 
-
     const companyNowHolds =
         companyHolding
             ? companyHolding.quantity
@@ -633,7 +547,6 @@ ${company.wallet.toLocaleString()} 🌙`
 
     const personalNowHolds =
         Math.max(0, holding.quantity || 0);
-
 
     return await sock.sendMessage(
         msg.key.remoteJid,
@@ -659,14 +572,6 @@ ${personalNowHolds} ${def.name}`
 }
 
 
-// ---------- .company distribute [@user | reply <amount>] ----------
-// No target -> withdraw the FULL company wallet balance to the owner's
-// personal wallet. Tag/reply a user -> pay that specific employee a
-// given amount from the company wallet — rejected if they're not
-// actually on the roster. company.employees is always empty until the
-// hiring step of the spec ships, so every "pay an employee" attempt
-// correctly rejects for now — that's accurate behavior, not a bug: no
-// one is actually employed yet.
 async function companyDistribute(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -686,92 +591,86 @@ async function companyDistribute(sock, msg, text) {
     if (context?.participant) target = context.participant;
     else if (context?.mentionedJid?.length) target = context.mentionedJid[0];
 
-    // ---- No target: withdraw everything to the owner's personal wallet ----
-   // ---- No target: withdraw all OR a specific amount to owner's personal wallet ----
+    if (!target) {
 
-if (!target) {
-
-    if (company.wallet <= 0) {
-
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            {
-                text: `⚠️ The company wallet is empty — nothing to withdraw.`
-            },
-            { quoted: msg }
-        );
-
-    }
-
-    // Get everything after ".company distribute"
-    const amountText = text
-        .replace(".company", "")
-        .replace("distribute", "")
-        .trim();
-
-    let amount;
-
-    // Bare ".company distribute" = withdraw everything
-    if (!amountText) {
-
-        amount = company.wallet;
-
-    } else {
-
-        // ".company distribute 50000" = withdraw exactly 50,000
-        amount = Number(
-            amountText.replace(/,/g, "")
-        );
-
-        if (
-            !Number.isFinite(amount) ||
-            amount <= 0
-        ) {
+        if (company.wallet <= 0) {
 
             return await sock.sendMessage(
                 msg.key.remoteJid,
                 {
-                    text: errorBox(
-                        "𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗜𝗦𝗧𝗥𝗜𝗕𝗨𝗧𝗘",
-                        "Enter a valid amount to withdraw.",
-                        [
-                            ".company distribute",
-                            ".company distribute 50000"
-                        ]
-                    )
+                    text: `⚠️ The company wallet is empty — nothing to withdraw.`
                 },
                 { quoted: msg }
             );
 
         }
 
-        if (amount > company.wallet) {
+        const amountText = text
+            .replace(".company", "")
+            .replace("distribute", "")
+            .trim();
 
-            return await sock.sendMessage(
-                msg.key.remoteJid,
-                {
-                    text:
+        let amount;
+
+        if (!amountText) {
+
+            amount = company.wallet;
+
+        } else {
+
+            amount = Number(
+                amountText.replace(/,/g, "")
+            );
+
+            if (
+                !Number.isFinite(amount) ||
+                amount <= 0
+            ) {
+
+                return await sock.sendMessage(
+                    msg.key.remoteJid,
+                    {
+                        text: errorBox(
+                            "𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗗𝗜𝗦𝗧𝗥𝗜𝗕𝗨𝗧𝗘",
+                            "Enter a valid amount to withdraw.",
+                            [
+                                ".company distribute",
+                                ".company distribute 50000"
+                            ]
+                        )
+                    },
+                    { quoted: msg }
+                );
+
+            }
+
+            if (amount > company.wallet) {
+
+                return await sock.sendMessage(
+                    msg.key.remoteJid,
+                    {
+                        text:
 `❌ Not enough in the company wallet.
 
 🏢 Company Wallet: ${company.wallet.toLocaleString()} 🌙
 💸 Requested: ${amount.toLocaleString()} 🌙`
-                },
-                { quoted: msg }
-            );
+                    },
+                    { quoted: msg }
+                );
+
+            }
 
         }
 
-    }
+        company.wallet -= amount;
+        users[sender].wallet += amount;
 
-    company.wallet -= amount;
-    users[sender].wallet += amount;
+        saveUsers(users);
 
-    saveUsers(users);
-
-    return await sock.sendMessage(
-        msg.key.remoteJid,
-        {
-            text:
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
 `✅ *Company Withdrawal Successful!*
 
 🏢 Company: ${company.name}
@@ -784,13 +683,12 @@ ${company.wallet.toLocaleString()} 🌙
 
 💳 Personal Wallet:
 ${users[sender].wallet.toLocaleString()} 🌙`
-        },
-        { quoted: msg }
-    );
+            },
+            { quoted: msg }
+        );
 
-}
+    }
 
-    // ---- Target given: pay a specific employee ----
     const employeeEntry = Object.values(company.employees).find(e => e.userId === target);
 
     if (!employeeEntry) {
@@ -833,13 +731,6 @@ ${users[sender].wallet.toLocaleString()} 🌙`
 }
 
 
-// ---------- .company assign <role> @user ----------
-// Grants an employee a role (e.g. "investor", "distributor") that later
-// gates access to role-specific commands (.companyinvest, etc.). Role
-// names aren't validated against a fixed catalog yet — that can be
-// tightened once role-gated commands actually exist and need to check
-// for specific values. Same as .company distribute, this always rejects
-// for now since company.employees is empty until hiring ships.
 async function companyAssign(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -891,14 +782,6 @@ async function companyAssign(sock, msg, text) {
 }
 
 
-// ---------- .company — router. Bare command -> status view. ----------
-// ".company deposit/distribute/assign" are new subcommands added for
-// the company/employment spec — everything else about how .company is
-// invoked is unchanged.
-//
-// CHANGE: "deposit" now passes the full `trimmed` text (like distribute
-// and assign already did), not just parts[2] — companyDeposit needs to
-// see the "crescent"/asset-id keyword that comes before the amount now.
 async function companyCommand(sock, msg, text) {
 
     const trimmed =
@@ -957,13 +840,6 @@ async function companyCommand(sock, msg, text) {
 
 }
 
-// ---------- .companycreate <name> <industry> — start a company for 100,000,000 ----------
-// Industry is now REQUIRED and must match an entry in lib/industries.js.
-// Parsing rule: the LAST whitespace-separated token is the industry,
-// everything before it is the company name. This matches the spec's
-// single-word industry keys (animation / retail / food) — if the
-// industry list ever grows multi-word keys, this parsing needs to
-// change to something more explicit (e.g. a trailing --industry flag).
 async function companyCreateCommand(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -982,7 +858,6 @@ async function companyCreateCommand(sock, msg, text) {
     const rest = text.replace(".companycreate", "").trim();
     const tokens = rest.split(/\s+/).filter(Boolean);
 
-    // Need at least a name token AND an industry token.
     if (tokens.length < 2) {
         return await sock.sendMessage(
             msg.key.remoteJid,
@@ -1064,7 +939,15 @@ Use .companyupgrade to grow your empire.`
 
 }
 
-// ---------- .companyupgrade — level up, cost +7%, income +15% each time ----------
+// ---------- .companyupgrade — level up, cost +9%, income +17% each time ----------
+//
+// FIX: two rules the owner intended but that were never actually wired
+// into this function — added here, nowhere else changed:
+//   1. Hard ceiling at MAX_COMPANY_LEVEL (100) — refuses once already there.
+//   2. From EMPLOYEE_GATE_LEVEL (50) onward, requires at least
+//      EMPLOYEE_GATE_MIN_COUNT (3) employees to upgrade further.
+// Both checks run BEFORE collectPendingIncome()/the cost check, so a
+// blocked upgrade never wastes a write settling income first.
 async function companyUpgradeCommand(sock, msg) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -1075,6 +958,30 @@ async function companyUpgradeCommand(sock, msg) {
     const company = users[sender].company;
 
     if (!company) return await replyNoCompany(sock, msg);
+
+    if (company.level >= MAX_COMPANY_LEVEL) {
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            { text: `🏆 *${company.name}* is already at the maximum level (${MAX_COMPANY_LEVEL}) — there's nowhere higher to grow.` },
+            { quoted: msg }
+        );
+    }
+
+    if (company.level >= EMPLOYEE_GATE_LEVEL) {
+
+        const employeeCount = Object.keys(company.employees || {}).length;
+
+        if (employeeCount < EMPLOYEE_GATE_MIN_COUNT) {
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: `⚠️ Companies at level ${EMPLOYEE_GATE_LEVEL}+ need at least ${EMPLOYEE_GATE_MIN_COUNT} employees to keep growing.\n\n👥 Current employees: ${employeeCount}/${EMPLOYEE_GATE_MIN_COUNT}\n\nHire more via .companyoffer before upgrading further.`
+                },
+                { quoted: msg }
+            );
+        }
+
+    }
 
     // Settle any income owed before spending, so nothing is lost to the upgrade
     collectPendingIncome(users, sender);
@@ -1115,12 +1022,6 @@ Next upgrade costs ${nextCost.toLocaleString()} 🌙`
 
 }
 
-// ---------- .companyoffer <position> — open a position from the industry catalog ----------
-// Rejects if: no industry set, position isn't in that industry's catalog,
-// the position is already at its maxSlots capacity, an offer for it is
-// already open AND that offer still has room, or the roster is at the
-// MAX_EMPLOYEES cap. A position can hold multiple employees at once (see
-// lib/industries.js's maxSlots) — this only blocks re-offering once FULL.
 async function companyOfferCommand(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -1222,7 +1123,6 @@ It's now live on .joboffers.`
 }
 
 
-// ---------- .companyoffers — owner view of open offers + filled positions ----------
 async function companyOffersCommand(sock, msg) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -1238,10 +1138,6 @@ async function companyOffersCommand(sock, msg) {
 
     const income = incomeAtLevel(company.level);
 
-    // Every offer gets its own card — position, slots, live pay, and its
-    // own pending applicants underneath (pending is tracked per-offer in
-    // the real data, so applicants are shown per-card rather than merged
-    // into one global list).
     const offerCards = Object.keys(company.offers).map(positionKey => {
 
         const offer = company.offers[positionKey];
@@ -1307,11 +1203,6 @@ ${FOOTER}`,
 
 }
 
-// Shared by .companyapprove and .hire — actually creates the employee
-// record for one applicant. Does NOT touch company.offers[positionKey]
-// (removing the applicant from pending, closing the offer once full) —
-// callers handle that themselves since .companyapprove removes exactly
-// one applicant while .hire may drain several in one call.
 function hireOneApplicant(company, positionKey, userId) {
 
     const rate =
@@ -1350,10 +1241,6 @@ function hireOneApplicant(company, positionKey, userId) {
 
     };
 
-    // ========================================================
-    // PORTFOLIO HISTORY
-    // ========================================================
-
     startEmployment({
         userId,
         companyName: company.name,
@@ -1367,10 +1254,6 @@ function hireOneApplicant(company, positionKey, userId) {
 
 }
 
-// ---------- .companyapprove <position> @user (or reply) — hire ONE specific pending applicant ----------
-// For when multiple people applied to the same offer and the owner wants
-// a particular one, not just whoever's oldest. For "just hire everyone
-// pending, in order," see .hire below.
 async function companyApproveCommand(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -1455,15 +1338,6 @@ async function companyApproveCommand(sock, msg, text) {
 
 }
 
-// ---------- .company disapprove <position> @user (or reply) ----------
-// Reject ONE pending applicant from one of the owner's open offers.
-//
-// Supports:
-//   .company disapprove analyst @user
-//   reply to applicant + .company disapprove analyst
-//
-// This only removes the application. It does NOT create employment
-// history, change wallets, or change the employee roster.
 async function companyDisapproveCommand(sock, msg, text) {
 
     const sender =
@@ -1494,12 +1368,9 @@ async function companyDisapproveCommand(sock, msg, text) {
 
     let target = null;
 
-    // Reply-to-applicant
     if (context?.participant) {
         target = context.participant;
     }
-
-    // Otherwise mention applicant
     else if (context?.mentionedJid?.length) {
         target = context.mentionedJid[0];
     }
@@ -1574,7 +1445,6 @@ They may already have been hired, rejected, or their application may no longer e
 
     }
 
-    // Remove exactly this applicant.
     offer.pending.splice(
         applicantIndex,
         1
@@ -1602,11 +1472,6 @@ ${FOOTER}`,
 
 }
 
-// ---------- .hire <offer #> — hire EVERYONE currently pending on that offer ----------
-// First-come-first-served if applicants outnumber remaining slots — the
-// oldest applications get hired, the rest stay pending (not discarded)
-// in case a slot frees up later. This is the "quick path" — pick a
-// specific applicant instead via .companyapprove.
 async function companyHireCommand(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -1698,21 +1563,6 @@ async function companyHireCommand(sock, msg, text) {
 
 }
 
-// ---------- .employees [num] — owner-only roster / employee detail ----------
-// Bare .employees -> roster (name, position, num, hired date).
-// .employees <num> -> single-employee detail view.
-//
-// Attendance/duty-performance ("present XX/XX times since hired") is
-// spec'd (§10-11) but that whole subsystem hasn't been built yet — it's
-// still an open question (rolling vs. calendar call-in window). Rather
-// than fake numbers, both views say so plainly instead of showing a
-// stat that doesn't exist yet.
-// ---------- .employees [num] — owner-only roster / employee detail ----------
-// Bare .employees -> styled employee roster.
-// .employees <num> -> styled detail card for one employee.
-//
-// The detail view intentionally mirrors .oversee so there is one consistent
-// employee-card design; only the lookup method differs.
 async function companyEmployeesCommand(sock, msg, text) {
 
     const sender =
@@ -1740,11 +1590,6 @@ async function companyEmployeesCommand(sock, msg, text) {
 
     const employeeEntries =
         Object.entries(company.employees);
-
-
-    // ========================================================
-    // .employees <num>
-    // ========================================================
 
     if (arg) {
 
@@ -1854,7 +1699,6 @@ ${FOOTER}`
                 ? "✅ on duty — will be paid"
                 : "❌ hasn't checked in yet";
 
-
         return await sock.sendMessage(
             msg.key.remoteJid,
             {
@@ -1891,11 +1735,6 @@ ${FOOTER}`,
 
     }
 
-
-    // ========================================================
-    // BARE .employees — ROSTER
-    // ========================================================
-
     if (employeeEntries.length === 0) {
 
         return await sock.sendMessage(
@@ -1917,7 +1756,6 @@ ${FOOTER}`
 
     }
 
-
     const income =
         incomeAtLevel(
             company.level
@@ -1928,7 +1766,6 @@ ${FOOTER}`
             ([, a], [, b]) =>
                 a.num - b.num
         );
-
 
     const employeeBlocks =
         sortedEntries.map(
@@ -1967,19 +1804,16 @@ ${FOOTER}`
             }
         );
 
-
     const rosterBlock =
         employeeBlocks.join(
             `\n\n${DIVIDER}\n\n`
         );
-
 
     const mentions =
         sortedEntries.map(
             ([, employee]) =>
                 employee.userId
         );
-
 
     await sock.sendMessage(
         msg.key.remoteJid,
@@ -2007,11 +1841,7 @@ ${FOOTER}`,
     );
 
 }
-// ---------- .oversee <code> — owner-only lookup by employee code ----------
-// Same detail view as .employees <num>, just looked up by the random
-// per-hire code instead of hire-order number — meant for an owner with a
-// big enough roster (40+, per spec) that scrolling for a name is slower
-// than typing a code someone gave them directly.
+
 async function companyOverseeCommand(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -2081,11 +1911,6 @@ ${FOOTER}`,
 
 }
 
-// Ordered "promotion ladder" for an industry — every position in that
-// industry's catalog, sorted by salary rate ascending. Used by .promote
-// to find the next rung up. Array.sort is stable in modern Node, so the
-// handful of same-rate ties (e.g. Retail's Cashier/Stock Clerk both at
-// 0.25%) break by the catalog's own declared order rather than randomly.
 function getPromotionLadder(industryKey) {
     const industry = getIndustry(industryKey);
     if (!industry) return [];
@@ -2094,13 +1919,6 @@ function getPromotionLadder(industryKey) {
         .map(([position]) => position);
 }
 
-// ---------- .promote <num> — move an employee up the industry's rate ladder ----------
-// DESIGN CALL, not spec-mandated: "promotion" = moving to the next
-// higher-rated position in the same industry catalog. An ad-hoc salary
-// bump was considered and rejected — spec §5 is explicit that rates are
-// fixed per catalog position, not owner-set — so moving position was the
-// only mechanism left that doesn't contradict that. Easy to swap for a
-// different model if this isn't what was meant.
 async function companyPromoteCommand(sock, msg, text) {
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -2164,19 +1982,16 @@ async function companyPromoteCommand(sock, msg, text) {
     employee.salaryRate = positionRate(company.industry, nextPosition);
     employee.promotedAt = Date.now();
 
-updatePosition({
-    userId: employee.userId,
-    companyName: company.name,
-    oldPosition,
-    newPosition: nextPosition,
-    tier: tierForLevel(company.level),
-    changedAt: employee.promotedAt,
-    companyType: "player"
-});
+    updatePosition({
+        userId: employee.userId,
+        companyName: company.name,
+        oldPosition,
+        newPosition: nextPosition,
+        tier: tierForLevel(company.level),
+        changedAt: employee.promotedAt,
+        companyType: "player"
+    });
 
-    // The old position is now vacant — close any stray open offer for it,
-    // but do NOT auto-reopen it; owner runs .companyoffer again if they
-    // want to backfill.
     if (company.offers[nextPosition]) delete company.offers[nextPosition];
 
     saveUsers(users);

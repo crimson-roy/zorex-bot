@@ -27,6 +27,12 @@
             "type": "collectible",
             "obtainedFrom": "shop",
             "obtainedAt": 1786973381352
+        },
+        {
+            "id": "art",
+            "type": "asset",
+            "quantity": 50000000000,
+            "obtainedAt": 1787908954189
         }
     ],
     "115251806732415@lid": [
@@ -56,9 +62,18 @@
             "name": "Golden Fish",
             "type": "resource",
             "value": 15000,
-            "quantity": 2,
+            "quantity": 3,
             "obtainedFrom": "fishing",
-            "obtainedAt": 1786992376702
+            "obtainedAt": 1787169550322
+        },
+        {
+            "id": "fish",
+            "name": "Fish",
+            "type": "resource",
+            "value": 5000,
+            "quantity": 26,
+            "obtainedFrom": "fishing",
+            "obtainedAt": 1787657102322
         }
     ],
     "66370632994983@lid": [
@@ -132,13 +147,46 @@
             "obtainedAt": 1786958979699
         },
         {
-            "id": "fish",
-            "name": "Fish",
-            "type": "resource",
-            "value": 5000,
-            "quantity": 3,
-            "obtainedFrom": "fishing",
-            "obtainedAt": 1786958984407
+            "id": "gold",
+            "type": "asset",
+            "quantity": 10000,
+            "obtainedAt": 1787908981755
+        },
+        {
+            "id": "land",
+            "type": "asset",
+            "quantity": 90,
+            "obtainedAt": 1787909793757
+        },
+        {
+            "id": "stark",
+            "type": "asset",
+            "quantity": 10000,
+            "obtainedAt": 1787909810651
+        },
+        {
+            "id": "bonds",
+            "type": "asset",
+            "quantity": 1000,
+            "obtainedAt": 1787909919751
+        },
+        {
+            "id": "oil",
+            "type": "asset",
+            "quantity": 1000,
+            "obtainedAt": 1787909940843
+        },
+        {
+            "id": "tech",
+            "type": "asset",
+            "quantity": 1000,
+            "obtainedAt": 1787909952336
+        },
+        {
+            "id": "art",
+            "type": "asset",
+            "quantity": 1000,
+            "obtainedAt": 1787909969273
         }
     ],
     "137289351082175@lid": [
@@ -171,6 +219,15 @@
             "quantity": 5,
             "obtainedFrom": "fishing",
             "obtainedAt": 1786960275287
+        },
+        {
+            "id": "golden_fish",
+            "name": "Golden Fish",
+            "type": "resource",
+            "value": 15000,
+            "quantity": 1,
+            "obtainedFrom": "fishing",
+            "obtainedAt": 1787215740970
         }
     ],
     "64480545378405@lid": [
@@ -187,15 +244,6 @@
             "type": "collectible",
             "obtainedFrom": "shop",
             "obtainedAt": 1786981638173
-        },
-        {
-            "id": "fish",
-            "name": "Fish",
-            "type": "resource",
-            "value": 5000,
-            "quantity": 1,
-            "obtainedFrom": "fishing",
-            "obtainedAt": 1786998739326
         },
         {
             "id": "lottery_ticket",
@@ -219,6 +267,131 @@
             "type": "collectible",
             "obtainedFrom": "shop",
             "obtainedAt": 1786996792904
+        },
+        {
+            "id": "golden_fish",
+            "name": "Golden Fish",
+            "type": "resource",
+            "value": 15000,
+            "quantity": 1,
+            "obtainedFrom": "fishing",
+            "obtainedAt": 1788020847703
+        }
+    ],
+    "193694451945507@lid": [
+        {
+            "id": "land",
+            "type": "asset",
+            "quantity": 13001341,
+            "obtainedAt": 1787926396437
+        },
+        {
+            "id": "bonds",
+            "type": "asset",
+            "quantity": 11000630,
+            "obtainedAt": 1787926462166
+        },
+        {
+            "id": "gold",
+            "type": "asset",
+            "quantity": 9989529,
+            "obtainedAt": 1787926518588
+        },
+        {
+            "id": "oil",
+            "type": "asset",
+            "quantity": 615070,
+            "obtainedAt": 1787929085601
+        },
+        {
+            "id": "tech",
+            "type": "asset",
+            "quantity": 2100000,
+            "obtainedAt": 1787929148742
+        },
+        {
+            "id": "stark",
+            "type": "asset",
+            "quantity": 90000,
+            "obtainedAt": 1787929184252
+        },
+        {
+            "id": "art",
+            "type": "asset",
+            "quantity": 1000900091,
+            "obtainedAt": 1787929193520
+        }
+    ],
+    "25353745596565@lid": [
+        {
+            "id": "land",
+            "type": "asset",
+            "quantity": 1000000,
+            "obtainedAt": 1787930110188
+        },
+        {
+            "id": "bonds",
+            "type": "asset",
+            "quantity": 10000000,
+            "obtainedAt": 1787930121020
+        },
+        {
+            "id": "gold",
+            "type": "asset",
+            "quantity": 102000001000,
+            "obtainedAt": 1787930152416
+        }
+    ],
+    "9312227324019@lid": [
+        {
+            "id": "land",
+            "type": "asset",
+            "quantity": 1110,
+            "obtainedAt": 1787961116060
+        }
+    ],
+    "71219701387449@lid": [
+        {
+            "id": "land",
+            "type": "asset",
+            "quantity": 119110,
+            "obtainedAt": 1787961746572
+        },
+        {
+            "id": "gold",
+            "type": "asset",
+            "quantity": 111000,
+            "obtainedAt": 1788025389345
+        }
+    ],
+    "127363346124919@lid": [
+        {
+            "id": "fishing_rod",
+            "name": "Fishing Rod",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1787993557187
+        },
+        {
+            "id": "gun",
+            "name": "Gun",
+            "type": "collectible",
+            "obtainedFrom": "shop",
+            "obtainedAt": 1787993598646
+        }
+    ],
+    "172726958485682@lid": [
+        {
+            "id": "art",
+            "type": "asset",
+            "quantity": 11802283330669876,
+            "obtainedAt": 1788022044861
+        },
+        {
+            "id": "gold",
+            "type": "asset",
+            "quantity": 111000,
+            "obtainedAt": 1788025380702
         }
     ]
 }

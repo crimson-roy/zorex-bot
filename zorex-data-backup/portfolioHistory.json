@@ -1,0 +1,130 @@
+{
+    "115251806732415@lid": {
+        "jobs": [
+            {
+                "companyName": "Nova Empire",
+                "position": "storyboard artist",
+                "tier": 3,
+                "companyType": "player",
+                "hiredAt": 1787143413675,
+                "endedAt": null
+            }
+        ]
+    },
+    "64480545378405@lid": {
+        "jobs": [
+            {
+                "companyName": "Nova Empire",
+                "position": "colorist",
+                "tier": 4,
+                "companyType": "player",
+                "hiredAt": 1787186245055,
+                "endedAt": null
+            }
+        ]
+    },
+    "217012433375436@lid": {
+        "jobs": [
+            {
+                "companyName": "Nova Empire",
+                "position": "colorist",
+                "tier": 4,
+                "companyType": "player",
+                "hiredAt": 1787186245056,
+                "endedAt": null
+            }
+        ]
+    },
+    "154945693167845@lid": {
+        "jobs": [
+            {
+                "companyName": "Nova Empire",
+                "position": "colorist",
+                "tier": 4,
+                "companyType": "player",
+                "hiredAt": 1787227010995,
+                "endedAt": null
+            }
+        ]
+    },
+    "162977433018581@lid": {
+        "jobs": [
+            {
+                "companyName": "Nova Empire",
+                "position": "colorist",
+                "tier": 4,
+                "companyType": "player",
+                "hiredAt": 1787227010996,
+                "endedAt": null
+            }
+        ]
+    },
+    "149027278561479@lid": {
+        "jobs": [
+            {
+                "companyName": "Michael",
+                "position": "storyboard artist",
+                "tier": 4,
+                "companyType": "player",
+                "hiredAt": 1787586894996,
+                "endedAt": null
+            },
+            {
+                "companyName": "Shadow",
+                "position": "head tailor",
+                "tier": 5,
+                "companyType": "player",
+                "hiredAt": 1787763473951,
+                "endedAt": null
+            }
+        ]
+    },
+    "226968184295677@lid": {
+        "jobs": [
+            {
+                "companyName": "Michael",
+                "position": "security personnel",
+                "tier": 5,
+                "companyType": "player",
+                "hiredAt": 1787691100049,
+                "endedAt": null
+            }
+        ]
+    },
+    "172726958485682@lid": {
+        "jobs": [
+            {
+                "companyName": "Shadow",
+                "position": "stock clerk",
+                "tier": 5,
+                "companyType": "player",
+                "hiredAt": 1787763612503,
+                "endedAt": null
+            }
+        ]
+    },
+    "193694451945507@lid": {
+        "jobs": [
+            {
+                "companyName": "Shadow",
+                "position": "personal shopper",
+                "tier": 5,
+                "companyType": "player",
+                "hiredAt": 1787764048724,
+                "endedAt": null
+            }
+        ]
+    },
+    "195623479410728@lid": {
+        "jobs": [
+            {
+                "companyName": "chronos",
+                "position": "editor",
+                "tier": 5,
+                "companyType": "player",
+                "hiredAt": 1788008352561,
+                "endedAt": null
+            }
+        ]
+    }
+}

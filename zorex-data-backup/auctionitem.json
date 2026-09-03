@@ -1,0 +1,67 @@
+{
+    "37826794": {
+        "name": "Reze",
+        "type": "card",
+        "image": "./cards/37826794.jpg"
+    },
+    "46036613": {
+        "name": "Kurisu Makise",
+        "type": "card",
+        "video": "./cards/46036613.mp4"
+    },
+    "75795443": {
+        "name": "Makima",
+        "type": "card",
+        "video": "./cards/75795443.mp4"
+    },
+    "e71a1077": {
+        "name": "Gojo Satoru",
+        "type": "card",
+        "video": "./gojo.mp4"
+    },
+    "bb7b0a87": {
+        "name": "Naruto Uzumaki",
+        "type": "card",
+        "image": "./naruto_uzumaki_naruto.jpg"
+    },
+    "47f20284": {
+        "name": "Irina Shidou",
+        "type": "card",
+        "video": "./cards/36785615.mp4"
+    },
+    "500k": {
+        "name": "Bank +500K",
+        "type": "bank",
+        "capacity": 500000
+    },
+    "a871db2b": {
+        "name": "Gojo Satoru",
+        "type": "card",
+        "image": "./cards/59226889.jpg"
+    },
+    "79a1a634": {
+        "name": "Makima",
+        "type": "card",
+        "image": "./cards/23697166.jpg"
+    },
+    "cb0076c2": {
+        "name": "Reze",
+        "type": "card",
+        "image": "./cards/cb0076c2.jpg"
+    },
+    "cd2427c7": {
+        "name": "Naruto Uzumaki",
+        "type": "card",
+        "image": "./cards/cd2427c7.jpg"
+    },
+    "0ff76822": {
+        "name": "Itachi Uchiha",
+        "type": "card",
+        "image": "./cards/0ff76822.jpg"
+    },
+    "bd874995": {
+        "name": "Gojo Satoru",
+        "type": "card",
+        "video": "./cards/bd874995.mp4"
+    }
+}
