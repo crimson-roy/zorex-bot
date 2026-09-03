@@ -1990,17 +1990,18 @@ else if (text.startsWith(".mem")) {
         sock,
         msg,
         text
-);
+    );
 
 } else if (
-    text === ".fixcompany"
+    text === ".fixcompany" ||
+    text.startsWith(".fixcompany ")
 ) {
 
     await companyAdminCommand(
         sock,
         msg,
         text
-);
+    );
 
 
 } else if (text.startsWith(".reseteconomy")) {
