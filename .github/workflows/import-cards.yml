@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       series:
-        description: 'Series names separated by | (example: Overlord | Bleach | KonoSuba)'
+        description: 'Series separated by | (example: Overlord | Bleach | KonoSuba)'
         required: true
         type: string
 
@@ -44,9 +44,15 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Prepare safe series scanner
+      - name: Find and import requested series
+        id: import
         shell: bash
         run: |
+          set -euo pipefail
+
+          cp card.json "$RUNNER_TEMP/card-before.json"
+          : > "$RUNNER_TEMP/allowed-ids.txt"
+
           cat > "$RUNNER_TEMP/find-series.js" <<'NODE'
           const fs = require('fs');
 
@@ -96,16 +102,12 @@ jobs:
 
               if (cards.length < 100) break;
               page += 1;
-
-              if (page > 500) {
-                throw new Error('Safety stop: Mazoku pagination exceeded 500 pages.');
-              }
+              if (page > 500) throw new Error('Safety stop: Mazoku pagination exceeded 500 pages.');
             }
 
             const unique = new Map();
             for (const card of matches) {
-              if (!card?.id) continue;
-              unique.set(String(card.id).toLowerCase(), card);
+              if (card?.id) unique.set(String(card.id).toLowerCase(), card);
             }
 
             if (unique.size === 0) {
@@ -119,7 +121,6 @@ jobs:
 
             const cards = [...unique.values()];
             const names = [...new Set(cards.map(card => String(card.seriesName || '').trim()))];
-
             console.log(`Validated ${cards.length} card(s) for: ${names.join(' / ')}`);
             fs.writeFileSync(outputFile, cards.map(card => card.id).join('\n') + '\n');
           })().catch(err => {
@@ -127,15 +128,6 @@ jobs:
             process.exit(1);
           });
           NODE
-
-      - name: Import requested series safely
-        id: import
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          cp card.json "$RUNNER_TEMP/card-before.json"
-          : > "$RUNNER_TEMP/allowed-ids.txt"
 
           input="${SERIES_INPUT//$'\n'/|}"
           IFS='|' read -ra requested <<< "$input"
@@ -154,11 +146,6 @@ jobs:
             ids_file="$RUNNER_TEMP/series-$processed.txt"
             node "$RUNNER_TEMP/find-series.js" "$series" "$ids_file"
             cat "$ids_file" >> "$RUNNER_TEMP/allowed-ids.txt"
-
-            while IFS= read -r card_id; do
-              [ -z "$card_id" ] && continue
-              node tools/importCard.js "$card_id" --all
-            done < "$ids_file"
           done
 
           if [ "$processed" -eq 0 ]; then
@@ -167,13 +154,23 @@ jobs:
           fi
 
           sort -u "$RUNNER_TEMP/allowed-ids.txt" -o "$RUNNER_TEMP/allowed-ids.txt"
-          echo "processed=$processed" >> "$GITHUB_OUTPUT"
+          total="$(wc -l < "$RUNNER_TEMP/allowed-ids.txt" | tr -d ' ')"
+          echo "Importing $total unique Mazoku card(s)..."
 
-      - name: Verify importer only changed requested cards
+          while IFS= read -r card_id; do
+            [ -z "$card_id" ] && continue
+            node tools/importCard.js "$card_id" --all
+          done < "$RUNNER_TEMP/allowed-ids.txt"
+
+          echo "processed=$processed" >> "$GITHUB_OUTPUT"
+          echo "requested_cards=$total" >> "$GITHUB_OUTPUT"
+
+      - name: Verify import integrity
         shell: bash
         run: |
           node - "$RUNNER_TEMP/card-before.json" "$RUNNER_TEMP/allowed-ids.txt" <<'NODE'
           const fs = require('fs');
+          const path = require('path');
 
           const [beforePath, allowedPath] = process.argv.slice(2);
           const before = JSON.parse(fs.readFileSync(beforePath, 'utf8'));
@@ -203,19 +200,71 @@ jobs:
             process.exit(1);
           }
 
-          console.log('Safety check passed: all card.json changes belong to validated requested cards.');
+          const cardsByMazokuId = new Map();
+          for (const [botId, card] of Object.entries(after)) {
+            if (!card?.mazokuId) continue;
+            const id = String(card.mazokuId).toLowerCase();
+            if (!cardsByMazokuId.has(id)) cardsByMazokuId.set(id, []);
+            cardsByMazokuId.get(id).push([botId, card]);
+          }
+
+          const missing = [];
+          const badMedia = [];
+
+          for (const id of allowed) {
+            const entries = cardsByMazokuId.get(id) || [];
+            if (!entries.length) {
+              missing.push(id);
+              continue;
+            }
+
+            for (const [botId, card] of entries) {
+              const relative = card.video || card.image;
+              if (!relative) {
+                badMedia.push(`${botId}: no image/video path`);
+                continue;
+              }
+
+              const mediaPath = path.resolve(relative);
+              if (!fs.existsSync(mediaPath) || fs.statSync(mediaPath).size === 0) {
+                badMedia.push(`${botId}: missing/empty ${relative}`);
+              }
+            }
+          }
+
+          if (missing.length || badMedia.length) {
+            if (missing.length) {
+              console.error('Requested Mazoku IDs missing from card.json:');
+              for (const id of missing) console.error(`  - ${id}`);
+            }
+            if (badMedia.length) {
+              console.error('Requested cards with invalid media:');
+              for (const item of badMedia) console.error(`  - ${item}`);
+            }
+            process.exit(1);
+          }
+
+          console.log(`Integrity check passed for ${allowed.size} requested Mazoku card(s).`);
           NODE
 
-      - name: Check generated media size
+      - name: Check changed media size
         shell: bash
         run: |
           set -euo pipefail
-          oversized="$(find cards -type f -size +95M -print 2>/dev/null || true)"
-          if [ -n "$oversized" ]; then
-            echo 'Refusing to commit media larger than the 95 MiB safety threshold:' >&2
-            printf '%s\n' "$oversized" >&2
-            exit 1
-          fi
+          {
+            git diff --name-only HEAD -- cards/
+            git ls-files --others --exclude-standard cards/
+          } | sort -u > "$RUNNER_TEMP/changed-media.txt"
+
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            [ -f "$file" ] || continue
+            size="$(stat -c%s "$file")"
+            if [ "$size" -gt 99614720 ]; then
+              echo "Refusing to commit $file: larger than the 95 MiB safety threshold." >&2
+              exit 1
+            fi
+          done < "$RUNNER_TEMP/changed-media.txt"
 
       - name: Write import summary
         shell: bash
@@ -227,8 +276,9 @@ jobs:
           {
             echo '## Zorex card import'
             echo ''
-            echo "Requested: \`$SERIES_INPUT\`"
+            echo "Requested series: \`$SERIES_INPUT\`"
             echo "Series processed: ${{ steps.import.outputs.processed }}"
+            echo "Validated Mazoku cards: ${{ steps.import.outputs.requested_cards }}"
             echo "Cards before: $before"
             echo "Cards after: $after"
             echo "Net new cards: $added"
