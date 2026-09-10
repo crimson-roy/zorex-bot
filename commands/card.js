@@ -244,10 +244,11 @@ function buildSeriesGroups(cards) {
 
 }
 
-// Resolves a user's search term to logical series groups. Alias expansion is
-// applied first, then both the search and catalog names are normalized before
-// substring matching. This keeps abbreviation support while preventing tiny
-// punctuation/case/spacing differences from producing duplicate series.
+// Resolves a user's search term to logical series groups. Exact normalized
+// matches take priority over broader substring matches, so `.ss dragon ball`
+// opens "Dragon Ball" directly even when "Dragon Ball Series" also exists.
+// Alias expansion still happens first, and partial searches still return all
+// matching series when there is no exact match.
 function resolveSeriesMatches(searchTerm, cards) {
 
     const term = searchTerm.trim().toLowerCase();
@@ -255,8 +256,14 @@ function resolveSeriesMatches(searchTerm, cards) {
 
     if (!searchFor) return [];
 
-    return buildSeriesGroups(cards)
-        .filter(group => group.key.includes(searchFor));
+    const groups = buildSeriesGroups(cards);
+    const exactMatches = groups.filter(group => group.key === searchFor);
+
+    if (exactMatches.length > 0) {
+        return exactMatches;
+    }
+
+    return groups.filter(group => group.key.includes(searchFor));
 
 }
 
