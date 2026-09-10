@@ -180,19 +180,83 @@ async function sendCardDisplay(sock, msg, cardId, card, owners, extraText = "") 
 
 }
 
-// Resolves a user's search term to the actual series name(s) it matches
-// in card.json. Checks the alias table first (for abbreviations with no
-// substring relationship to the real name), then falls back to a plain
-// case-insensitive substring match — which covers cases like "dxd"
-// matching "High School DxD" without needing an alias entry at all.
+// Normalize a series name for matching/grouping without changing the value
+// stored in card.json. Case, whitespace and punctuation differences should
+// not split the same series into separate .ss results. Examples:
+// "KonoSuba" / "Konosuba", "Steins; Gate" / "Steins;Gate", and
+// "JoJo's Bizarre Adventure" / "JoJos Bizarre Adventure" all collapse
+// to the same comparison key. Different titles such as "Fate/Zero" and
+// "Fate Series" remain separate.
+function normalizeSeriesName(value) {
+
+    return String(value || "")
+        .normalize("NFKC")
+        .toLowerCase()
+        .replace(/&/g, "and")
+        .replace(/[^\p{L}\p{N}]+/gu, "");
+
+}
+
+// Build one logical group per normalized series name while retaining the
+// most common original spelling for display. This lets .ss merge duplicate
+// labels without rewriting card.json or losing the nicer source title.
+function buildSeriesGroups(cards) {
+
+    const groups = new Map();
+
+    for (const card of Object.values(cards)) {
+
+        const rawSeries = String(card?.series || "").trim();
+        const key = normalizeSeriesName(rawSeries);
+
+        if (!rawSeries || !key) continue;
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                variants: new Map()
+            });
+        }
+
+        const group = groups.get(key);
+        group.variants.set(
+            rawSeries,
+            (group.variants.get(rawSeries) || 0) + 1
+        );
+
+    }
+
+    return [...groups.values()].map(group => {
+
+        const displayName = [...group.variants.entries()]
+            .sort((a, b) => {
+                if (b[1] !== a[1]) return b[1] - a[1];
+                return a[0].localeCompare(b[0]);
+            })[0][0];
+
+        return {
+            key: group.key,
+            displayName,
+            variants: [...group.variants.keys()]
+        };
+
+    });
+
+}
+
+// Resolves a user's search term to logical series groups. Alias expansion is
+// applied first, then both the search and catalog names are normalized before
+// substring matching. This keeps abbreviation support while preventing tiny
+// punctuation/case/spacing differences from producing duplicate series.
 function resolveSeriesMatches(searchTerm, cards) {
 
     const term = searchTerm.trim().toLowerCase();
-    const searchFor = SERIES_ALIASES[term] || term;
+    const searchFor = normalizeSeriesName(SERIES_ALIASES[term] || term);
 
-    const allSeries = [...new Set(Object.values(cards).map(c => c.series))];
+    if (!searchFor) return [];
 
-    return allSeries.filter(series => series.toLowerCase().includes(searchFor));
+    return buildSeriesGroups(cards)
+        .filter(group => group.key.includes(searchFor));
 
 }
 
@@ -223,14 +287,17 @@ async function seriesSearchCommand(sock, msg, text) {
     if (matchingSeries.length > 1) {
 
         return await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Multiple series match "${searchTerm}" — please be more specific:\n\n${matchingSeries.map(s => `• ${s}`).join("\n")}`
+            text: `⚠️ Multiple series match "${searchTerm}" — please be more specific:\n\n${matchingSeries.map(group => `• ${group.displayName}`).join("\n")}`
         }, { quoted: msg });
 
     }
 
-    const seriesName = matchingSeries[0];
+    const seriesGroup = matchingSeries[0];
+    const seriesName = seriesGroup.displayName;
 
-    const seriesCards = Object.entries(cards).filter(([id, card]) => card.series === seriesName);
+    const seriesCards = Object.entries(cards).filter(
+        ([id, card]) => normalizeSeriesName(card.series) === seriesGroup.key
+    );
 
     const byTier = {};
     for (const [id, card] of seriesCards) {
