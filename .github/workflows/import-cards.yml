@@ -1,0 +1,253 @@
+name: Import Cards
+
+on:
+  workflow_dispatch:
+    inputs:
+      series:
+        description: 'Series names separated by | (example: Overlord | Bleach | KonoSuba)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: import-cards-main
+  cancel-in-progress: false
+
+jobs:
+  import-cards:
+    name: Import selected series
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SERIES_INPUT: ${{ inputs.series }}
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Prepare safe series scanner
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/find-series.js" <<'NODE'
+          const fs = require('fs');
+
+          const API = 'https://api.mazoku.cc/cards';
+          const [target, outputFile] = process.argv.slice(2);
+
+          function normalize(value) {
+            return String(value || '')
+              .normalize('NFKC')
+              .toLowerCase()
+              .replace(/&/g, 'and')
+              .replace(/[^\p{L}\p{N}]+/gu, '');
+          }
+
+          async function fetchPage(page) {
+            const url = `${API}?page=${page}&pageSize=100&orderBy=created_at&order=DESC&spicy=false`;
+            console.log(`Scanning Mazoku page ${page}...`);
+            const response = await fetch(url);
+            if (!response.ok) {
+              throw new Error(`Mazoku API failed: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+          }
+
+          (async () => {
+            const wanted = normalize(target);
+            if (!wanted) throw new Error('Series name is empty after normalization.');
+
+            const matches = [];
+            const related = new Set();
+            let page = 1;
+
+            while (true) {
+              const data = await fetchPage(page);
+              const cards = Array.isArray(data.cards) ? data.cards : [];
+
+              for (const card of cards) {
+                const rawSeries = String(card?.seriesName || '').trim();
+                const key = normalize(rawSeries);
+
+                if (key === wanted) {
+                  matches.push(card);
+                } else if (key && (key.includes(wanted) || wanted.includes(key))) {
+                  related.add(rawSeries);
+                }
+              }
+
+              if (cards.length < 100) break;
+              page += 1;
+
+              if (page > 500) {
+                throw new Error('Safety stop: Mazoku pagination exceeded 500 pages.');
+              }
+            }
+
+            const unique = new Map();
+            for (const card of matches) {
+              if (!card?.id) continue;
+              unique.set(String(card.id).toLowerCase(), card);
+            }
+
+            if (unique.size === 0) {
+              console.error(`No exact normalized series match found for "${target}".`);
+              if (related.size) {
+                console.error('Similar series found:');
+                for (const name of [...related].sort()) console.error(`  - ${name}`);
+              }
+              process.exit(2);
+            }
+
+            const cards = [...unique.values()];
+            const names = [...new Set(cards.map(card => String(card.seriesName || '').trim()))];
+
+            console.log(`Validated ${cards.length} card(s) for: ${names.join(' / ')}`);
+            fs.writeFileSync(outputFile, cards.map(card => card.id).join('\n') + '\n');
+          })().catch(err => {
+            console.error(err.stack || err.message);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Import requested series safely
+        id: import
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cp card.json "$RUNNER_TEMP/card-before.json"
+          : > "$RUNNER_TEMP/allowed-ids.txt"
+
+          input="${SERIES_INPUT//$'\n'/|}"
+          IFS='|' read -ra requested <<< "$input"
+
+          processed=0
+          for raw in "${requested[@]}"; do
+            series="$(printf '%s' "$raw" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+            [ -z "$series" ] && continue
+
+            processed=$((processed + 1))
+            echo ""
+            echo "============================================================"
+            echo "Series: $series"
+            echo "============================================================"
+
+            ids_file="$RUNNER_TEMP/series-$processed.txt"
+            node "$RUNNER_TEMP/find-series.js" "$series" "$ids_file"
+            cat "$ids_file" >> "$RUNNER_TEMP/allowed-ids.txt"
+
+            while IFS= read -r card_id; do
+              [ -z "$card_id" ] && continue
+              node tools/importCard.js "$card_id" --all
+            done < "$ids_file"
+          done
+
+          if [ "$processed" -eq 0 ]; then
+            echo 'No non-empty series names were supplied.' >&2
+            exit 1
+          fi
+
+          sort -u "$RUNNER_TEMP/allowed-ids.txt" -o "$RUNNER_TEMP/allowed-ids.txt"
+          echo "processed=$processed" >> "$GITHUB_OUTPUT"
+
+      - name: Verify importer only changed requested cards
+        shell: bash
+        run: |
+          node - "$RUNNER_TEMP/card-before.json" "$RUNNER_TEMP/allowed-ids.txt" <<'NODE'
+          const fs = require('fs');
+
+          const [beforePath, allowedPath] = process.argv.slice(2);
+          const before = JSON.parse(fs.readFileSync(beforePath, 'utf8'));
+          const after = JSON.parse(fs.readFileSync('card.json', 'utf8'));
+          const allowed = new Set(
+            fs.readFileSync(allowedPath, 'utf8')
+              .split(/\r?\n/)
+              .map(v => v.trim().toLowerCase())
+              .filter(Boolean)
+          );
+
+          const unexpected = [];
+          const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
+
+          for (const key of allKeys) {
+            const oldCard = before[key];
+            const newCard = after[key];
+            if (JSON.stringify(oldCard) === JSON.stringify(newCard)) continue;
+
+            const mazokuId = String(newCard?.mazokuId || oldCard?.mazokuId || '').toLowerCase();
+            if (!allowed.has(mazokuId)) unexpected.push(`${key} (${mazokuId || 'no mazokuId'})`);
+          }
+
+          if (unexpected.length) {
+            console.error('Safety check failed: importer changed cards outside the requested series:');
+            for (const item of unexpected) console.error(`  - ${item}`);
+            process.exit(1);
+          }
+
+          console.log('Safety check passed: all card.json changes belong to validated requested cards.');
+          NODE
+
+      - name: Check generated media size
+        shell: bash
+        run: |
+          set -euo pipefail
+          oversized="$(find cards -type f -size +95M -print 2>/dev/null || true)"
+          if [ -n "$oversized" ]; then
+            echo 'Refusing to commit media larger than the 95 MiB safety threshold:' >&2
+            printf '%s\n' "$oversized" >&2
+            exit 1
+          fi
+
+      - name: Write import summary
+        shell: bash
+        run: |
+          before="$(node -e "const x=require(process.argv[1]); console.log(Object.keys(x).length)" "$RUNNER_TEMP/card-before.json")"
+          after="$(node -e "const x=require('./card.json'); console.log(Object.keys(x).length)")"
+          added=$((after - before))
+
+          {
+            echo '## Zorex card import'
+            echo ''
+            echo "Requested: \`$SERIES_INPUT\`"
+            echo "Series processed: ${{ steps.import.outputs.processed }}"
+            echo "Cards before: $before"
+            echo "Cards after: $after"
+            echo "Net new cards: $added"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit imported cards
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          git add card.json cards/
+
+          if git diff --cached --quiet; then
+            echo 'No card changes to commit.'
+            exit 0
+          fi
+
+          git commit -m 'Import cards via GitHub Actions'
+          git push origin HEAD:main
