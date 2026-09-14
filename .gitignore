@@ -1,28 +1,14 @@
-# Dependencies
-node_modules/
+[main 714d6ca6] Clean ignore rules for public releasecat
+ Committer: Ubuntu <zorex@zorex-vps.1b5jqilv0uoutlpyn1v2moz3ga.madx.internal.cloudapp.net>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
 
-# Environment / secrets
-.env
-.env.*
-!.env.example
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
 
-# WhatsApp / Baileys authentication
-auth/
+After doing this, you may fix the identity used for this commit with:
 
-# Runtime/private data
-data/
-activity.json
-activeTrades.json
-users.json
-owners.json
-shop.json
-wcg.json
-games.json
-market.json
-commandState.json
+    git commit --amend --reset-author
 
-# Generated / temporary files
-*-player-script.js
-*.bak
-*.log
-npm-debug.log*
+ 1 file changed, 16 insertions(+), 21 deletions(-)
