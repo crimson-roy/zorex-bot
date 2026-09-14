@@ -29,3 +29,5 @@ data/
 
 # Backups
 *.bak
+
+activeTrades.json
