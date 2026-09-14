@@ -14,3 +14,6 @@ data/
 
 # Env vars / secrets
 .env
+
+# WhatsApp/Baileys session credentials
+auth/
