@@ -21,7 +21,7 @@ const memory =
     require("../lib/chloeMemory");
 
 const { callAI } =
-    require("../lib/aiClient");
+    require("../lib/chloeOpenAI");
 
 const { judgeExchange } =
     require("../lib/relationshipEngine");
