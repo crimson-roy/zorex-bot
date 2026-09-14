@@ -17,3 +17,15 @@ data/
 
 # WhatsApp/Baileys session credentials
 auth/
+
+# Sensitive WhatsApp authentication
+auth/
+.env
+.env.*
+
+# Runtime/private data
+activity.json
+data/
+
+# Backups
+*.bak
