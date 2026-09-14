@@ -1,8 +1,18 @@
 # Dependencies
 node_modules/
 
-# Runtime data written by the bot — these must NOT be committed, or every
-# git push overwrites whatever's live on Railway with your local copy
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# WhatsApp / Baileys authentication
+auth/
+
+# Runtime/private data
+data/
+activity.json
+activeTrades.json
 users.json
 owners.json
 shop.json
@@ -10,24 +20,9 @@ wcg.json
 games.json
 market.json
 commandState.json
-data/
 
-# Env vars / secrets
-.env
-
-# WhatsApp/Baileys session credentials
-auth/
-
-# Sensitive WhatsApp authentication
-auth/
-.env
-.env.*
-
-# Runtime/private data
-activity.json
-data/
-
-# Backups
+# Generated / temporary files
+*-player-script.js
 *.bak
-
-activeTrades.json
+*.log
+npm-debug.log*
