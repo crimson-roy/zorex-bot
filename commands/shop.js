@@ -93,7 +93,7 @@ ${utilitySection}
 📥 .shop buy <item_ID>
 👉 Example: .shop buy 500k
 📥 .shop buy <item_ID> <amount>
-👉 Example: .shop buy lottery_ticket 5
+👉 Example: .shop buy raffle_ticket 5
 ╰──── 🤖 Powered by Zorex AI ────╯`
     );
 
@@ -134,11 +134,11 @@ async function shopCommands(sock, msg, text) {
         }
 
         const isBankItem = item.type === "bank";
-        const isLotteryTicket = itemId === "lottery_ticket";
+        const isRaffleTicket = itemId === "raffle_ticket";
 
-        // Normal tools/collectibles are unique, but lottery tickets are
+        // Normal tools/collectibles are unique, but raffle tickets are
         // consumable and may be bought in bulk.
-        if (!isBankItem && !isLotteryTicket) {
+        if (!isBankItem && !isRaffleTicket) {
 
             const inventory = loadInventory();
 
@@ -191,8 +191,8 @@ async function shopCommands(sock, msg, text) {
 
         } else {
 
-            // Non-bank items go into inventory.json. Lottery tickets may
-            // appear multiple times because each .lottery use consumes one.
+            // Non-bank items go into inventory.json. Raffle tickets may
+            // appear multiple times because each .raffle start consumes one.
             const inventory = loadInventory();
 
             if (!inventory[sender]) inventory[sender] = [];
