@@ -34,6 +34,7 @@ const {
 } = require("./commands/economy");
 
 const { shopCommands } = require("./commands/shop");
+const { lotteryCommand } = require("./commands/lottery");
 const { inviteCommands } = require("./commands/invite");
 const { minesCommands } = require("./commands/mines");
 const { gambleCommands } = require("./commands/gamble");
@@ -1905,6 +1906,10 @@ else if (text.startsWith(".mem")) {
 
     await dailyCommand(sock, msg);
 
+} else if (text === ".lottery") {
+
+    await lotteryCommand(sock, msg);
+
 } else if (text.startsWith(".work")) {
 
     await workCommand(sock, msg, text);
@@ -2307,6 +2312,7 @@ ROY AI SYSTEM
 │ ✦ .coinflip
 │ ✦ .blackjack
 │ ✦ .aviator
+│ ✦ .lottery
 ╰────────────────────╯
 
 ╭─═📥 DOWNLOADER 📥═─╮
