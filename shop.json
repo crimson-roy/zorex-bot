@@ -1,0 +1,109 @@
+{
+    "500k": {
+        "name": "Bank +500K",
+        "type": "bank",
+        "price": 100000,
+        "capacity": 500000
+    },
+
+    "3m": {
+        "name": "Bank +3M",
+        "type": "bank",
+        "price": 600000,
+        "capacity": 3000000
+    },
+
+    "10m": {
+        "name": "Bank +10M",
+        "type": "bank",
+        "price": 2000000,
+        "capacity": 10000000
+    },
+
+    "50m": {
+        "name": "Bank +50M",
+        "type": "bank",
+        "price": 10000000,
+        "capacity": 50000000
+    },
+
+    "100m": {
+        "name": "Bank +100M",
+        "type": "bank",
+        "price": 20000000,
+        "capacity": 100000000
+    },
+
+    "500m": {
+        "name": "Bank +500M",
+        "type": "bank",
+        "price": 100000000,
+        "capacity": 500000000
+    },
+
+    "1b": {
+        "name": "Bank +1B",
+        "type": "bank",
+        "price": 200000000,
+        "capacity": 1000000000
+    },
+
+    "5b": {
+        "name": "Bank +5B",
+        "type": "bank",
+        "price": 1000000000,
+        "capacity": 5000000000
+    },
+
+    "10b": {
+        "name": "Bank +10B",
+        "type": "bank",
+        "price": 2000000000,
+        "capacity": 10000000000
+    },
+
+    "100b": {
+        "name": "Bank +100B",
+        "type": "bank",
+        "price": 20000000000,
+        "capacity": 100000000000
+    },
+
+    "500b": {
+        "name": "Bank +500B",
+        "type": "bank",
+        "price": 100000000000,
+        "capacity": 500000000000
+    },
+
+    "1t": {
+        "name": "Bank +1T",
+        "type": "bank",
+        "price": 200000000000,
+        "capacity": 1000000000000
+    },
+
+    "gun": {
+        "name": "Gun",
+        "type": "collectible",
+        "price": 30000
+    },
+
+    "fishing_rod": {
+        "name": "Fishing Rod",
+        "type": "collectible",
+        "price": 20000
+    },
+
+    "shovel": {
+        "name": "Shovel",
+        "type": "collectible",
+        "price": 20000
+    },
+
+    "lottery_ticket": {
+        "name": "Lottery Ticket",
+        "type": "collectible",
+        "price": 10000
+    }
+}
