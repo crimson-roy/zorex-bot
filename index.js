@@ -2272,31 +2272,49 @@ else if (text.startsWith(".mem")) {
             image: fs.readFileSync("./zorex.jpg"),
             caption: `
 ╔═⭓═══⭓═══⭓═╗
-    ZOREX
-ROY AI SYSTEM
+       ZOREX
+  ROY AI SYSTEM
 ╚═⭓═══⭓═══⭓═╝
 
 𖤓 Prefix: .
 𖤓 Owner: Lord Crimson
 𖤓 Heir to Roy Trading Group
 
-╭─═🤖 AI FEATURES 🤖═─╮
+📚 Full command menu below ↓
+👑 Owner only
+🔱 Main owner only
+`
+        },
+        {
+            quoted: msg
+        }
+    );
+
+    await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text: `📚 *ZOREX COMMAND MENU*
+
+╭─═🤖 AI & CHLOE 🤖═─╮
 │ ✦ .ai
-│ ✦ .ask
-│ ✦ .chat
-│ ✦ .image
+│ ✦ .relation
+│ ✦ .mem
 ╰────────────────────╯
 
 ╭─═🎮 GAMES 🎮═─╮
-│ ✦ .wcg
+│ ✦ .wcg start
+│ ✦ .wcg join
 │ ✦ .trivia
-│ ✦ .ttt
+│ ✦ .ttt @user
 ╰────────────────────╯
 
 ╭─═💰 ECONOMY 💰═─╮
 │ ✦ .register
 │ ✦ .profile
-│ ✦ .balance
+│ ✦ .bal
+│ ✦ .dep
+│ ✦ .wd
+│ ✦ .donate
 │ ✦ .daily
 │ ✦ .work
 │ ✦ .shop
@@ -2304,57 +2322,134 @@ ROY AI SYSTEM
 │ ✦ .rob
 │ ✦ .beg
 │ ✦ .fish
+│ ✦ .sell
+│ ✦ .dig
+│ ✦ .rich
 ╰────────────────────╯
 
-╭─═🏢 ROY EMPIRE 🏢═─╮
-│ ✦ .company
-│ ✦ .market
-│ ✦ .stocks
+╭─═👤 PROFILE 👤═─╮
+│ ✦ .age
+│ ✦ .bio
+│ ✦ .setage
+│ ✦ .setbio
+╰────────────────────╯
+
+╭─═📈 INVESTMENTS 📈═─╮
 │ ✦ .invest
 │ ✦ .portfolio
-│ ✦ .land
 │ ✦ .assets
 ╰────────────────────╯
 
+╭─═🏢 COMPANY 🏢═─╮
+│ ✦ .company
+│ ✦ .companycreate
+│ ✦ .companyupgrade
+│ ✦ .company deposit
+│ ✦ .company distribute
+│ ✦ .company assign
+│ ✦ .company promote
+│ ✦ .companyoffers
+│ ✦ .companyoffer
+│ ✦ .companyapprove
+│ ✦ .company disapprove
+│ ✦ .hire
+│ ✦ .employees
+│ ✦ .oversee
+│ ✦ .fire
+│ ✦ .companyassets
+╰────────────────────╯
+
+╭─═💼 JOBS 💼═─╮
+│ ✦ .joboffers
+│ ✦ .jobapply
+│ ✦ .job
+│ ✦ .jobinfo
+│ ✦ .duty
+╰────────────────────╯
+
+╭─═🎴 CARDS 🎴═─╮
+│ ✦ .ss
+│ ✦ .cs
+│ ✦ .col
+│ ✦ .inv
+│ ✦ .claim
+│ ✦ .give
+│ ✦ .cardlb
+│ ✦ .use
+╰────────────────────╯
+
+╭─═🔨 AUCTION 🔨═─╮
+│ ✦ .auction
+│ ✦ .auctionbid
+│ ✦ .auctioncards
+│ 👑 .importauction
+│ 👑 .auctionstart
+│ 👑 .auctionend
+╰────────────────────╯
+
 ╭─═🎰 CASINO 🎰═─╮
-│ ✦ .roulette
-│ ✦ .slots
-│ ✦ .coinflip
-│ ✦ .blackjack
+│ ✦ .gamble
+│ ✦ .cf
+│ ✦ .dice
 │ ✦ .aviator
+│ ✦ .slots
+│ ✦ .roulette
+│ ✦ .poker
+│ ✦ .bj
+│ ✦ .hit
+│ ✦ .stand
+│ ✦ .double
+│ ✦ .mines
+│ ✦ .shovel
+│ ✦ .cashout
 │ ✦ .raffle
 ╰────────────────────╯
 
 ╭─═📥 DOWNLOADER 📥═─╮
+│ ✦ .play
 │ ✦ .yt
 │ ✦ .vv
 │ ✦ .ttk
 │ ✦ .media
 ╰────────────────────╯
 
-╭─═🛠 TOOLS 🛠═─╮
-│ ✦ .sticker
-│ ✦ .toimg
-│ ✦ .tovid
-│ ✦ .ping
-│ ✦ .test
+╭─═🖼️ MEDIA TOOLS 🖼️═─╮
+│ ✦ .enhance
+│ ✦ .fix
+│ ✦ .fix brightness
+│ ✦ .fix saturation
+│ ✦ .fix denoise
+│ ✦ .graph
+│ ✦ .silhouette
+│ ✦ .upscale
+│ ✦ .fps
+│ ✦ .bitrate
+╰────────────────────╯
+
+╭─═👥 GROUP TOOLS 👥═─╮
+│ ✦ .afk
 │ ✦ .tagall
+│ ✦ .hidetag
+│ ✦ .antilink
+│ ✦ .setwarnings
+│ ✦ .resetwarnings
+│ ✦ .mute
+│ ✦ .unmute
+│ ✦ .promote
+│ ✦ .demote
+│ ✦ .kick
+│ ✦ .open
+│ ✦ .close
+│ ✦ .setwelcome
+│ ✦ .setleave
+│ ✦ .invite
 ╰────────────────────╯
 
-╭─═👤 PROFILE 👤═─╮
-│ ✦ .profile
-│ ✦ .age
-│ ✦ .bio
-│ ✦ .setage
-│ ✦ .setbio
-│ ✦ .rank
-│ ✦ .leaderboard
-╰────────────────────╯
-
-╭─═📦 COLLECTION 📦═─╮
-│ ✦ .col
-│ ✦ .inv
-│ ✦ .cs
+╭─═💍 SOCIAL 💍═─╮
+│ ✦ .marry
+│ ✦ .marryaccept
+│ ✦ .marrydecline
+│ ✦ .divorce
 ╰────────────────────╯
 
 ╭─═📖 SCHOOL 📖═─╮
@@ -2362,19 +2457,45 @@ ROY AI SYSTEM
 │ ✦ .teach
 ╰────────────────────╯
 
-╭─═👑 OWNER 👑═─╮
+╭─═🛠 UTILITIES 🛠═─╮
+│ ✦ .ping
+│ ✦ .test
 │ ✦ .owner
-│ ✦ .restart
-│ ✦ .broadcast
-│ ✦ .commandoff
-│ ✦ .commandon
+│ ✦ .mycds
+│ ✦ .mydls
+│ ✦ .d
+╰────────────────────╯
+
+╭─═👑 OWNER COMMANDS 👑═─╮
+│ 👑 .restart
+│ 👑 .commandoff
+│ 👑 .commandon
+│ 👑 .cardoff
+│ 👑 .cardon
+│ 👑 .setrole
+│ 👑 .addcrescent
+│ 👑 .spawn
+│ 👑 .addcard
+│ 👑 .rcard
+│ 👑 .fixcompany
+╰────────────────────╯
+
+╭─═🔱 MAIN OWNER 🔱═─╮
+│ 🔱 .broadcast
+│ 🔱 .removecrescent
+│ 🔱 .addowner
+│ 🔱 .removeowner
+│ 🔱 .resetcd
+│ 🔱 .resetdl
+│ 🔱 .resetbal
+│ 🔱 .reseteconomy
+│ 🔱 .hb
 ╰────────────────────╯
 
 ⚡ ZOREX AI
-© ROY TRADING GROUP
-`
+© ROY TRADING GROUP`
         },
-               {
+        {
             quoted: msg
         }
     );
