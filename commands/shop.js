@@ -134,12 +134,11 @@ async function shopCommands(sock, msg, text) {
         }
 
         const isBankItem = item.type === "bank";
+        const isLotteryTicket = itemId === "lottery_ticket";
 
-        // ---- Tools/utilities: ownership check FIRST, before quantity or
-        // wallet are even looked at. Owning a second one is never allowed,
-        // so if they already have it, that's the whole answer regardless
-        // of what quantity they asked for or what's in their wallet. ----
-        if (!isBankItem) {
+        // Normal tools/collectibles are unique, but lottery tickets are
+        // consumable and may be bought in bulk.
+        if (!isBankItem && !isLotteryTicket) {
 
             const inventory = loadInventory();
 
@@ -151,8 +150,6 @@ async function shopCommands(sock, msg, text) {
 
             }
 
-            // Not owned yet — a utility/tool purchase is always exactly
-            // one, regardless of any quantity argument that was passed.
             quantity = 1;
 
         }
@@ -194,13 +191,12 @@ async function shopCommands(sock, msg, text) {
 
         } else {
 
-            // Non-bank items are tools/collectibles, not cards — these go into inventory.json now
+            // Non-bank items go into inventory.json. Lottery tickets may
+            // appear multiple times because each .lottery use consumes one.
             const inventory = loadInventory();
 
             if (!inventory[sender]) inventory[sender] = [];
 
-            // quantity is always 1 here (enforced above), but the loop is
-            // left in place to match the original bulk-push shape.
             for (let i = 0; i < quantity; i++) {
 
                 inventory[sender].push({
