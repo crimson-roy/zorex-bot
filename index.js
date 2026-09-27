@@ -155,6 +155,13 @@ const { removeCardCommand } = require("./commands/rcard");
 // re-add a second one.
 const { cardCommands, cardLeaderboardCommand, seriesSearchCommand } = require("./commands/card");
 const { execute: ttkCommand } = require("./commands/ttk");
+const { execute: mediaCommand } = require("./commands/media");
+const { afkCommand, handleAfkMessage } = require("./commands/afk");
+const {
+    setWelcomeCommand,
+    setLeaveCommand,
+    handleGroupParticipantsUpdate
+} = require("./commands/greetings");
 const { execute: hbCommand } = require("./commands/hb");
 const { upscleCommands } = require("./commands/upscle");
 const { graphicsCommands } = require("./commands/graphics");
@@ -287,7 +294,7 @@ function isOwner(userId) {
 
     if (!userId) return false;
 
-    const normalized = normalizeUserId(userId);
+    const normalized = jidNormalizedUser(userId);
 
     if (MAIN_OWNER && normalized === jidNormalizedUser(MAIN_OWNER)) {
         return true;
@@ -295,7 +302,7 @@ function isOwner(userId) {
 
     const owners = loadOwners();
 
-    return owners.includes(normalized);
+    return owners.some(owner => jidNormalizedUser(owner) === normalized);
 
 }
 
@@ -531,6 +538,17 @@ startJobResignationProcessor(sock);
     );
 
 
+    // Welcome / leave messages are driven by Baileys' participant-update
+    // event, separate from normal chat messages.
+    sock.ev.on("group-participants.update", async (update) => {
+        try {
+            await handleGroupParticipantsUpdate(sock, update);
+        } catch (err) {
+            console.error("⚠️ Group greeting error:", err.message);
+        }
+    });
+
+
     // Listen for incoming messages
     sock.ev.on("messages.upsert", async ({ messages, type }) => {
 
@@ -635,6 +653,10 @@ Please behave yourself. 💙`
 
     console.log("Message:", text);
 
+    // AFK is checked for every normal message so returning users are
+    // automatically marked back, and tags/replies to AFK users get a notice.
+    await handleAfkMessage(sock, msg, text);
+
     // Antilink watcher — must run after `text` exists. Deletes the message
     // and handles the warn/kick flow internally when a non-allowlisted
     // link is posted; returns true if it acted, so routing stops here.
@@ -663,7 +685,19 @@ Please behave yourself. 💙`
     }
 
 
-    if (text === ".ping") {
+    if (text === ".afk" || text.startsWith(".afk ")) {
+
+        await afkCommand(sock, msg, text);
+
+    } else if (text === ".setwelcome" || text.startsWith(".setwelcome ")) {
+
+        await setWelcomeCommand(sock, msg, text);
+
+    } else if (text === ".setleave" || text.startsWith(".setleave ")) {
+
+        await setLeaveCommand(sock, msg, text);
+
+    } else if (text === ".ping") {
 
         await sock.sendMessage(
             msg.key.remoteJid,
@@ -2209,6 +2243,11 @@ else if (text.startsWith(".mem")) {
 
     const ttkArgs = text.split(" ").slice(1);
     await ttkCommand(sock, msg, ttkArgs);
+
+} else if (text === ".media" || text.startsWith(".media ")) {
+
+    const mediaArgs = text.split(" ").slice(1);
+    await mediaCommand(sock, msg, mediaArgs);
 
 } else if (text === ".menu") {
 
