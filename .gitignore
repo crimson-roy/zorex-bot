@@ -1,14 +1,39 @@
-[main 714d6ca6] Clean ignore rules for public releasecat
- Committer: Ubuntu <zorex@zorex-vps.1b5jqilv0uoutlpyn1v2moz3ga.madx.internal.cloudapp.net>
-Your name and email address were configured automatically based
-on your username and hostname. Please check that they are accurate.
-You can suppress this message by setting them explicitly:
+# Dependencies
+node_modules/
 
-    git config --global user.name "Your Name"
-    git config --global user.email you@example.com
+# Secrets
+.env
+.env.*
+!.env.example
 
-After doing this, you may fix the identity used for this commit with:
+# Runtime data written by the bot
+users.json
+owners.json
+wcg.json
+games.json
+market.json
+commandState.json
+activity.json
+activeTrades.json
+tradeRequests.json
+inventory.json
+collection.json
+spawnedCards.json
+cardSettings.json
+cardSpawnHistory.json
+cardShopHistory.json
+groupGreetings.json
+afk.json
 
-    git commit --amend --reset-author
+# Baileys/session runtime
+auth/
 
- 1 file changed, 16 insertions(+), 21 deletions(-)
+# Logs / backups
+*.log
+*.bak
+*.bak-*
+npm-debug.log*
+
+# Intentionally tracked source/config:
+# shop.json
+# data/
