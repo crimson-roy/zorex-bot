@@ -34,7 +34,7 @@ const {
 } = require("./commands/economy");
 
 const { shopCommands } = require("./commands/shop");
-const { lotteryCommand } = require("./commands/lottery");
+const { raffleCommand, startRaffleSweeper } = require("./commands/raffle");
 const { inviteCommands } = require("./commands/invite");
 const { minesCommands } = require("./commands/mines");
 const { gambleCommands } = require("./commands/gamble");
@@ -145,6 +145,7 @@ const { execute: playCommand } = require("./commands/play");
 const { execute: ytCommand } = require("./commands/yt");
 const { execute: spawnCommand } = require("./commands/spawn");
 const { execute: claimCommand } = require("./commands/claim");
+const { execute: cardToggleCommand } = require("./commands/cardoff");
 const { giveCommand } = require("./commands/give");
 const { addCardCommand } = require("./commands/addcard");
 const { resetEconomyCommand } = require("./commands/reseteconomy");
@@ -454,6 +455,10 @@ async function startBot() {
                     startTradeSweeper(sock);
 
                     console.log("🔁 Trade timeout sweeper started.");
+
+                    startRaffleSweeper(sock);
+
+                    console.log("🎟️ Raffle expiry sweeper started.");
 
                 } catch (err) {
 
@@ -1839,6 +1844,11 @@ ${board}
 
     await broadcastCommand(sock, msg, text);
 
+} else if (text === ".cardoff" || text === ".cardon") {
+
+    const cardToggleArgs = text === ".cardon" ? ["on"] : [];
+    await cardToggleCommand(sock, msg, cardToggleArgs);
+
 } else if (text === ".cardlb") {
 
     await cardLeaderboardCommand(sock, msg);
@@ -1906,9 +1916,9 @@ else if (text.startsWith(".mem")) {
 
     await dailyCommand(sock, msg);
 
-} else if (text === ".lottery") {
+} else if (text === ".raffle" || text.startsWith(".raffle ")) {
 
-    await lotteryCommand(sock, msg);
+    await raffleCommand(sock, msg, text);
 
 } else if (text.startsWith(".work")) {
 
@@ -2312,7 +2322,7 @@ ROY AI SYSTEM
 │ ✦ .coinflip
 │ ✦ .blackjack
 │ ✦ .aviator
-│ ✦ .lottery
+│ ✦ .raffle
 ╰────────────────────╯
 
 ╭─═📥 DOWNLOADER 📥═─╮
