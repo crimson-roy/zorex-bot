@@ -24,6 +24,7 @@ cardSpawnHistory.json
 cardShopHistory.json
 groupGreetings.json
 afk.json
+raffles.json
 
 # Baileys/session runtime
 auth/
