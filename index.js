@@ -157,7 +157,7 @@ const { removeCardCommand } = require("./commands/rcard");
 // re-add a second one.
 const { cardCommands, cardLeaderboardCommand, seriesSearchCommand } = require("./commands/card");
 const { execute: ttkCommand } = require("./commands/ttk");
-const { execute: mediaCommand } = require("./commands/media");
+const { execute: mediaCommand } = require("./commands/media");\nconst { stickerCommands } = require("./commands/sticker");
 const { afkCommand, handleAfkMessage } = require("./commands/afk");
 const {
     setWelcomeCommand,
@@ -2264,6 +2264,15 @@ else if (text.startsWith(".mem")) {
     const mediaArgs = text.split(" ").slice(1);
     await mediaCommand(sock, msg, mediaArgs);
 
+} else if (
+    text === ".sticker" ||
+    text === ".toimage" ||
+    text === ".toimg" ||
+    text === ".tovid"
+) {
+
+    await stickerCommands(sock, msg, text);
+
 } else if (text === ".menu") {
 
     await sock.sendMessage(
@@ -2423,7 +2432,7 @@ else if (text.startsWith(".mem")) {
 │ ✦ .silhouette
 │ ✦ .upscale
 │ ✦ .fps
-│ ✦ .bitrate
+│ ✦ .bitrate\n│ ✦ .sticker\n│ ✦ .toimage / .toimg\n│ ✦ .tovid
 ╰────────────────────╯
 
 ╭─═👥 GROUP TOOLS 👥═─╮
