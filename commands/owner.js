@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-const { MAIN_OWNER } = require("../config");
+const { MAIN_OWNER, MAIN_OWNER_PHONE } = require("../config");
 const { resetUserCooldown, resetAllCooldowns } = require("./cooldown");
 const { resetUserDailyLimit, resetAllDailyLimits } = require("./dailylimit");
 
@@ -123,19 +123,23 @@ function isOwnerMessage(msg) {
 
 function isMainOwnerMessage(msg) {
 
-    if (!MAIN_OWNER) {
+    const trustedMainOwnerIds =
+        [
+            MAIN_OWNER,
+            MAIN_OWNER_PHONE
+        ]
+            .filter(Boolean)
+            .map(normalizeJid);
+
+    if (!trustedMainOwnerIds.length) {
         return false;
     }
 
-    const main =
-        normalizeJid(
-            MAIN_OWNER
-        );
-
     return senderAliases(msg)
         .some(alias =>
-            normalizeJid(alias) ===
-            main
+            trustedMainOwnerIds.includes(
+                normalizeJid(alias)
+            )
         );
 
 }
