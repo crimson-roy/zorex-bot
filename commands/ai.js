@@ -690,7 +690,7 @@ async function handleAnswer(
                 "The user's current request:",
                 prompt,
                 "",
-                "Use the quoted message as source/context for the current request. Do not claim the quoted statement was independently verified merely because it was quoted."
+                "Treat the quoted message as the claim, statement, or context the user is referring to. Answer the user's current request normally using your own general knowledge, just as you would for any ordinary .ai question. If the user asks whether the quoted claim is true, assess it using your knowledge, explain what appears correct or incorrect, and mention uncertainty where appropriate. Do not assume the quoted claim is true merely because it was quoted. Only treat the quoted text as source-only evidence if the user explicitly asks you to answer strictly from that text."
             ].join("\n");
 
         const answer =
