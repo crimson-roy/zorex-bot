@@ -105,6 +105,7 @@ const {
 const { shopCommands } = require("./commands/shop");
 const { raffleCommand, startRaffleSweeper } = require("./commands/raffle");
 const { inviteCommands } = require("./commands/invite");
+const { socialCommand } = require("./commands/social");
 const { minesCommands } = require("./commands/mines");
 const { gambleCommands } = require("./commands/gamble");
 const { groupCommands } = require("./commands/group");
@@ -1878,12 +1879,34 @@ ${board}
 
     await aiCommand(sock, msg, text);
 
-} else if (
-    text === ".inviteowner" ||
-    /^\d{4}$/.test(text)
-) {
+} else if (text === ".inviteowner") {
+
+    if (!(await isOwnerOrAdmin(sock, msg))) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+                    "❌ Only the owner or group admins can use .inviteowner."
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
 
     await inviteCommands(
+        sock,
+        msg,
+        text
+    );
+
+} else if (
+    /^\.(hug|kiss|slap|pat|poke|cuddle|bite|highfive|kill|dance)(?:\s|$)/i.test(text)
+) {
+
+    await socialCommand(
         sock,
         msg,
         text
@@ -2553,9 +2576,20 @@ else if (text.startsWith(".mem")) {
 │ ✦ .setwelcome
 │ ✦ .setleave
 │ ✦ .invite
+│ ✦ .inviteowner
 ╰────────────────────╯
 
 ╭─═💍 SOCIAL 💍═─╮
+│ ✦ .hug
+│ ✦ .kiss
+│ ✦ .slap
+│ ✦ .pat
+│ ✦ .poke
+│ ✦ .cuddle
+│ ✦ .bite
+│ ✦ .highfive
+│ ✦ .kill
+│ ✦ .dance
 │ ✦ .marry
 │ ✦ .marryaccept
 │ ✦ .marrydecline
