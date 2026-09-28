@@ -7,6 +7,7 @@
  * .graph <color>
  * .graph inverse
  * .graph white
+ * .graph depth
  * .silhouette   (background removal + green-screen compositing — fully wired)
  * ---------------------------------------------------------------------
  * Plain local image manipulation via `sharp` — no AI model, no
@@ -37,6 +38,8 @@
  * .graph <color>        - tints toward a named color or #RRGGBB hex.
  * .graph inverse         - inverts all colors.
  * .graph white           - ASSUMED grayscale/black-and-white — flag if wrong.
+ * .graph depth           - AI monocular depth estimation; returns a grayscale
+ *                          depth map from the replied image.
  *
  * ---------------------------------------------------------------------
  * .silhouette — HOW IT WORKS
@@ -86,6 +89,7 @@ const {
 } = require('../lib/imageHelpers');
 
 const { removeBackground } = require('../providers/removebg');
+const { generateDepthMap } = require('../providers/depth');
 const { startProgress } = require('../lib/progressIndicator');
 const { checkCooldown, setCooldown } = require('./cooldown');
 
@@ -96,6 +100,7 @@ const COOLDOWN_MS = 5000; // short — these are cheap, instant local operations
 // Real-ESRGAN, but the same "protect it from spam" reasoning) — so it
 // gets that same longer cooldown instead of the 5s one above.
 const SILHOUETTE_COOLDOWN_MS = 60000;
+const DEPTH_COOLDOWN_MS = 60000;
 
 const COLOR_MAP = {
     red: { r: 255, g: 0, b: 0 },
@@ -262,7 +267,7 @@ Example:
 }
 
 /**
- * .graph <color> / .graph inverse / .graph white
+ * .graph <color> / .graph inverse / .graph white / .graph depth
  *
  * @param {import('@whiskeysockets/baileys').WASocket} sock
  * @param {import('@whiskeysockets/baileys').proto.IWebMessageInfo} msg
@@ -281,7 +286,8 @@ async function graphSubcommand(sock, msg, args) {
 
 .graph <color>     e.g. .graph red, .graph #ff8800
 .graph inverse
-.graph white`,
+.graph white
+.graph depth`,
         }, { quoted: msg });
     }
 
@@ -291,6 +297,13 @@ async function graphSubcommand(sock, msg, args) {
 
     if (token === 'white') {
         return await runImageEdit(sock, msg, 'graph-white', (img) => img.grayscale());
+    }
+
+    if (token === 'depth') {
+        return await depthGraphCommand(
+            sock,
+            msg
+        );
     }
 
     const color = parseColor(token);
@@ -306,6 +319,155 @@ or a hex code like #ff8800.`,
     }
 
     return await runImageEdit(sock, msg, 'graph-color', (img) => img.tint(color));
+
+}
+
+async function depthGraphCommand(
+    sock,
+    msg
+) {
+
+    const chatId =
+        msg.key.remoteJid;
+
+    const sender =
+        msg.key.participant ||
+        msg.key.remoteJid;
+
+    const remaining =
+        checkCooldown(
+            sender,
+            'graph-depth',
+            DEPTH_COOLDOWN_MS
+        );
+
+    if (remaining) {
+        return await sock.sendMessage(
+            chatId,
+            {
+                text:
+                    `⏳ Depth generation is cooling down. Try again in ${Math.ceil(remaining / 1000)}s.`
+            },
+            {
+                quoted:
+                    msg
+            }
+        );
+    }
+
+    let media;
+
+    try {
+        media =
+            await getQuotedImage(
+                sock,
+                msg
+            );
+    } catch (err) {
+        console.error(
+            '[.graph depth] failed to download quoted image:',
+            err.message
+        );
+
+        media =
+            null;
+    }
+
+    if (!media) {
+        return await sock.sendMessage(
+            chatId,
+            {
+                text:
+                    '⚠️ Reply to an image with *.graph depth*.'
+            },
+            {
+                quoted:
+                    msg
+            }
+        );
+    }
+
+    setCooldown(
+        sender,
+        'graph-depth'
+    );
+
+    const inputPath =
+        saveBufferToTemp(
+            media.buffer,
+            media.mimeType
+        );
+
+    const progress =
+        await startProgress(
+            sock,
+            msg,
+            '🌖 Estimating image depth...'
+        );
+
+    let depthPath;
+
+    try {
+
+        depthPath =
+            await generateDepthMap(
+                inputPath
+            );
+
+        await sock.sendMessage(
+            chatId,
+            {
+                image: {
+                    url:
+                        depthPath
+                },
+                caption:
+                    '🌖 *Depth Map*'
+            },
+            {
+                quoted:
+                    msg
+            }
+        );
+
+        await progress.succeed(
+            '✅ Depth map ready'
+        );
+
+    } catch (err) {
+
+        console.error(
+            '[.graph depth] failed:',
+            err.message
+        );
+
+        await progress.fail(
+            '❌ Depth generation failed'
+        );
+
+        await sock.sendMessage(
+            chatId,
+            {
+                text:
+                    '⚠️ I couldn\'t generate the depth map right now. The depth service may be busy or unavailable.'
+            },
+            {
+                quoted:
+                    msg
+            }
+        );
+
+    } finally {
+
+        cleanupTempFile(
+            inputPath
+        );
+
+        cleanupTempFile(
+            depthPath
+        );
+
+    }
 
 }
 
