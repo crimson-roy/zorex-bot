@@ -82,6 +82,10 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"transfer","amount":250000}
 {"name":"shop_buy","item":"fishing rod","quantity":1}
 {"name":"cshop_buy","slot":6}
+{"name":"set_welcome","message":"Welcome to the group 😹"}
+{"name":"set_leave","message":"Bye bye 😭"}
+{"name":"group_open"}
+{"name":"group_close"}
 {"name":"card_search","query":"card name","tier":"SSR"}
 {"name":"series_search","query":"series name"}
 {"name":"casino","amount":5000,"repeats":10}
@@ -116,6 +120,17 @@ Rules:
   cshop_buy slot 6.
 - Never invent a shop price, card ID, or CShop card name. The executor reads
   the current catalog/rotation and computes the real cost itself.
+- "set welcome to Welcome to the group" or "setwelcome Welcome to the group"
+  => set_welcome with the requested message. Preserve the user's message text.
+- "set leave to Bye everyone" or "setleave Bye everyone" => set_leave with
+  the requested message. Preserve the user's message text.
+- "close the group", "close this group", or "make this group admin only"
+  => group_close.
+- "open the group", "open this group", or "let everyone send messages"
+  => group_open.
+- These group actions apply ONLY to the current WhatsApp group. Never invent
+  or accept a target group ID/name. The executor uses the real current chat
+  and the real command handlers perform owner/admin permission checks.
 - "search Rem SSR" or "find Rem SSR card" => card_search, query "Rem",
   tier "SSR".
 - "show JJK cards" or "search JJK series" => series_search.
@@ -123,8 +138,10 @@ Rules:
 - "casino and slots 5000 10 times each" => TWO commands, casino then slots.
 - If repeats are omitted, use 1.
 - Never create owner/admin commands, arbitrary shell commands, raw command
-  strings, company creation, employee management, moderation actions, direct
-  item/card IDs not supplied by the user, or any command not listed above.
+  strings, company creation, employee management, moderation actions other
+  than the explicitly listed set_welcome, set_leave, group_open and
+  group_close actions, direct item/card IDs not supplied by the user, or any
+  command not listed above.
 - Asking "how does casino work?" is answer, NOT execute_commands.
 - Asking what a command does is answer, NOT execute_commands.
 - If the user requests an unsupported Zorex action, use answer rather than
