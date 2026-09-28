@@ -118,6 +118,55 @@ async function isGroupAdmin(sock, groupId, userId) {
     }
 }
 
+function senderAliases(msg) {
+    const key =
+        msg?.key || {};
+
+    return [
+        ...new Set(
+            [
+                key.participant,
+                key.participantAlt,
+                key.senderPn,
+                key.senderLid
+            ]
+                .filter(Boolean)
+                .map(String)
+        )
+    ];
+}
+
+async function canManageGroup(
+    sock,
+    groupId,
+    msg
+) {
+    const aliases =
+        senderAliases(msg);
+
+    if (
+        aliases.some(alias =>
+            isOwner(alias)
+        )
+    ) {
+        return true;
+    }
+
+    for (const alias of aliases) {
+        if (
+            await isGroupAdmin(
+                sock,
+                groupId,
+                alias
+            )
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 // ---------- .rich — leaderboard of richest users (wallet + bank) ----------
 async function richCommand(sock, msg) {
@@ -194,7 +243,12 @@ async function openGroup(sock, msg) {
         return await sock.sendMessage(groupId, { text: `❌ This command only works in groups.` }, { quoted: msg });
     }
 
-    const allowed = isOwner(sender) || await isGroupAdmin(sock, groupId, sender);
+    const allowed =
+        await canManageGroup(
+            sock,
+            groupId,
+            msg
+        );
 
     if (!allowed) {
         return await sock.sendMessage(groupId, { text: `❌ Only group admins can use this command.` }, { quoted: msg });
@@ -220,7 +274,12 @@ async function closeGroup(sock, msg) {
         return await sock.sendMessage(groupId, { text: `❌ This command only works in groups.` }, { quoted: msg });
     }
 
-    const allowed = isOwner(sender) || await isGroupAdmin(sock, groupId, sender);
+    const allowed =
+        await canManageGroup(
+            sock,
+            groupId,
+            msg
+        );
 
     if (!allowed) {
         return await sock.sendMessage(groupId, { text: `❌ Only group admins can use this command.` }, { quoted: msg });
