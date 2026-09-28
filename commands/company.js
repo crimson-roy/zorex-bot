@@ -2018,6 +2018,7 @@ module.exports = {
     companyOverseeCommand,
     companyPromoteCommand,
     incomeAtLevel,
+    upgradeCostAtLevel,
     formatDuration,
     PAYOUT_INTERVAL_MS,
     wasOnDutyDuring,
