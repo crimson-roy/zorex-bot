@@ -1249,15 +1249,27 @@ async function aiCommand(sock, msg, text) {
         let media;
 
         try {
-            media = await getQuotedMedia(sock, msg);
+            media =
+                await getAiSource(
+                    sock,
+                    msg
+                );
         } catch (err) {
-            console.error("[.ai] failed to download quoted media:", err.message);
+            console.error(
+                "[.ai] failed to read attached/quoted source:",
+                err.message
+            );
+
             media = null;
         }
 
         const mediaDescription =
             media
-                ? `an ${media.type} is attached`
+                ? (
+                    media.type === "text"
+                        ? "the user replied to a text message"
+                        : `an ${media.type} source is attached`
+                )
                 : "nothing is attached";
 
         const routingRaw =
