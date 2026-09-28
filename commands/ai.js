@@ -1433,6 +1433,21 @@ async function aiCommand(sock, msg, text) {
                         auth.registeredUserId
                     )
                 ) {
+                    const hasPrivilegeChange =
+                        commands.some(
+                            command =>
+                                command.name === "add_owner" ||
+                                command.name === "promote_user" ||
+                                command.name === "demote_user"
+                        );
+
+                    const confirmationReason =
+                        hasPrivilegeChange && exposure > 5000000
+                            ? "This request changes user privileges and also exceeds the *5,000,000 🌙* confirmation threshold."
+                            : hasPrivilegeChange
+                                ? "This request changes Zorex/group privileges, so explicit confirmation is required."
+                                : "${confirmationReason}";
+
                     setPending(
                         chatId,
                         senderId,
