@@ -1022,18 +1022,39 @@ async function saveStaticImage(
 
 function runFFmpeg(
     input,
-    output
+    output,
+    decoder = null
 ) {
 
     return new Promise(
         (resolve, reject) => {
 
             console.log(
-                `   🎬 Converting video to MP4...`
+                decoder
+                    ? `   🎬 Converting video to MP4 with ${decoder} decoder...`
+                    : `   🎬 Converting video to MP4...`
             );
 
             const args = [
-                "-y",
+                "-y"
+            ];
+
+            // Some Mazoku animated cards are VP9 WebM files with alpha.
+            // FFmpeg's native VP9 decoder can occasionally fail to determine
+            // their pixel format, while libvpx-vp9 can still decode them.
+            if (decoder) {
+                args.push(
+                    "-c:v",
+                    decoder
+                );
+            }
+
+            args.push(
+                "-probesize",
+                "100M",
+
+                "-analyzeduration",
+                "100M",
 
                 "-i",
                 input,
@@ -1056,7 +1077,7 @@ function runFFmpeg(
                 "-an",
 
                 output
-            ];
+            );
 
             const ffmpeg =
                 spawn(
@@ -1166,11 +1187,35 @@ async function saveAnimatedVideo(
         );
 
         // If Mazoku really returns MP4, FFmpeg still normalizes
-        // it into our WhatsApp-friendly MP4.
-        await runFFmpeg(
-            tempPath,
-            outputPath
-        );
+        // it into our WhatsApp-friendly MP4. Some transparent VP9 WebM
+        // cards fail with FFmpeg's native VP9 decoder, so retry once with
+        // libvpx-vp9 before declaring the media broken.
+        try {
+
+            await runFFmpeg(
+                tempPath,
+                outputPath
+            );
+
+        } catch (nativeErr) {
+
+            console.warn(
+                `   ⚠️ Native VP9 decode failed: ${nativeErr.message.split("\n")[0]}`
+            );
+
+            if (fs.existsSync(outputPath)) {
+                try {
+                    fs.unlinkSync(outputPath);
+                } catch (_) {}
+            }
+
+            await runFFmpeg(
+                tempPath,
+                outputPath,
+                "libvpx-vp9"
+            );
+
+        }
 
         if (!fs.existsSync(outputPath)) {
 
@@ -1377,6 +1422,12 @@ mazokuIndex.set(
             fs.existsSync(videoPath) &&
             fs.statSync(videoPath).size > 0;
 
+        let animatedReady =
+            hasValidVideo;
+
+        let usedStaticFallback =
+            false;
+
         if (hasValidVideo) {
 
             console.log(
@@ -1388,40 +1439,121 @@ mazokuIndex.set(
             // Remove stale image/media before creating the video.
             removeOldMedia(botId);
 
-            const videoUrl =
-                `${MAZOKU_CDN}/${mazokuId}.mp4?width=750`;
+            // Try Mazoku's transformed endpoint first, then the untouched
+            // source. A few cards have a broken/truncated transformed WebM
+            // even though the original source may still be usable.
+            const videoUrls = [
+                `${MAZOKU_CDN}/${mazokuId}.mp4?width=750`,
+                `${MAZOKU_CDN}/${mazokuId}.mp4`
+            ];
 
-            console.log(
-                `   ⬇️ Downloading animated ${name}...`
-            );
+            let lastVideoError = null;
 
-            const media =
-                await fetchMedia(
-                    videoUrl
-                );
+            for (const videoUrl of videoUrls) {
 
-            // IMPORTANT:
-            // We don't care that the URL says .mp4.
-            // Mazoku may return video/webm.
-            if (
-                !media.contentType.startsWith("video/")
-            ) {
+                try {
 
-                throw new Error(
-                    `Expected animated media, but Mazoku returned "${media.contentType || "unknown"}".`
-                );
+                    console.log(
+                        `   ⬇️ Downloading animated ${name}...`
+                    );
+
+                    const media =
+                        await fetchMedia(
+                            videoUrl
+                        );
+
+                    if (
+                        !media.contentType.startsWith("video/")
+                    ) {
+
+                        throw new Error(
+                            `Expected animated media, but Mazoku returned "${media.contentType || "unknown"}".`
+                        );
+
+                    }
+
+                    await saveAnimatedVideo(
+                        media.buffer,
+                        media.contentType,
+                        botId
+                    );
+
+                    animatedReady = true;
+                    break;
+
+                } catch (err) {
+
+                    lastVideoError = err;
+
+                    console.warn(
+                        `   ⚠️ Animated source failed: ${err.message.split("\n")[0]}`
+                    );
+
+                    if (fs.existsSync(videoPath)) {
+                        try {
+                            fs.unlinkSync(videoPath);
+                        } catch (_) {}
+                    }
+
+                }
 
             }
 
-            await saveAnimatedVideo(
-                media.buffer,
-                media.contentType,
-                botId
-            );
+            // Last-resort recovery: Mazoku normally exposes a static WebP
+            // for the same card ID. Keep the SSR/UR tier and value, but store
+            // this one card as an image so a broken animation does not make
+            // the card impossible to import.
+            if (!animatedReady) {
+
+                console.warn(
+                    `   ⚠️ All animated sources failed. Trying static artwork fallback...`
+                );
+
+                removeOldMedia(botId);
+
+                const fallbackUrl =
+                    `${MAZOKU_CDN}/${mazokuId}.webp?width=750`;
+
+                try {
+
+                    const fallbackMedia =
+                        await fetchMedia(
+                            fallbackUrl
+                        );
+
+                    if (
+                        !fallbackMedia.contentType.startsWith("image/")
+                    ) {
+
+                        throw new Error(
+                            `Static fallback returned "${fallbackMedia.contentType || "unknown"}".`
+                        );
+
+                    }
+
+                    await saveStaticImage(
+                        fallbackMedia.buffer,
+                        imagePath
+                    );
+
+                    usedStaticFallback = true;
+
+                    console.log(
+                        `   ✅ Static fallback saved → ${getImageRelativePath(botId)}`
+                    );
+
+                } catch (fallbackErr) {
+
+                    throw new Error(
+                        `Animated media failed (${lastVideoError?.message.split("\n")[0] || "unknown error"}); static fallback also failed (${fallbackErr.message}).`
+                    );
+
+                }
+
+            }
 
         }
 
-        // Make absolutely sure the card points to video.
         cards[botId] = {
 
             name,
@@ -1438,8 +1570,15 @@ mazokuIndex.set(
 
             type: "card",
 
-            video:
-                getVideoRelativePath(botId),
+            ...(usedStaticFallback
+                ? {
+                    image:
+                        getImageRelativePath(botId)
+                }
+                : {
+                    video:
+                        getVideoRelativePath(botId)
+                }),
 
             mazokuId,
 
