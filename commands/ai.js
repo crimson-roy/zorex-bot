@@ -761,6 +761,69 @@ async function handleAnswer(
         return;
     }
 
+    if (media && media.type === "document") {
+
+        await progress.update(
+            "📄 Extracting document text..."
+        );
+
+        const extracted =
+            await readDocument(
+                media.buffer,
+                {
+                    mimeType:
+                        media.mimeType,
+                    fileName:
+                        media.fileName
+                }
+            );
+
+        if (showThinking) {
+            await progress.update(
+                "🧠 Thinking..."
+            );
+        }
+
+        const documentPrompt =
+            media.sourceText
+                ? (
+                    "Quoted message/caption:\n" +
+                    media.sourceText +
+                    "\n\nUser's request:\n" +
+                    prompt
+                )
+                : prompt;
+
+        const answer =
+            await answerFromExtractedDocument(
+                documentPrompt,
+                extracted.text,
+                media.fileName,
+                progress
+            );
+
+        await splitAndSend(
+            sock,
+            chatId,
+            answer,
+            msg
+        );
+
+        appendHistory(
+            profileId,
+            {
+                type: "document",
+                user:
+                    (media.fileName || "document") +
+                    ": " +
+                    prompt,
+                assistant:
+                    answer
+            }
+        );
+
+        return;
+    }
     if (media && media.type === "pdf") {
 
         await progress.update("📄 Reviewing the document...");
