@@ -25,6 +25,7 @@ async function getDownloadMediaMessage() {
 
 const { callAI } = require("../lib/textAIClient");
 const { callVision } = require("../lib/visionClient");
+const { readDocument } = require("../lib/documentReader");
 const { extractDocumentPages } = require("./teach"); // requires the teach.js export change above
 const { startProgress } = require("../lib/progressIndicator");
 const { setPending, getPending, clearPending } = require("../lib/pendingRequests");
