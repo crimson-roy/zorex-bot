@@ -31,6 +31,8 @@ const { setPending, getPending, clearPending } = require("../lib/pendingRequests
 const { buildDocx, buildXlsx, buildPptx, buildPdf } = require("../lib/fileBuilders");
 const { generateImageFromPrompt } = require("./image");
 const { ZOREX_AI_SYSTEM_PROMPT } = require("../lib/zorexPersona");
+const { authorizeAiRequest } = require("../lib/aiAuth");
+const { appendHistory, getHistory } = require("../lib/aiUserStore");
 
 const CHUNK_CHARS = 2500;
 const MESSAGE_CHARS = 3500;
@@ -123,6 +125,141 @@ async function splitAndSend(sock, chatId, text, quoted) {
     }
 }
 
+function shortHistoryText(value, max = 90) {
+    const text =
+        String(value || "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+    if (text.length <= max) {
+        return text;
+    }
+
+    return (
+        text.slice(
+            0,
+            Math.max(
+                1,
+                max - 1
+            )
+        ) +
+        "…"
+    );
+}
+
+function formatHistoryTime(value) {
+    const date =
+        new Date(value);
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return "Unknown time";
+    }
+
+    try {
+        return date.toLocaleString(
+            "en-GB",
+            {
+                timeZone:
+                    "Africa/Lagos",
+                day:
+                    "2-digit",
+                month:
+                    "short",
+                hour:
+                    "2-digit",
+                minute:
+                    "2-digit"
+            }
+        );
+    } catch (_) {
+        return date
+            .toISOString()
+            .slice(0, 16)
+            .replace("T", " ");
+    }
+}
+
+async function showAiHistory(
+    sock,
+    msg,
+    profileId,
+    body
+) {
+    const requested =
+        Number(
+            String(body || "")
+                .trim()
+                .split(/\s+/)[1]
+        );
+
+    const limit =
+        Number.isInteger(requested) &&
+        requested > 0
+            ? Math.min(
+                requested,
+                25
+            )
+            : 10;
+
+    const entries =
+        getHistory(
+            profileId,
+            limit
+        );
+
+    if (!entries.length) {
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+                    "🧠 *Zorex AI History*\n\nYou don't have any saved AI history yet."
+            },
+            {
+                quoted: msg
+            }
+        );
+    }
+
+    const lines =
+        entries
+            .slice()
+            .reverse()
+            .map(
+                (entry, index) => {
+                    const label =
+                        entry.type === "image"
+                            ? "🖼️ Image"
+                            : entry.type === "file"
+                                ? "📄 File"
+                                : entry.type === "vision"
+                                    ? "👁️ Vision"
+                                    : entry.type === "document"
+                                        ? "📚 Document"
+                                        : "💬 Chat";
+
+                    return (
+                        `${index + 1}. *${label}* — ${formatHistoryTime(entry.time)}\n` +
+                        `> ${shortHistoryText(entry.user)}`
+                    );
+                }
+            );
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text:
+                `🧠 *Zorex AI History*\n\n${lines.join("\n\n")}\n\n> Showing your latest ${entries.length} entr${entries.length === 1 ? "y" : "ies"}.`
+        },
+        {
+            quoted: msg
+        }
+    );
+}
+
 /**
  * Pulls the quoted message's media (image or PDF) out of a .ai reply.
  * Returns null if the reply isn't to media, or isn't a reply at all.
@@ -174,7 +311,16 @@ return null;
 
 }
 
-async function handleAnswer(sock, msg, chatId, prompt, media, progress, showThinking) {
+async function handleAnswer(
+    sock,
+    msg,
+    chatId,
+    prompt,
+    media,
+    progress,
+    showThinking,
+    profileId
+) {
 
     if (media && media.type === "image") {
 
@@ -191,6 +337,16 @@ async function handleAnswer(sock, msg, chatId, prompt, media, progress, showThin
             media.mimeType
         );
         await splitAndSend(sock, chatId, answer, msg);
+
+        appendHistory(
+            profileId,
+            {
+                type: "vision",
+                user: prompt,
+                assistant: answer
+            }
+        );
+
         return;
     }
 
@@ -255,6 +411,16 @@ async function handleAnswer(sock, msg, chatId, prompt, media, progress, showThin
             );
 
         await splitAndSend(sock, chatId, merged, msg);
+
+        appendHistory(
+            profileId,
+            {
+                type: "document",
+                user: prompt,
+                assistant: merged
+            }
+        );
+
         return;
 
     }
@@ -274,9 +440,28 @@ async function handleAnswer(sock, msg, chatId, prompt, media, progress, showThin
     );
     await splitAndSend(sock, chatId, answer, msg);
 
+    appendHistory(
+        profileId,
+        {
+            type: "answer",
+            user: prompt,
+            assistant: answer
+        }
+    );
+
 }
 
-async function handleGenerateFile(sock, msg, chatId, senderId, prompt, format, media, progress) {
+async function handleGenerateFile(
+    sock,
+    msg,
+    chatId,
+    senderId,
+    profileId,
+    prompt,
+    format,
+    media,
+    progress
+) {
 
     const label = FORMAT_LABELS[format] || format;
     let sourceContext = "";
@@ -317,7 +502,17 @@ async function handleGenerateFile(sock, msg, chatId, senderId, prompt, format, m
 
     await progress.update("🧠 Thinking...");
 
-    setPending(chatId, senderId, { prompt, format, sourceContext, sourceImages });
+    setPending(
+        chatId,
+        senderId,
+        {
+            profileId,
+            prompt,
+            format,
+            sourceContext,
+            sourceImages
+        }
+    );
 
     await sock.sendMessage(chatId, {
         text: `📄 This looks like a request to generate a *${label}*.\n\nReply *.ai yes* to go ahead, or *.ai no* to cancel.`
@@ -327,7 +522,13 @@ async function handleGenerateFile(sock, msg, chatId, senderId, prompt, format, m
 
 async function handleConfirmedGeneration(sock, msg, chatId, pendingReq) {
 
-    const { prompt, format, sourceContext, sourceImages } = pendingReq;
+    const {
+        profileId,
+        prompt,
+        format,
+        sourceContext,
+        sourceImages
+    } = pendingReq;
     const progress = await startProgress(sock, msg, "🔎 Reviewing your request...");
 
     let filePath;
@@ -361,6 +562,16 @@ async function handleConfirmedGeneration(sock, msg, chatId, pendingReq) {
             mimetype: MIME_TYPES[format]
         }, { quoted: msg });
 
+        appendHistory(
+            profileId,
+            {
+                type: "file",
+                user: prompt,
+                assistant:
+                    `${FORMAT_LABELS[format] || format} generated and sent.`
+            }
+        );
+
         await progress.succeed("✅ File ready");
 
     } catch (err) {
@@ -381,6 +592,29 @@ async function aiCommand(sock, msg, text) {
     const chatId = msg.key.remoteJid;
     const senderId = msg.key.participant || msg.key.remoteJid;
     const body = text.replace(/^\.ai/i, "").trim();
+
+    const auth =
+        await authorizeAiRequest(
+            sock,
+            msg,
+            body
+        );
+
+    if (!auth.allowed) {
+        return;
+    }
+
+    const profileId =
+        auth.profileId;
+
+    if (/^history(?:\s+\d+)?$/i.test(body)) {
+        return await showAiHistory(
+            sock,
+            msg,
+            profileId,
+            body
+        );
+    }
 
     if (/^(yes|y)$/i.test(body)) {
         const pendingReq = getPending(chatId, senderId);
@@ -461,6 +695,16 @@ async function aiCommand(sock, msg, text) {
                 }
             );
 
+            appendHistory(
+                profileId,
+                {
+                    type: "image",
+                    user: body,
+                    assistant:
+                        "Image generation request completed."
+                }
+            );
+
             return;
         }
 
@@ -477,7 +721,8 @@ async function aiCommand(sock, msg, text) {
                 body,
                 media,
                 progress,
-                showThinking
+                showThinking,
+                profileId
             );
 
             await progress.succeed(
@@ -492,6 +737,7 @@ async function aiCommand(sock, msg, text) {
             msg,
             chatId,
             senderId,
+            profileId,
             body,
             routing.format,
             media,
