@@ -7,7 +7,7 @@
 // 2. Generate a real file (docx/xlsx/pptx/pdf) — but ONLY after the user
 //    confirms via ".ai yes" once asked. Nothing is built before that.
 //
-// Routing (answer vs generate_file) is a small, cheap Groq classification
+// Routing (answer vs generate_file) is a small Azure AI classification
 // call, separate from the "real" answer/draft call — a malformed
 // classification response safely defaults to "answer".
 //
@@ -23,7 +23,7 @@ async function getDownloadMediaMessage() {
     return baileys.downloadMediaMessage;
 }
 
-const { callAI } = require("../lib/aiClient");
+const { callAI } = require("../lib/textAIClient");
 const { callVision } = require("../lib/visionClient");
 const { extractDocumentPages } = require("./teach"); // requires the teach.js export change above
 const { startProgress } = require("../lib/progressIndicator");
