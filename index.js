@@ -2385,6 +2385,9 @@ else if (text.startsWith(".mem")) {
 
 } else if (
     text === ".sticker" ||
+    text.startsWith(".sticker ") ||
+    text === ".s" ||
+    text.startsWith(".s ") ||
     text === ".toimage" ||
     text === ".toimg" ||
     text === ".tovid"
@@ -2554,7 +2557,7 @@ else if (text.startsWith(".mem")) {
 │ ✦ .upscale
 │ ✦ .fps
 │ ✦ .bitrate
-│ ✦ .sticker
+│ ✦ .sticker / .s
 │ ✦ .toimage / .toimg
 │ ✦ .tovid
 ╰────────────────────╯
