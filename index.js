@@ -156,6 +156,7 @@ const { removeCardCommand } = require("./commands/rcard");
 // with "Identifier 'cardCommands' has already been declared". Do not
 // re-add a second one.
 const { cardCommands, cardLeaderboardCommand, seriesSearchCommand } = require("./commands/card");
+const { cshopCommands } = require("./commands/cshop");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: mediaCommand } = require("./commands/media");
 const { stickerCommands } = require("./commands/sticker");
@@ -2164,7 +2165,17 @@ else if (text.startsWith(".mem")) {
 
     await removeCardCommand(sock, msg, text);
 
-} else if (text.startsWith(".cs")) {
+} else if (
+    text === ".cshop" ||
+    text.startsWith(".cshop ")
+) {
+
+    await cshopCommands(sock, msg, text);
+
+} else if (
+    text === ".cs" ||
+    text.startsWith(".cs ")
+) {
 
     await cardCommands(sock, msg, text);
 
@@ -2380,6 +2391,7 @@ else if (text.startsWith(".mem")) {
 
 ╭─═🎴 CARDS 🎴═─╮
 │ ✦ .ss
+│ ✦ .cshop
 │ ✦ .cs
 │ ✦ .col
 │ ✦ .inv
