@@ -277,10 +277,9 @@ The card is still available for someone else to claim.`
     removeSpawn(chatJid);
 
     const claimerName =
+        user.name ||
         msg.pushName ||
-        claimerId
-            .split("@")[0]
-            .split(":")[0];
+        "Unregistered User";
 
     const owners =
         findOwners(
