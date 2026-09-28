@@ -33,34 +33,69 @@ const { generateImageFromPrompt } = require("./image");
 const { ZOREX_AI_SYSTEM_PROMPT } = require("../lib/zorexPersona");
 const { authorizeAiRequest } = require("../lib/aiAuth");
 const { appendHistory, getHistory } = require("../lib/aiUserStore");
+const {
+    normalizeCommandPlan,
+    calculateExposure,
+    requiresConfirmation,
+    describePlan,
+    executeAiCommandPlan
+} = require("../lib/aiCommandExecutor");
 
 const CHUNK_CHARS = 2500;
 const MESSAGE_CHARS = 3500;
 
 const ROUTING_SYSTEM_PROMPT = `
-You are a routing classifier for a WhatsApp bot command. Given a user's
-prompt (and a note about what, if anything, they replied to), decide
-whether they want a normal answer, a generated downloadable file, or a
-new AI-generated image.
+You are a routing classifier for Zorex, a WhatsApp bot. Given a user's
+prompt (and a note about attached media), decide whether they want a
+normal AI answer, a generated file/image, or one or more supported Zorex
+actions executed.
 
-Reply with STRICT JSON ONLY, no markdown, exactly one of:
+Reply with STRICT JSON ONLY, no markdown, matching exactly one shape:
+
 {"action":"answer"}
 {"action":"generate_image"}
 {"action":"generate_file","format":"docx"}
 {"action":"generate_file","format":"xlsx"}
 {"action":"generate_file","format":"pptx"}
 {"action":"generate_file","format":"pdf"}
+{"action":"execute_commands","commands":[...]}
 
-Pick generate_image when the user clearly asks you to create, generate,
-draw, render, design, or make a NEW image, picture, artwork, illustration,
-wallpaper, poster, logo, or visual. Do NOT pick generate_image merely
-because an image is attached and the user wants it described or analyzed.
+For execute_commands, commands may ONLY use these exact schemas:
+{"name":"balance"}
+{"name":"profile"}
+{"name":"company"}
+{"name":"card_search","query":"card name","tier":"SSR"}
+{"name":"series_search","query":"series name"}
+{"name":"casino","amount":5000,"repeats":10}
+{"name":"slots","amount":5000,"repeats":10}
 
-Only pick generate_file if the user clearly wants a document produced —
-e.g. "put this in a word doc", "make a spreadsheet of these", "turn this
-into a PDF", "create a slide deck about X". Summarizing, explaining,
-solving, or answering something is "answer", even if a file was the
-source rather than the destination.
+Rules:
+- Use execute_commands only when the user wants Zorex to PERFORM or SHOW
+  one of those supported actions.
+- "show my balance" => balance.
+- "show my profile" => profile.
+- "show my company" => company.
+- "search Rem SSR" or "find Rem SSR card" => card_search, query "Rem",
+  tier "SSR".
+- "show JJK cards" or "search JJK series" => series_search.
+- "casino 5000 10 times" => casino amount 5000 repeats 10.
+- "casino and slots 5000 10 times each" => TWO commands, casino then slots.
+- If repeats are omitted, use 1.
+- Never create owner/admin commands, arbitrary shell commands, raw command
+  strings, money transfers, company mutations, moderation actions, or any
+  command not listed above.
+- Asking "how does casino work?" is answer, NOT execute_commands.
+- Asking what a command does is answer, NOT execute_commands.
+- If the user requests an unsupported Zorex action, use answer rather than
+  inventing a command.
+
+Pick generate_image when the user clearly asks to create, generate, draw,
+render, design, or make a NEW image. Do not pick it merely because an image
+is attached for analysis.
+
+Only pick generate_file if the user clearly wants a downloadable document.
+Summarizing, explaining, solving, or answering is answer unless one of the
+supported Zorex execution actions above is clearly requested.
 `.trim();
 
 const DRAFT_SYSTEM_PROMPT = `
@@ -506,6 +541,7 @@ async function handleGenerateFile(
         chatId,
         senderId,
         {
+            kind: "file",
             profileId,
             prompt,
             format,
@@ -617,17 +653,139 @@ async function aiCommand(sock, msg, text) {
     }
 
     if (/^(yes|y)$/i.test(body)) {
-        const pendingReq = getPending(chatId, senderId);
-        if (!pendingReq) return await sock.sendMessage(chatId, { text: "⚠️ I don't have a pending file request from you to confirm." }, { quoted: msg });
-        clearPending(chatId, senderId);
-        return await handleConfirmedGeneration(sock, msg, chatId, pendingReq);
+        const pendingReq =
+            getPending(
+                chatId,
+                senderId
+            );
+
+        if (!pendingReq) {
+            return await sock.sendMessage(
+                chatId,
+                {
+                    text:
+                        "⚠️ I don't have a pending AI action for you to confirm."
+                },
+                {
+                    quoted: msg
+                }
+            );
+        }
+
+        clearPending(
+            chatId,
+            senderId
+        );
+
+        if (
+            pendingReq.kind ===
+            "commands"
+        ) {
+            const confirmationProgress =
+                await startProgress(
+                    sock,
+                    msg,
+                    "⚙️ Executing approved Zorex actions..."
+                );
+
+            try {
+                const result =
+                    await executeAiCommandPlan(
+                        sock,
+                        msg,
+                        pendingReq.registeredUserId ||
+                            auth.registeredUserId,
+                        pendingReq.commands
+                    );
+
+                appendHistory(
+                    pendingReq.profileId ||
+                        profileId,
+                    {
+                        type:
+                            "command",
+                        user:
+                            pendingReq.prompt ||
+                            body,
+                        assistant:
+                            "Executed approved Zorex actions:\n" +
+                            result.summary
+                    }
+                );
+
+                await confirmationProgress.succeed(
+                    "✅ Approved actions complete"
+                );
+
+                return;
+            } catch (err) {
+                console.error(
+                    "[.ai] confirmed command execution failed:",
+                    err.message
+                );
+
+                await confirmationProgress.fail(
+                    "❌ Action execution failed"
+                );
+
+                return await sock.sendMessage(
+                    chatId,
+                    {
+                        text:
+                            "⚠️ I couldn't complete those approved Zorex actions."
+                    },
+                    {
+                        quoted: msg
+                    }
+                );
+            }
+        }
+
+        return await handleConfirmedGeneration(
+            sock,
+            msg,
+            chatId,
+            pendingReq
+        );
     }
 
     if (/^(no|n|cancel)$/i.test(body)) {
-        const pendingReq = getPending(chatId, senderId);
-        if (!pendingReq) return await sock.sendMessage(chatId, { text: "⚠️ I don't have a pending file request from you to cancel." }, { quoted: msg });
-        clearPending(chatId, senderId);
-        return await sock.sendMessage(chatId, { text: "❌ Cancelled — no file was created." }, { quoted: msg });
+        const pendingReq =
+            getPending(
+                chatId,
+                senderId
+            );
+
+        if (!pendingReq) {
+            return await sock.sendMessage(
+                chatId,
+                {
+                    text:
+                        "⚠️ I don't have a pending AI action for you to cancel."
+                },
+                {
+                    quoted: msg
+                }
+            );
+        }
+
+        clearPending(
+            chatId,
+            senderId
+        );
+
+        return await sock.sendMessage(
+            chatId,
+            {
+                text:
+                    pendingReq.kind === "commands"
+                        ? "❌ Cancelled — no Zorex actions were executed."
+                        : "❌ Cancelled — no file was created."
+            },
+            {
+                quoted: msg
+            }
+        );
     }
 
     if (!body) return await sock.sendMessage(chatId, { text: "Usage: .ai <your question or request>" }, { quoted: msg });
@@ -676,6 +834,101 @@ async function aiCommand(sock, msg, text) {
                 media,
                 routing
             );
+
+        if (
+            routing?.action ===
+            "execute_commands"
+        ) {
+            const commands =
+                normalizeCommandPlan(
+                    routing.commands
+                );
+
+            if (commands.length > 0) {
+                const exposure =
+                    calculateExposure(
+                        commands
+                    );
+
+                if (
+                    requiresConfirmation(
+                        commands
+                    )
+                ) {
+                    setPending(
+                        chatId,
+                        senderId,
+                        {
+                            kind:
+                                "commands",
+                            profileId,
+                            registeredUserId:
+                                auth.registeredUserId,
+                            prompt:
+                                body,
+                            commands
+                        }
+                    );
+
+                    await sock.sendMessage(
+                        chatId,
+                        {
+                            text:
+`⚠️ *Confirm Zorex AI actions*
+
+${describePlan(commands)}
+
+This request exceeds the *5,000,000 🌙* confirmation threshold.
+
+> Reply \`.ai yes\` to execute.
+> Reply \`.ai no\` to cancel.`
+                        },
+                        {
+                            quoted: msg
+                        }
+                    );
+
+                    await progress.succeed(
+                        "✅ Plan ready — awaiting confirmation"
+                    );
+
+                    return;
+                }
+
+                await progress.update(
+                    exposure > 0
+                        ? "🎮 Running Zorex actions..."
+                        : "⚙️ Fetching Zorex data..."
+                );
+
+                const result =
+                    await executeAiCommandPlan(
+                        sock,
+                        msg,
+                        auth.registeredUserId,
+                        commands
+                    );
+
+                appendHistory(
+                    profileId,
+                    {
+                        type:
+                            "command",
+                        user:
+                            body,
+                        assistant:
+                            "Executed Zorex actions:\n" +
+                            result.summary
+                    }
+                );
+
+                await progress.succeed(
+                    "✅ Zorex actions complete"
+                );
+
+                return;
+            }
+        }
 
         if (
             routing?.action === "generate_image"
