@@ -29,6 +29,75 @@ const { trackActivityAndMaybeSpawn } = require("./lib/activityTracker");
 // See lib/dataPath.js.
 const dataPath = require("./lib/dataPath");
 
+
+const SMALL_CAP_COMMAND_MAP = {
+    "ᴀ": "a",
+    "ʙ": "b",
+    "ᴄ": "c",
+    "ᴅ": "d",
+    "ᴇ": "e",
+    "ғ": "f",
+    "ɢ": "g",
+    "ʜ": "h",
+    "ɪ": "i",
+    "ᴊ": "j",
+    "ᴋ": "k",
+    "ʟ": "l",
+    "ᴍ": "m",
+    "ɴ": "n",
+    "ᴏ": "o",
+    "ᴘ": "p",
+    "ʀ": "r",
+    "ꜱ": "s",
+    "ᴛ": "t",
+    "ᴜ": "u",
+    "ᴠ": "v",
+    "ᴡ": "w",
+    "ʏ": "y",
+    "ᴢ": "z"
+};
+
+function normalizeCommandText(input) {
+
+    if (typeof input !== "string") {
+        return input;
+    }
+
+    const trimmed = input.trimStart();
+
+    if (!trimmed) {
+        return input;
+    }
+
+    const spaceIndex = trimmed.search(/\s/);
+
+    const rawCommand =
+        spaceIndex === -1
+            ? trimmed
+            : trimmed.slice(0, spaceIndex);
+
+    const rest =
+        spaceIndex === -1
+            ? ""
+            : trimmed.slice(spaceIndex);
+
+    let command =
+        rawCommand
+            .normalize("NFKC")
+            .toLowerCase();
+
+    command = [...command]
+        .map(char => SMALL_CAP_COMMAND_MAP[char] || char)
+        .join("");
+
+    if (!command.startsWith(".")) {
+        return input;
+    }
+
+    return command + rest;
+}
+
+
 const {
     economyCommands
 } = require("./commands/economy");
@@ -654,13 +723,19 @@ Please behave yourself. 💙`
     const isCrimsonMentioned =
         mentioned.includes("164317513175043@lid");
 
-   const text =
+   const rawText =
         msg.message.conversation ||
         msg.message.extendedTextMessage?.text;
 
-    if (!text) return;
+    if (!rawText) return;
 
-    console.log("Message:", text);
+    const text = normalizeCommandText(rawText);
+
+    console.log("Message:", rawText);
+
+    if (text !== rawText) {
+        console.log("Normalized command:", text);
+    }
 
     // AFK is checked for every normal message so returning users are
     // automatically marked back, and tags/replies to AFK users get a notice.
