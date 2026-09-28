@@ -30,6 +30,7 @@ const { startProgress } = require("../lib/progressIndicator");
 const { setPending, getPending, clearPending } = require("../lib/pendingRequests");
 const { buildDocx, buildXlsx, buildPptx, buildPdf } = require("../lib/fileBuilders");
 const { generateImageFromPrompt } = require("./image");
+const { ZOREX_AI_SYSTEM_PROMPT } = require("../lib/zorexPersona");
 
 const CHUNK_CHARS = 2500;
 const MESSAGE_CHARS = 3500;
@@ -184,7 +185,7 @@ async function handleAnswer(sock, msg, chatId, prompt, media, progress, showThin
         }
 
         const answer = await callVision(
-            "You are a helpful assistant. Answer the user's request about the attached image directly and accurately.",
+            ZOREX_AI_SYSTEM_PROMPT + "\n\nAnswer the user's request about the attached image directly and accurately.",
             prompt || "Describe and analyze this image.",
             media.buffer,
             media.mimeType
@@ -262,7 +263,15 @@ async function handleAnswer(sock, msg, chatId, prompt, media, progress, showThin
         await progress.update("🧠 Thinking...");
     }
 
-    const answer = await callAI("You are a helpful, direct assistant.", [{ role: "user", content: prompt }]);
+    const answer = await callAI(
+        ZOREX_AI_SYSTEM_PROMPT,
+        [
+            {
+                role: "user",
+                content: prompt
+            }
+        ]
+    );
     await splitAndSend(sock, chatId, answer, msg);
 
 }
