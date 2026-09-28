@@ -9,6 +9,7 @@ const dataPath = require("../lib/dataPath");
 // redeploy. Routed through dataPath() to match group.js exactly.
 const MUTED_FILE = dataPath("muted.json");
 const MUTE_ALL_FILE = dataPath("muteall.json");
+const AI_MOD_RULES_FILE = dataPath("aiModerationRules.json");
 
 const ADMIN_CACHE_TTL_MS = 15 * 1000;
 const adminCache = new Map();
@@ -78,6 +79,158 @@ function loadMuteAll() {
 
     }
 
+}
+
+function loadAiModerationRules() {
+
+    if (!fs.existsSync(AI_MOD_RULES_FILE)) {
+
+        fs.writeFileSync(
+            AI_MOD_RULES_FILE,
+            JSON.stringify({}, null, 4)
+        );
+
+    }
+
+    try {
+
+        const parsed =
+            JSON.parse(
+                fs.readFileSync(
+                    AI_MOD_RULES_FILE,
+                    "utf8"
+                )
+            );
+
+        return parsed &&
+            typeof parsed === "object"
+                ? parsed
+                : {};
+
+    } catch (_) {
+
+        return {};
+
+    }
+
+}
+
+function saveAiModerationRules(data) {
+
+    fs.writeFileSync(
+        AI_MOD_RULES_FILE,
+        JSON.stringify(
+            data,
+            null,
+            4
+        )
+    );
+
+}
+
+function armSpamKickRule(
+    groupJid,
+    target,
+    enabledBy,
+    expiresAt,
+    limit = 5,
+    windowMs = 30000
+) {
+
+    const rules =
+        loadAiModerationRules();
+
+    if (!rules[groupJid]) {
+        rules[groupJid] = {};
+    }
+
+    rules[groupJid][target] = {
+        type:
+            "kick_if_spam",
+        enabledBy:
+            enabledBy || null,
+        expiresAt:
+            Number(expiresAt || 0),
+        limit:
+            Math.max(
+                2,
+                Math.min(
+                    Number(limit) || 5,
+                    20
+                )
+            ),
+        windowMs:
+            Math.max(
+                5000,
+                Math.min(
+                    Number(windowMs) || 30000,
+                    300000
+                )
+            ),
+        hits:
+            []
+    };
+
+    saveAiModerationRules(
+        rules
+    );
+
+}
+
+function clearSpamKickRule(
+    groupJid,
+    target
+) {
+
+    const rules =
+        loadAiModerationRules();
+
+    if (!rules[groupJid]) {
+        return;
+    }
+
+    delete rules[groupJid][target];
+
+    if (
+        Object.keys(
+            rules[groupJid]
+        ).length === 0
+    ) {
+        delete rules[groupJid];
+    }
+
+    saveAiModerationRules(
+        rules
+    );
+
+}
+
+function findStoredKey(
+    record,
+    aliases
+) {
+
+    if (
+        !record ||
+        typeof record !== "object"
+    ) {
+        return null;
+    }
+
+    for (const alias of aliases) {
+        if (
+            Object.prototype
+                .hasOwnProperty
+                .call(
+                    record,
+                    alias
+                )
+        ) {
+            return alias;
+        }
+    }
+
+    return null;
 }
 
 function senderAliases(msg) {
@@ -287,8 +440,21 @@ async function moderationWatcher(sock, msg) {
     const muted =
         loadMuted();
 
+    const aliases =
+        senderAliases(
+            msg
+        );
+
+    const mutedKey =
+        findStoredKey(
+            muted[groupJid],
+            aliases
+        );
+
     const user =
-        muted[groupJid]?.[sender];
+        mutedKey
+            ? muted[groupJid]?.[mutedKey]
+            : null;
 
     if (!user) return false;
 
@@ -296,7 +462,12 @@ async function moderationWatcher(sock, msg) {
     // User's mute has expired
     if (Date.now() >= user.expires) {
 
-        delete muted[groupJid][sender];
+        delete muted[groupJid][mutedKey];
+
+        clearSpamKickRule(
+            groupJid,
+            mutedKey
+        );
 
         if (
             Object.keys(
@@ -311,7 +482,7 @@ async function moderationWatcher(sock, msg) {
         saveMuted(muted);
 
         const tag =
-            "@" + sender.split("@")[0];
+            "@" + mutedKey.split("@")[0];
 
         const text =
             user.custom
@@ -334,7 +505,7 @@ You are free to type now. 😌💙`;
             groupJid,
             {
                 text,
-                mentions: [sender]
+                mentions: [mutedKey]
             }
         );
 
@@ -342,6 +513,133 @@ You are free to type now. 😌💙`;
 
     }
 
+
+    // Optional AI moderation escalation:
+    // if an admin asked Zorex to "mute them and kick if they keep
+    // spamming", count attempted messages while the mute is active.
+    const rules =
+        loadAiModerationRules();
+
+    const rule =
+        rules[groupJid]?.[mutedKey];
+
+    if (
+        rule?.type === "kick_if_spam"
+    ) {
+
+        if (
+            rule.expiresAt &&
+            Date.now() >= rule.expiresAt
+        ) {
+
+            clearSpamKickRule(
+                groupJid,
+                mutedKey
+            );
+
+        } else {
+
+            const now =
+                Date.now();
+
+            const windowMs =
+                Number(
+                    rule.windowMs ||
+                    30000
+                );
+
+            const limit =
+                Number(
+                    rule.limit ||
+                    5
+                );
+
+            rule.hits =
+                (
+                    Array.isArray(
+                        rule.hits
+                    )
+                        ? rule.hits
+                        : []
+                )
+                    .filter(
+                        timestamp =>
+                            now -
+                            Number(timestamp) <=
+                            windowMs
+                    );
+
+            rule.hits.push(
+                now
+            );
+
+            rules[groupJid][mutedKey] =
+                rule;
+
+            saveAiModerationRules(
+                rules
+            );
+
+            if (
+                rule.hits.length >=
+                limit
+            ) {
+
+                try {
+
+                    await sock.groupParticipantsUpdate(
+                        groupJid,
+                        [mutedKey],
+                        "remove"
+                    );
+
+                    delete muted[groupJid][mutedKey];
+
+                    if (
+                        Object.keys(
+                            muted[groupJid]
+                        ).length === 0
+                    ) {
+                        delete muted[groupJid];
+                    }
+
+                    saveMuted(
+                        muted
+                    );
+
+                    clearSpamKickRule(
+                        groupJid,
+                        mutedKey
+                    );
+
+                    await sock.sendMessage(
+                        groupJid,
+                        {
+                            text:
+`🚫 @${mutedKey.split("@")[0]} was kicked after continuing to spam while muted.
+
+> Trigger: ${limit} messages within ${Math.round(windowMs / 1000)}s.`,
+                            mentions:
+                                [mutedKey]
+                        }
+                    );
+
+                    return true;
+
+                } catch (err) {
+
+                    console.log(
+                        "Spam escalation kick failed:",
+                        err.message
+                    );
+
+                }
+
+            }
+
+        }
+
+    }
 
     // Delete individually muted user's message.
     return await deleteGroupMessage(
@@ -353,5 +651,7 @@ You are free to type now. 😌💙`;
 }
 
 module.exports = {
-    moderationWatcher
+    moderationWatcher,
+    armSpamKickRule,
+    clearSpamKickRule
 };
