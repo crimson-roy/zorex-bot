@@ -75,6 +75,8 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"work","tier":1}
 {"name":"company_upgrade"}
 {"name":"transfer","amount":250000}
+{"name":"shop_buy","item":"fishing rod","quantity":1}
+{"name":"cshop_buy","slot":6}
 {"name":"card_search","query":"card name","tier":"SSR"}
 {"name":"series_search","query":"series name"}
 {"name":"casino","amount":5000,"repeats":10}
@@ -101,6 +103,14 @@ Rules:
 - "send 250000 to @user" or a transfer request made while replying to a
   recipient => transfer amount 250000. Do NOT invent or output a target JID;
   the executor binds the recipient from the actual WhatsApp mention/reply.
+- "buy shovel" => shop_buy item "shovel" quantity 1.
+- "buy fishing rod" => shop_buy item "fishing rod" quantity 1.
+- "buy 5 raffle tickets" => shop_buy item "raffle ticket" quantity 5.
+- "buy shovel and fishing rod" => TWO shop_buy commands, one for each item.
+- "buy cshop 6", "buy card shop 6", or "buy card-shop slot 6" =>
+  cshop_buy slot 6.
+- Never invent a shop price, card ID, or CShop card name. The executor reads
+  the current catalog/rotation and computes the real cost itself.
 - "search Rem SSR" or "find Rem SSR card" => card_search, query "Rem",
   tier "SSR".
 - "show JJK cards" or "search JJK series" => series_search.
@@ -108,8 +118,8 @@ Rules:
 - "casino and slots 5000 10 times each" => TWO commands, casino then slots.
 - If repeats are omitted, use 1.
 - Never create owner/admin commands, arbitrary shell commands, raw command
-  strings, company creation, employee management, moderation actions, or any
-  command not listed above.
+  strings, company creation, employee management, moderation actions, direct
+  item/card IDs not supplied by the user, or any command not listed above.
 - Asking "how does casino work?" is answer, NOT execute_commands.
 - Asking what a command does is answer, NOT execute_commands.
 - If the user requests an unsupported Zorex action, use answer rather than
