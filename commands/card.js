@@ -1,5 +1,6 @@
 const fs = require("fs");
 const { prepareVideo } = require("../lib/videoHelper");
+const { startProgress } = require("../lib/progressIndicator");
 
 // Abbreviation -> a substring to search for in card.series. Only needed
 // for series whose common short name has no substring relationship with
@@ -287,61 +288,122 @@ async function seriesSearchCommand(sock, msg, text) {
 
     }
 
-    const cards = loadCards();
-    const matchingSeries = resolveSeriesMatches(searchTerm, cards);
+    const progress =
+        await startProgress(
+            sock,
+            msg,
+            `🔎 Searching series for "${searchTerm}"...`
+        );
 
-    if (matchingSeries.length === 0) {
+    try {
 
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ No series found matching "${searchTerm}".`
-        }, { quoted: msg });
+        const cards = loadCards();
+        const matchingSeries = resolveSeriesMatches(searchTerm, cards);
+
+        if (matchingSeries.length === 0) {
+
+            await progress.fail(
+                "❌ No matching series found"
+            );
+
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ No series found matching "${searchTerm}".`
+            }, { quoted: msg });
+
+        }
+
+        if (matchingSeries.length > 1) {
+
+            await progress.succeed(
+                `✅ Found ${matchingSeries.length} matching series`
+            );
+
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: `⚠️ Multiple series match "${searchTerm}" — please be more specific:\n\n${matchingSeries.map(group => `• ${group.displayName}`).join("\n")}`
+            }, { quoted: msg });
+
+        }
+
+        await progress.update(
+            "📚 Preparing series list..."
+        );
+
+        const seriesGroup = matchingSeries[0];
+        const seriesName = seriesGroup.displayName;
+
+        const seriesCards = Object.entries(cards).filter(
+            ([id, card]) => normalizeSeriesName(card.series) === seriesGroup.key
+        );
+
+        const byTier = {};
+
+        for (const [id, card] of seriesCards) {
+            if (!byTier[card.tier]) byTier[card.tier] = [];
+            byTier[card.tier].push({ id, name: card.name });
+        }
+
+        for (const tier of Object.keys(byTier)) {
+            byTier[tier].sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        let out =
+            `📚 *${seriesName}*\n📊 ${seriesCards.length} cards\n▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n`;
+
+        for (const tier of TIER_ORDER) {
+
+            const entries = byTier[tier];
+
+            if (!entries || entries.length === 0) continue;
+
+            const icon = TIER_ICONS[tier] || "⚪";
+            const label = TIER_LABELS[tier] || tier;
+
+            out +=
+                `${icon} *${label}* (${entries.length})\n─────────────────────\n`;
+
+            out +=
+                entries
+                    .map(
+                        (card, index) =>
+                            `${index + 1}.🃏 ${card.name} \`#${card.id}\``
+                    )
+                    .join("\n");
+
+            out += "\n";
+
+        }
+
+        out +=
+            `💡 \`.spawn\` to try getting a card from this series`;
+
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: out
+            },
+            {
+                quoted: msg
+            }
+        );
+
+        await progress.succeed(
+            `✅ ${seriesName} — ${seriesCards.length} cards found`
+        );
+
+    } catch (err) {
+
+        console.error(
+            "[.ss] search failed:",
+            err.message
+        );
+
+        await progress.fail(
+            "❌ Series search failed"
+        );
+
+        throw err;
 
     }
-
-    if (matchingSeries.length > 1) {
-
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Multiple series match "${searchTerm}" — please be more specific:\n\n${matchingSeries.map(group => `• ${group.displayName}`).join("\n")}`
-        }, { quoted: msg });
-
-    }
-
-    const seriesGroup = matchingSeries[0];
-    const seriesName = seriesGroup.displayName;
-
-    const seriesCards = Object.entries(cards).filter(
-        ([id, card]) => normalizeSeriesName(card.series) === seriesGroup.key
-    );
-
-    const byTier = {};
-    for (const [id, card] of seriesCards) {
-        if (!byTier[card.tier]) byTier[card.tier] = [];
-        byTier[card.tier].push({ id, name: card.name });
-    }
-
-    for (const tier of Object.keys(byTier)) {
-        byTier[tier].sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    let out = `📚 *${seriesName}*\n📊 ${seriesCards.length} cards\n▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰\n`;
-
-    for (const tier of TIER_ORDER) {
-
-        const entries = byTier[tier];
-        if (!entries || entries.length === 0) continue;
-
-        const icon = TIER_ICONS[tier] || "⚪";
-        const label = TIER_LABELS[tier] || tier;
-
-        out += `${icon} *${label}* (${entries.length})\n─────────────────────\n`;
-        out += entries.map((c, i) => `${i + 1}.🃏 ${c.name} \`#${c.id}\``).join("\n");
-        out += "\n";
-
-    }
-
-    out += `💡 \`.spawn\` to try getting a card from this series`;
-
-    return await sock.sendMessage(msg.key.remoteJid, { text: out }, { quoted: msg });
 
 }
 
@@ -350,10 +412,10 @@ async function cardCommands(sock, msg, text) {
 
     const args =
         text
-        .replace(".cs", "")
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean);
+            .replace(/^\.cs/i, "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
 
     if (args.length === 0) {
 
@@ -366,88 +428,171 @@ async function cardCommands(sock, msg, text) {
     let rarity = null;
     const lastArg = args[args.length - 1].toUpperCase();
 
-    if (TIER_ORDER.includes(lastArg) && args.length > 1) {
+    if (
+        TIER_ORDER.includes(lastArg) &&
+        args.length > 1
+    ) {
         rarity = lastArg;
         args.pop();
     }
 
-    const searchTerm = args.join(" ").toLowerCase();
+    const searchTerm =
+        args.join(" ").toLowerCase();
 
     if (!searchTerm) {
 
         return await sock.sendMessage(msg.key.remoteJid, {
-            text: `⚠️ Please provide a card name.`
+            text: "⚠️ Please provide a card name."
         }, { quoted: msg });
 
     }
 
-    await sock.sendMessage(msg.key.remoteJid, {
-        text: rarity
-            ? `🔍 Searching for ${searchTerm} [${rarity}]...`
-            : `🔍 Searching for ${searchTerm}...`
-    }, { quoted: msg });
-
-    const cards = loadCards();
-    const collection = loadCollection();
-
-    // Strip a leading "#" so both "59e04c5d" and "#59e04c5d" work
-    const cleanTerm = searchTerm.replace(/^#/, "");
-
-    // Exact card_ID match takes priority over name search
-    const idMatch = Object.keys(cards).find(
-        id => id.toLowerCase() === cleanTerm
-    );
-
-    let matches;
-
-    if (idMatch) {
-
-        matches = [[idMatch, cards[idMatch]]];
-
-    } else {
-
-        matches = Object.entries(cards).filter(
-            ([id, card]) => card.name.toLowerCase().includes(cleanTerm)
+    const progress =
+        await startProgress(
+            sock,
+            msg,
+            rarity
+                ? `🔎 Searching for ${searchTerm} [${rarity}]...`
+                : `🔎 Searching for ${searchTerm}...`
         );
 
-    }
+    try {
 
-    if (rarity) {
-        matches = matches.filter(([id, card]) => card.tier === rarity);
-    }
+        const cards = loadCards();
+        const collection = loadCollection();
 
-    if (matches.length === 0) {
+        // Strip a leading "#" so both "59e04c5d" and "#59e04c5d" work.
+        const cleanTerm =
+            searchTerm.replace(/^#/, "");
 
-        return await sock.sendMessage(msg.key.remoteJid, {
-            text:
+        // Exact card ID takes priority over name search.
+        const idMatch =
+            Object.keys(cards).find(
+                id =>
+                    id.toLowerCase() === cleanTerm
+            );
+
+        let matches;
+
+        if (idMatch) {
+
+            matches = [
+                [idMatch, cards[idMatch]]
+            ];
+
+        } else {
+
+            matches =
+                Object.entries(cards).filter(
+                    ([id, card]) =>
+                        card.name
+                            .toLowerCase()
+                            .includes(cleanTerm)
+                );
+
+        }
+
+        if (rarity) {
+
+            matches =
+                matches.filter(
+                    ([id, card]) =>
+                        card.tier === rarity
+                );
+
+        }
+
+        if (matches.length === 0) {
+
+            await progress.fail(
+                "❌ No matching cards found"
+            );
+
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
 `❌ No cards found for ${searchTerm}${rarity ? ` [${rarity}]` : ""}.
 💡 Check spelling or try a shorter name.`
-        }, { quoted: msg });
+                },
+                {
+                    quoted: msg
+                }
+            );
 
-    }
+        }
 
-    const [topId, topCard] = matches[0];
-    const owners = findOwners(topId, collection);
+        const [topId, topCard] =
+            matches[0];
 
-    let extraText = "";
+        const owners =
+            findOwners(
+                topId,
+                collection
+            );
 
-    if (matches.length > 1) {
+        let extraText = "";
 
-        const others = matches.slice(1, 3);
-        const remaining = matches.length - 1;
+        if (matches.length > 1) {
 
-        const lines = others.map(([id, card]) => {
-            const icon = TIER_ICONS[card.tier] || "⚪";
-            return `  • ${icon} ${card.name} [${card.tier}] — ${card.series} #${id}`;
-        });
+            const others =
+                matches.slice(1, 3);
 
-        extraText =
+            const remaining =
+                matches.length - 1;
+
+            const lines =
+                others.map(
+                    ([id, card]) => {
+
+                        const icon =
+                            TIER_ICONS[card.tier] ||
+                            "⚪";
+
+                        return `  • ${icon} ${card.name} [${card.tier}] — ${card.series} #${id}`;
+
+                    }
+                );
+
+            extraText =
 `\n📌 ${remaining} other match${remaining === 1 ? "" : "es"} — Top ${Math.min(matches.length, 3)}:
 ${lines.join("\n")}`;
 
-    }
+        }
 
-    await sendCardDisplay(sock, msg, topId, topCard, owners, extraText);
+        await progress.update(
+            topCard.video
+                ? "🎞️ Preparing card media..."
+                : "🃏 Preparing card..."
+        );
+
+        await sendCardDisplay(
+            sock,
+            msg,
+            topId,
+            topCard,
+            owners,
+            extraText
+        );
+
+        await progress.succeed(
+            `✅ Found ${topCard.name} [${topCard.tier}]`
+        );
+
+    } catch (err) {
+
+        console.error(
+            "[.cs] search failed:",
+            err.message
+        );
+
+        await progress.fail(
+            "❌ Card search failed"
+        );
+
+        throw err;
+
+    }
 
 }
 
