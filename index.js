@@ -645,7 +645,14 @@ startJobResignationProcessor(sock);
         // Extra safety net: ignore anything timestamped before the bot started
         if (msg.messageTimestamp && msg.messageTimestamp < startTime) return;
 
-        await moderationWatcher(sock, msg);
+        if (
+            await moderationWatcher(
+                sock,
+                msg
+            )
+        ) {
+            return;
+        }
 
         // Chloe gets first look at every live, non-history message — before any
         // prefix-command routing. handleMessage decides internally whether she
