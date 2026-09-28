@@ -89,6 +89,11 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"add_owner"}
 {"name":"promote_user"}
 {"name":"demote_user"}
+{"name":"mute_user","duration":"","kick_if_spam":false,"spam_limit":5,"spam_window_seconds":30}
+{"name":"unmute_user"}
+{"name":"kick_user"}
+{"name":"mute_all"}
+{"name":"unmute_all"}
 {"name":"card_search","query":"card name","tier":"SSR"}
 {"name":"series_search","query":"series name"}
 {"name":"casino","amount":5000,"repeats":10}
@@ -146,6 +151,20 @@ Rules:
   to a user => demote_user. Never output a target JID; the executor binds the
   target from the real WhatsApp mention/reply and the real group handler
   checks current admin/owner permissions.
+- "mute @user" or the same request while replying to a user => mute_user.
+  If a duration is given, preserve it in compact form such as "30mins",
+  "2hr", or "1d". If omitted, use an empty duration.
+- "mute @user and kick him if he keeps spamming" => ONE mute_user action
+  with kick_if_spam true. Unless the user gives a threshold, use
+  spam_limit 5 and spam_window_seconds 30. This means mute immediately,
+  then kick only if they send 5 messages within 30 seconds while muted.
+- "unmute @user" or the same request while replying => unmute_user.
+- "kick @user" or "remove @user from the group" => kick_user.
+- "mute all" => mute_all.
+- "unmute all" => unmute_all.
+- Never invent a mute/unmute/kick target JID. Bind the target only from the
+  real WhatsApp mention/reply. The executor calls the real group handlers,
+  so actual WhatsApp admin permissions still decide whether the action works.
 - "search Rem SSR" or "find Rem SSR card" => card_search, query "Rem",
   tier "SSR".
 - "show JJK cards" or "search JJK series" => series_search.
@@ -155,8 +174,9 @@ Rules:
 - Never create owner/admin commands, arbitrary shell commands, raw command
   strings, company creation, employee management, moderation actions other
   than the explicitly listed set_welcome, set_leave, group_open, group_close,
-  add_owner, promote_user and demote_user actions, direct item/card IDs not
-  supplied by the user, or any command not listed above.
+  add_owner, promote_user, demote_user, mute_user, unmute_user, kick_user,
+  mute_all and unmute_all actions, direct item/card IDs not supplied by the
+  user, or any command not listed above.
 - Asking "how does casino work?" is answer, NOT execute_commands.
 - Asking what a command does is answer, NOT execute_commands.
 - If the user requests an unsupported Zorex action, use answer rather than
@@ -1433,21 +1453,6 @@ async function aiCommand(sock, msg, text) {
                         auth.registeredUserId
                     )
                 ) {
-                    const hasPrivilegeChange =
-                        commands.some(
-                            command =>
-                                command.name === "add_owner" ||
-                                command.name === "promote_user" ||
-                                command.name === "demote_user"
-                        );
-
-                    const confirmationReason =
-                        hasPrivilegeChange && exposure > 5000000
-                            ? "This request changes user privileges and also exceeds the *5,000,000 🌙* confirmation threshold."
-                            : hasPrivilegeChange
-                                ? "This request changes Zorex/group privileges, so explicit confirmation is required."
-                                : "${confirmationReason}";
-
                     setPending(
                         chatId,
                         senderId,
