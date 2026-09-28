@@ -148,7 +148,16 @@ async function handleAfkMessage(sock, msg, text) {
   }
 }
 
+function isAfkUser(jid) {
+  const key = normalizeJid(jid);
+  if (!key) return false;
+
+  const afk = loadAfk();
+  return Boolean(afk[key]);
+}
+
 module.exports = {
   afkCommand,
   handleAfkMessage,
+  isAfkUser,
 };
