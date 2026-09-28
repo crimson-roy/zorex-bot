@@ -949,7 +949,32 @@ async function handleGenerateFile(
     let sourceContext = "";
     const sourceImages = [];
 
-    if (media && media.type === "image") {
+    if (media && media.type === "text") {
+
+        sourceContext =
+            media.text;
+
+    } else if (media && media.type === "document") {
+
+        await progress.update(
+            "📄 Reviewing the attached document..."
+        );
+
+        const extracted =
+            await readDocument(
+                media.buffer,
+                {
+                    mimeType:
+                        media.mimeType,
+                    fileName:
+                        media.fileName
+                }
+            );
+
+        sourceContext =
+            extracted.text;
+
+    } else     if (media && media.type === "image") {
 
         await progress.update("🖼️ Reviewing the attached image...");
 
