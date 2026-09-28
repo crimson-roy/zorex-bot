@@ -31,6 +31,7 @@ const { startProgress } = require("../lib/progressIndicator");
 const { setPending, getPending, clearPending } = require("../lib/pendingRequests");
 const { buildDocx, buildXlsx, buildPptx, buildPdf } = require("../lib/fileBuilders");
 const { generateImageFromPrompt } = require("./image");
+const { generateVideoFromPrompt } = require("./video");
 const { ZOREX_AI_SYSTEM_PROMPT } = require("../lib/zorexPersona");
 const { authorizeAiRequest } = require("../lib/aiAuth");
 const {
@@ -53,13 +54,14 @@ const MESSAGE_CHARS = 3500;
 const ROUTING_SYSTEM_PROMPT = `
 You are a routing classifier for Zorex, a WhatsApp bot. Given a user's
 prompt (and a note about attached media), decide whether they want a
-normal AI answer, a generated file/image, or one or more supported Zorex
+normal AI answer, a generated file/image/video, or one or more supported Zorex
 actions executed.
 
 Reply with STRICT JSON ONLY, no markdown, matching exactly one shape:
 
 {"action":"answer"}
 {"action":"generate_image"}
+{"action":"generate_video"}
 {"action":"generate_file","format":"docx"}
 {"action":"generate_file","format":"xlsx"}
 {"action":"generate_file","format":"pptx"}
@@ -185,6 +187,12 @@ Rules:
 Pick generate_image when the user clearly asks to create, generate, draw,
 render, design, or make a NEW image. Do not pick it merely because an image
 is attached for analysis.
+
+Pick generate_video when the user clearly asks to create, generate, animate,
+or make a VIDEO. If an image is attached/replied and the user asks to animate
+it or turn it into a video, use generate_video. Do not pick generate_video
+for ordinary video analysis or when the user is only asking how video
+generation works.
 
 Only pick generate_file if the user clearly wants a downloadable document.
 Summarizing, explaining, solving, or answering is answer unless one of the
@@ -1556,6 +1564,37 @@ This request exceeds the *5,000,000 🌙* confirmation threshold.
                     user: body,
                     assistant:
                         "Image generation request completed."
+                }
+            );
+
+            return;
+        }
+
+        if (
+            routing?.action === "generate_video"
+        ) {
+
+            await progress.update(
+                "🎬 Preparing video generation..."
+            );
+
+            await generateVideoFromPrompt(
+                sock,
+                msg,
+                body,
+                {
+                    progress,
+                    source: "ai"
+                }
+            );
+
+            appendHistory(
+                profileId,
+                {
+                    type: "video",
+                    user: body,
+                    assistant:
+                        "Video generation request completed."
                 }
             );
 
