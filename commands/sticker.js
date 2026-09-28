@@ -121,12 +121,203 @@ function extensionForMime(mimeType, fallback) {
     return fallback;
 }
 
-async function imageToSticker(buffer) {
-    return sharp(buffer, { animated: true })
-        .resize(512, 512, {
-            fit: 'contain',
-            background: { r: 0, g: 0, b: 0, alpha: 0 }
-        })
+function escapeXml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
+function wrapText(value, maxChars = 18, maxLines = 3) {
+    const words = String(value || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    if (!words.length) return [];
+
+    const lines = [];
+    let current = '';
+
+    for (const word of words) {
+        const candidate =
+            current
+                ? `${current} ${word}`
+                : word;
+
+        if (
+            candidate.length <= maxChars ||
+            !current
+        ) {
+            current = candidate;
+            continue;
+        }
+
+        lines.push(current);
+        current = word;
+
+        if (lines.length >= maxLines - 1) {
+            break;
+        }
+    }
+
+    if (
+        current &&
+        lines.length < maxLines
+    ) {
+        lines.push(current);
+    }
+
+    return lines;
+}
+
+function parseStickerText(text) {
+    const body =
+        String(text || '')
+            .replace(/^\.(?:sticker|s)\b/i, '')
+            .trim();
+
+    if (!body) {
+        return {
+            mainText: '',
+            captionText: ''
+        };
+    }
+
+    const captionMatch =
+        body.match(/\(([^()]*)\)\s*$/);
+
+    if (!captionMatch) {
+        return {
+            mainText: body,
+            captionText: ''
+        };
+    }
+
+    return {
+        mainText:
+            body
+                .slice(
+                    0,
+                    captionMatch.index
+                )
+                .trim(),
+        captionText:
+            captionMatch[1]
+                .trim()
+    };
+}
+
+async function createStickerTextOverlay(
+    mainText,
+    captionText
+) {
+    if (!mainText && !captionText) {
+        return null;
+    }
+
+    const mainLines =
+        wrapText(
+            mainText,
+            18,
+            3
+        );
+
+    const captionLines =
+        wrapText(
+            captionText,
+            28,
+            2
+        );
+
+    const mainFontSize =
+        mainLines.length > 1
+            ? 48
+            : 56;
+
+    const mainStartY = 54;
+    const mainGap =
+        Math.round(
+            mainFontSize * 1.05
+        );
+
+    const captionFontSize = 28;
+    const captionGap = 32;
+    const captionStartY =
+        476 -
+        (
+            Math.max(
+                captionLines.length - 1,
+                0
+            ) *
+            captionGap
+        );
+
+    const mainSvg =
+        mainLines
+            .map(
+                (line, index) =>
+                    `<text x="256" y="${mainStartY + (index * mainGap)}" text-anchor="middle" font-family="sans-serif" font-size="${mainFontSize}" font-weight="800" fill="white" stroke="black" stroke-width="7" paint-order="stroke fill" stroke-linejoin="round">${escapeXml(line)}</text>`
+            )
+            .join('');
+
+    const captionSvg =
+        captionLines
+            .map(
+                (line, index) =>
+                    `<text x="256" y="${captionStartY + (index * captionGap)}" text-anchor="middle" font-family="sans-serif" font-size="${captionFontSize}" font-weight="700" fill="white" stroke="black" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round">${escapeXml(line)}</text>`
+            )
+            .join('');
+
+    const svg =
+        `<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">${mainSvg}${captionSvg}</svg>`;
+
+    return sharp(
+        Buffer.from(svg)
+    )
+        .png()
+        .toBuffer();
+}
+
+async function imageToSticker(
+    buffer,
+    mainText = '',
+    captionText = ''
+) {
+    const overlay =
+        await createStickerTextOverlay(
+            mainText,
+            captionText
+        );
+
+    let pipeline =
+        sharp(
+            buffer,
+            { animated: false }
+        )
+            .resize(
+                512,
+                512,
+                {
+                    fit: 'cover',
+                    position: 'centre'
+                }
+            );
+
+    if (overlay) {
+        pipeline =
+            pipeline.composite([
+                {
+                    input: overlay,
+                    top: 0,
+                    left: 0
+                }
+            ]);
+    }
+
+    return pipeline
         .webp({
             quality: 88,
             effort: 4
@@ -134,7 +325,11 @@ async function imageToSticker(buffer) {
         .toBuffer();
 }
 
-async function videoToSticker(media) {
+async function videoToSticker(
+    media,
+    mainText = '',
+    captionText = ''
+) {
     const input =
         tempPath(
             extensionForMime(media.mimeType, '.mp4'),
@@ -144,15 +339,44 @@ async function videoToSticker(media) {
     const output =
         tempPath('.webp', 'sticker-out');
 
+    const overlayPath =
+        tempPath('.png', 'sticker-overlay');
+
     fs.writeFileSync(input, media.buffer);
 
     try {
-        await runFFmpeg([
+        const overlay =
+            await createStickerTextOverlay(
+                mainText,
+                captionText
+            );
+
+        if (overlay) {
+            fs.writeFileSync(
+                overlayPath,
+                overlay
+            );
+        }
+
+        const args = [
             '-y',
-            '-i', input,
+            '-i', input
+        ];
+
+        if (overlay) {
+            args.push(
+                '-i',
+                overlayPath
+            );
+        }
+
+        args.push(
             '-t', '10',
-            '-vf',
-            'fps=15,scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x00000000',
+            '-filter_complex',
+            overlay
+                ? '[0:v]fps=15,scale=512:512:force_original_aspect_ratio=increase,crop=512:512[base];[base][1:v]overlay=0:0:shortest=1[out]'
+                : '[0:v]fps=15,scale=512:512:force_original_aspect_ratio=increase,crop=512:512[out]',
+            '-map', '[out]',
             '-an',
             '-vcodec', 'libwebp',
             '-lossless', '0',
@@ -162,12 +386,18 @@ async function videoToSticker(media) {
             '-vsync', '0',
             '-loglevel', 'error',
             output
-        ]);
+        );
+
+        await runFFmpeg(args);
 
         return fs.readFileSync(output);
 
     } finally {
-        cleanup(input, output);
+        cleanup(
+            input,
+            output,
+            overlayPath
+        );
     }
 }
 
@@ -237,6 +467,21 @@ async function stickerCommands(sock, msg, text) {
             .split(/\s+/)[0]
             .toLowerCase();
 
+    const isStickerCommand =
+        command === '.sticker' ||
+        command === '.s';
+
+    const {
+        mainText,
+        captionText
+    } =
+        isStickerCommand
+            ? parseStickerText(text)
+            : {
+                mainText: '',
+                captionText: ''
+            };
+
     let media;
 
     try {
@@ -256,8 +501,8 @@ async function stickerCommands(sock, msg, text) {
 
     if (!media) {
         const help =
-            command === '.sticker'
-                ? 'Reply to an image or video with *.sticker*.'
+            isStickerCommand
+                ? 'Reply to an image or video with *.sticker* or *.s*. You can also add text, e.g. *.s Legend (Made by Zorex)*.'
                 : command === '.tovid'
                     ? 'Reply to a sticker with *.tovid*.'
                     : 'Reply to a sticker with *.toimage* (or *.toimg*).';
@@ -270,9 +515,13 @@ async function stickerCommands(sock, msg, text) {
     }
 
     try {
-        if (command === '.sticker') {
+        if (isStickerCommand) {
 
-            if (media.kind === 'sticker') {
+            if (
+                media.kind === 'sticker' &&
+                !mainText &&
+                !captionText
+            ) {
                 return sock.sendMessage(
                     chatId,
                     { sticker: media.buffer },
@@ -282,8 +531,16 @@ async function stickerCommands(sock, msg, text) {
 
             const stickerBuffer =
                 media.kind === 'video'
-                    ? await videoToSticker(media)
-                    : await imageToSticker(media.buffer);
+                    ? await videoToSticker(
+                        media,
+                        mainText,
+                        captionText
+                    )
+                    : await imageToSticker(
+                        media.buffer,
+                        mainText,
+                        captionText
+                    );
 
             return sock.sendMessage(
                 chatId,
