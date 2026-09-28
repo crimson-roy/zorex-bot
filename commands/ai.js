@@ -29,6 +29,7 @@ const { extractDocumentPages } = require("./teach"); // requires the teach.js ex
 const { startProgress } = require("../lib/progressIndicator");
 const { setPending, getPending, clearPending } = require("../lib/pendingRequests");
 const { buildDocx, buildXlsx, buildPptx, buildPdf } = require("../lib/fileBuilders");
+const { generateImageFromPrompt } = require("./image");
 
 const CHUNK_CHARS = 2500;
 const MESSAGE_CHARS = 3500;
@@ -36,14 +37,21 @@ const MESSAGE_CHARS = 3500;
 const ROUTING_SYSTEM_PROMPT = `
 You are a routing classifier for a WhatsApp bot command. Given a user's
 prompt (and a note about what, if anything, they replied to), decide
-whether they want a normal answer, or a generated downloadable file.
+whether they want a normal answer, a generated downloadable file, or a
+new AI-generated image.
 
 Reply with STRICT JSON ONLY, no markdown, exactly one of:
 {"action":"answer"}
+{"action":"generate_image"}
 {"action":"generate_file","format":"docx"}
 {"action":"generate_file","format":"xlsx"}
 {"action":"generate_file","format":"pptx"}
 {"action":"generate_file","format":"pdf"}
+
+Pick generate_image when the user clearly asks you to create, generate,
+draw, render, design, or make a NEW image, picture, artwork, illustration,
+wallpaper, poster, logo, or visual. Do NOT pick generate_image merely
+because an image is attached and the user wants it described or analyzed.
 
 Only pick generate_file if the user clearly wants a document produced —
 e.g. "put this in a word doc", "make a spreadsheet of these", "turn this
@@ -90,7 +98,10 @@ function requestNeedsThinking(prompt, media, routing = null) {
 
     if (media) return true;
 
-    if (routing?.action === "generate_file") {
+    if (
+        routing?.action === "generate_file" ||
+        routing?.action === "generate_image"
+    ) {
         return true;
     }
 
@@ -422,6 +433,27 @@ async function aiCommand(sock, msg, text) {
                 media,
                 routing
             );
+
+        if (
+            routing?.action === "generate_image"
+        ) {
+
+            await progress.update(
+                "🎨 Preparing image generation..."
+            );
+
+            await generateImageFromPrompt(
+                sock,
+                msg,
+                body,
+                {
+                    progress,
+                    source: "ai"
+                }
+            );
+
+            return;
+        }
 
         if (
             !routing ||
