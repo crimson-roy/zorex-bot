@@ -725,9 +725,25 @@ async function handleAnswer(
             await progress.update("🧠 Thinking...");
         }
 
+        const imagePrompt =
+            [
+                media.sourceText
+                    ? "Text/caption attached to the quoted image:\n" +
+                        media.sourceText
+                    : "",
+                "User's request:\n" +
+                    (
+                        prompt ||
+                        "Describe and analyze this image."
+                    )
+            ]
+                .filter(Boolean)
+                .join("\n\n");
+
         const answer = await callVision(
-            ZOREX_AI_SYSTEM_PROMPT + "\n\nAnswer the user's request about the attached image directly and accurately.",
-            prompt || "Describe and analyze this image.",
+            ZOREX_AI_SYSTEM_PROMPT +
+                "\n\nAnalyze the attached image directly. Read visible text when relevant, but also use visual context, layout, diagrams, objects and relationships shown in the image.",
+            imagePrompt,
             media.buffer,
             media.mimeType
         );
