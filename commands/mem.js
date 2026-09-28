@@ -11,7 +11,7 @@ const {
 
 const {
     callAI
-} = require('../lib/chloeOpenAI');
+} = require('../lib/textAIClient');
 
 
 const BOT_DISPLAY_NAME = 'Chloe';
@@ -135,7 +135,7 @@ async function memCommand(
     } catch (err) {
 
         console.error(
-            '[mem] OpenAI call failed:',
+            '[mem] Azure AI call failed:',
             err.message
         );
 
