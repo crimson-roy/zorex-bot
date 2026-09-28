@@ -206,6 +206,7 @@ const { commandOffCommand, commandOnCommand, isCommandsOff } = require("./comman
 // background (see lib/tradeTimeouts.js).
 const { aiCommand } = require("./commands/ai");
 const { askCommand } = require("./commands/ask");
+const { nameChangeCommand } = require("./commands/namechange");
 const { imageCommand } = require("./commands/image");
 const { tradeCommands } = require("./commands/trade");
 const { startTradeSweeper } = require("./lib/tradeTimeouts");
@@ -1005,6 +1006,19 @@ Type .profile to view your account.`
             quoted: msg
         }
     );
+
+    } else if (
+        text === ".namechange" ||
+        text.startsWith(".namechange ") ||
+        text === ".changename" ||
+        text.startsWith(".changename ")
+    ) {
+
+        await nameChangeCommand(
+            sock,
+            msg,
+            text
+        );
 
     } else if (text.startsWith(".setage")) {
 
@@ -2473,6 +2487,7 @@ else if (text.startsWith(".mem")) {
 │ ✦ .bio
 │ ✦ .setage
 │ ✦ .setbio
+│ ✦ .namechange / .changename
 ╰────────────────────╯
 
 ╭─═📈 INVESTMENTS 📈═─╮
