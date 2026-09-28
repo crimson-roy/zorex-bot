@@ -84,6 +84,26 @@ function safeParseJson(str) {
     }
 }
 
+// Keep quick questions visually lightweight. Longer/analytical prompts,
+// attached media and file-generation requests get a second "Thinking" stage.
+function requestNeedsThinking(prompt, media, routing = null) {
+
+    if (media) return true;
+
+    if (routing?.action === "generate_file") {
+        return true;
+    }
+
+    const value = String(prompt || "");
+
+    if (value.length >= 180) {
+        return true;
+    }
+
+    return /\b(analy[sz]e|compare|debug|solve|calculate|reason|review|summari[sz]e|plan|research|step[- ]?by[- ]?step|explain why|how does|write|create|design)\b/i
+        .test(value);
+}
+
 async function splitAndSend(sock, chatId, text, quoted) {
     for (let i = 0; i < text.length; i += MESSAGE_CHARS) {
         const piece = text.slice(i, i + MESSAGE_CHARS);
@@ -142,9 +162,16 @@ return null;
 
 }
 
-async function handleAnswer(sock, msg, chatId, prompt, media) {
+async function handleAnswer(sock, msg, chatId, prompt, media, progress, showThinking) {
 
     if (media && media.type === "image") {
+
+        await progress.update("🖼️ Reviewing the image...");
+
+        if (showThinking) {
+            await progress.update("🧠 Thinking...");
+        }
+
         const answer = await callVision(
             "You are a helpful assistant. Answer the user's request about the attached image directly and accurately.",
             prompt || "Describe and analyze this image.",
@@ -157,10 +184,16 @@ async function handleAnswer(sock, msg, chatId, prompt, media) {
 
     if (media && media.type === "pdf") {
 
+        await progress.update("📄 Reviewing the document...");
+
         const pages = await extractDocumentPages(media.buffer);
         const partials = [];
 
         for (let i = 0; i < pages.length; i++) {
+
+            await progress.update(
+                `📄 Reviewing document... ${i + 1}/${pages.length}`
+            );
 
             const { text, images } = pages[i];
             const trimmedText = text.slice(0, CHUNK_CHARS);
@@ -198,6 +231,10 @@ async function handleAnswer(sock, msg, chatId, prompt, media) {
             return;
         }
 
+        if (showThinking) {
+            await progress.update("🧠 Thinking...");
+        }
+
         const merged = partials.length === 1
             ? partials[0]
             : await callAI(
@@ -210,18 +247,24 @@ async function handleAnswer(sock, msg, chatId, prompt, media) {
 
     }
 
+    if (showThinking) {
+        await progress.update("🧠 Thinking...");
+    }
+
     const answer = await callAI("You are a helpful, direct assistant.", [{ role: "user", content: prompt }]);
     await splitAndSend(sock, chatId, answer, msg);
 
 }
 
-async function handleGenerateFile(sock, msg, chatId, senderId, prompt, format, media) {
+async function handleGenerateFile(sock, msg, chatId, senderId, prompt, format, media, progress) {
 
     const label = FORMAT_LABELS[format] || format;
     let sourceContext = "";
     const sourceImages = [];
 
     if (media && media.type === "image") {
+
+        await progress.update("🖼️ Reviewing the attached image...");
 
         sourceImages.push({ buffer: media.buffer, mimeType: media.mimeType });
 
@@ -238,6 +281,8 @@ async function handleGenerateFile(sock, msg, chatId, senderId, prompt, format, m
 
     } else if (media && media.type === "pdf") {
 
+        await progress.update("📄 Reviewing the attached document...");
+
         const pages = await extractDocumentPages(media.buffer);
         const textParts = [];
 
@@ -250,6 +295,8 @@ async function handleGenerateFile(sock, msg, chatId, senderId, prompt, format, m
 
     }
 
+    await progress.update("🧠 Thinking...");
+
     setPending(chatId, senderId, { prompt, format, sourceContext, sourceImages });
 
     await sock.sendMessage(chatId, {
@@ -261,7 +308,7 @@ async function handleGenerateFile(sock, msg, chatId, senderId, prompt, format, m
 async function handleConfirmedGeneration(sock, msg, chatId, pendingReq) {
 
     const { prompt, format, sourceContext, sourceImages } = pendingReq;
-    const progress = await startProgress(sock, msg, "🧠 Drafting content...");
+    const progress = await startProgress(sock, msg, "🔎 Reviewing your request...");
 
     let filePath;
 
@@ -272,6 +319,8 @@ async function handleConfirmedGeneration(sock, msg, chatId, pendingReq) {
             sourceContext ? `Real source content to base this on:\n${sourceContext.slice(0, 6000)}` : "",
             DRAFT_SCHEMAS[format]
         ].filter(Boolean).join("\n\n");
+
+        await progress.update("🧠 Thinking...");
 
         const draftRaw = await callAI(DRAFT_SYSTEM_PROMPT, [{ role: "user", content: draftPromptParts }]);
         const draft = safeParseJson(draftRaw);
@@ -292,7 +341,7 @@ async function handleConfirmedGeneration(sock, msg, chatId, pendingReq) {
             mimetype: MIME_TYPES[format]
         }, { quoted: msg });
 
-        await progress.succeed();
+        await progress.succeed("✅ File ready");
 
     } catch (err) {
 
@@ -329,25 +378,112 @@ async function aiCommand(sock, msg, text) {
 
     if (!body) return await sock.sendMessage(chatId, { text: "Usage: .ai <your question or request>" }, { quoted: msg });
 
-    let media;
+    const progress =
+        await startProgress(
+            sock,
+            msg,
+            "🔎 Reviewing your prompt..."
+        );
 
     try {
-        media = await getQuotedMedia(sock, msg);
+
+        let media;
+
+        try {
+            media = await getQuotedMedia(sock, msg);
+        } catch (err) {
+            console.error("[.ai] failed to download quoted media:", err.message);
+            media = null;
+        }
+
+        const mediaDescription =
+            media
+                ? `an ${media.type} is attached`
+                : "nothing is attached";
+
+        const routingRaw =
+            await callAI(
+                ROUTING_SYSTEM_PROMPT,
+                [
+                    {
+                        role: "user",
+                        content:
+                            `Prompt: ${body}\n\n(${mediaDescription})`
+                    }
+                ]
+            );
+
+        const routing =
+            safeParseJson(routingRaw);
+
+        const showThinking =
+            requestNeedsThinking(
+                body,
+                media,
+                routing
+            );
+
+        if (
+            !routing ||
+            routing.action !== "generate_file" ||
+            !DRAFT_SCHEMAS[routing.format]
+        ) {
+
+            await handleAnswer(
+                sock,
+                msg,
+                chatId,
+                body,
+                media,
+                progress,
+                showThinking
+            );
+
+            await progress.succeed(
+                "✅ Response ready"
+            );
+
+            return;
+        }
+
+        await handleGenerateFile(
+            sock,
+            msg,
+            chatId,
+            senderId,
+            body,
+            routing.format,
+            media,
+            progress
+        );
+
+        await progress.succeed(
+            "✅ Request reviewed — awaiting confirmation"
+        );
+
     } catch (err) {
-        console.error("[.ai] failed to download quoted media:", err.message);
-        media = null;
+
+        console.error(
+            "[.ai] request failed:",
+            err.message
+        );
+
+        await progress.fail(
+            "❌ AI request failed"
+        );
+
+        await sock.sendMessage(
+            chatId,
+            {
+                text:
+                    "⚠️ I couldn't complete that AI request right now."
+            },
+            {
+                quoted: msg
+            }
+        );
+
     }
-
-    const mediaDescription = media ? `an ${media.type} is attached` : "nothing is attached";
-
-    const routingRaw = await callAI(ROUTING_SYSTEM_PROMPT, [{ role: "user", content: `Prompt: ${body}\n\n(${mediaDescription})` }]);
-    const routing = safeParseJson(routingRaw);
-
-    if (!routing || routing.action !== "generate_file" || !DRAFT_SCHEMAS[routing.format]) {
-        return await handleAnswer(sock, msg, chatId, body, media);
-    }
-
-    await handleGenerateFile(sock, msg, chatId, senderId, body, routing.format, media);
 
 }
 
