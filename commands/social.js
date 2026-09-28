@@ -127,8 +127,13 @@ async function socialCommand(sock, msg, text) {
     if (actionName === "kill" && target === sender) {
         return await sock.sendMessage(
             msg.key.remoteJid,
-            { text: "😭 You can\'t use .kill on yourself. Pick somebody else for the dramatic nonsense." },
-            { quoted: msg }
+            {
+                text:
+                    `💀 ${actorName} committed seppuku 😭`
+            },
+            {
+                quoted: msg
+            }
         );
     }
 
