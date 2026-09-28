@@ -448,7 +448,7 @@ Example:
 
 }
 
-// teach.js — change the last line from:
-module.exports = { teachCommand };
-// to:
-module.exports = { teachCommand, extractDocumentPages };
+module.exports = {
+    teachCommand,
+    extractDocumentPages
+};
