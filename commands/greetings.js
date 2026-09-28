@@ -2,10 +2,7 @@
 
 const fs = require('fs');
 const dataPath = require('../lib/dataPath');
-const { MAIN_OWNER } = require('../config');
-
 const SETTINGS_FILE = dataPath('groupGreetings.json');
-const OWNERS_FILE = dataPath('owners.json');
 
 function normalizeJid(jid) {
   if (!jid || typeof jid !== 'string') return '';
@@ -38,17 +35,6 @@ function saveSettings(data) {
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
 
-function isOwner(userId) {
-  const target = normalizeJid(userId);
-
-  if (MAIN_OWNER && normalizeJid(MAIN_OWNER) === target) {
-    return true;
-  }
-
-  const owners = loadJson(OWNERS_FILE, []);
-  return Array.isArray(owners) && owners.some(owner => normalizeJid(owner) === target);
-}
-
 async function isAdmin(sock, groupId, userId) {
   try {
     const metadata = await sock.groupMetadata(groupId);
@@ -72,16 +58,34 @@ async function canConfigure(sock, msg) {
   const groupId = msg.key.remoteJid;
   const sender = msg.key.participant || msg.key.remoteJid;
 
-  return isOwner(sender) || await isAdmin(sock, groupId, sender);
+  return await isAdmin(
+    sock,
+    groupId,
+    sender
+  );
 }
 
 function renderTemplate(template, participant, groupName, count) {
-  const tag = `@${String(participant).split('@')[0]}`;
+  const tag =
+    `@${String(participant).split('@')[0]}`;
 
-  return String(template)
-    .replace(/@user/gi, tag)
-    .replace(/\{group\}/gi, groupName || 'this group')
-    .replace(/\{count\}/gi, String(count ?? ''));
+  const raw =
+    String(template || '');
+
+  const hadUserPlaceholder =
+    /@user/i.test(raw);
+
+  const rendered =
+    raw
+      .replace(/@user/gi, tag)
+      .replace(/\{group\}/gi, groupName || 'this group')
+      .replace(/\{count\}/gi, String(count ?? ''));
+
+  // Always show a visible mention for the person who joined/left.
+  // If the admin already placed @user in the template, do not duplicate it.
+  return hadUserPlaceholder
+    ? rendered
+    : `${tag}\n\n${rendered}`;
 }
 
 async function configureGreeting(sock, msg, text, type) {
@@ -100,7 +104,7 @@ async function configureGreeting(sock, msg, text, type) {
   if (!(await canConfigure(sock, msg))) {
     return sock.sendMessage(
       groupId,
-      { text: '❌ Only the owner or group admins can use this command.' },
+      { text: '❌ Only group admins can use this command.' },
       { quoted: msg }
     );
   }
@@ -125,7 +129,8 @@ async function configureGreeting(sock, msg, text, type) {
           `Set: ${command} <message>\n` +
           `Disable: ${command} off\n` +
           `Enable again: ${command} on\n\n` +
-          'Placeholders: @user  {group}  {count}' +
+          'The affected member is tagged automatically.\n' +
+          'Optional placeholders: @user  {group}  {count}' +
           currentText,
       },
       { quoted: msg }
@@ -173,8 +178,8 @@ async function configureGreeting(sock, msg, text, type) {
     groupId,
     {
       text:
-        `✅ ${label[0].toUpperCase() + label.slice(1)} message saved.\n\n` +
-        `Preview template:\n${raw}`,
+        `✅ ${label[0].toUpperCase() + label.slice(1)} message saved for *this group*.\n\n` +
+        `Preview template:\n@new_member\n\n${raw}`,
     },
     { quoted: msg }
   );
