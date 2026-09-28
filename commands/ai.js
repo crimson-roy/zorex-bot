@@ -86,6 +86,9 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"set_leave","message":"Bye bye 😭"}
 {"name":"group_open"}
 {"name":"group_close"}
+{"name":"add_owner"}
+{"name":"promote_user"}
+{"name":"demote_user"}
 {"name":"card_search","query":"card name","tier":"SSR"}
 {"name":"series_search","query":"series name"}
 {"name":"casino","amount":5000,"repeats":10}
@@ -131,6 +134,18 @@ Rules:
 - These group actions apply ONLY to the current WhatsApp group. Never invent
   or accept a target group ID/name. The executor uses the real current chat
   and the real command handlers perform owner/admin permission checks.
+- "addowner @user", "add @user as owner", or the same request while replying
+  to a user => add_owner. Never output a target JID; the executor binds the
+  target from the real WhatsApp mention/reply. Only the real MAIN_OWNER
+  permission check may authorize this action.
+- "promote @user", "make @user admin", or the same request while replying to
+  a user => promote_user. Never output a target JID; the executor binds the
+  target from the real WhatsApp mention/reply and the real group handler
+  checks current admin/owner permissions.
+- "demote @user", "remove @user as admin", or the same request while replying
+  to a user => demote_user. Never output a target JID; the executor binds the
+  target from the real WhatsApp mention/reply and the real group handler
+  checks current admin/owner permissions.
 - "search Rem SSR" or "find Rem SSR card" => card_search, query "Rem",
   tier "SSR".
 - "show JJK cards" or "search JJK series" => series_search.
@@ -139,9 +154,9 @@ Rules:
 - If repeats are omitted, use 1.
 - Never create owner/admin commands, arbitrary shell commands, raw command
   strings, company creation, employee management, moderation actions other
-  than the explicitly listed set_welcome, set_leave, group_open and
-  group_close actions, direct item/card IDs not supplied by the user, or any
-  command not listed above.
+  than the explicitly listed set_welcome, set_leave, group_open, group_close,
+  add_owner, promote_user and demote_user actions, direct item/card IDs not
+  supplied by the user, or any command not listed above.
 - Asking "how does casino work?" is answer, NOT execute_commands.
 - Asking what a command does is answer, NOT execute_commands.
 - If the user requests an unsupported Zorex action, use answer rather than
