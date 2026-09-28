@@ -229,7 +229,7 @@ const { cshopCommands } = require("./commands/cshop");
 const { execute: ttkCommand } = require("./commands/ttk");
 const { execute: mediaCommand } = require("./commands/media");
 const { stickerCommands } = require("./commands/sticker");
-const { afkCommand, handleAfkMessage } = require("./commands/afk");
+const { afkCommand, handleAfkMessage, isAfkUser } = require("./commands/afk");
 const {
     setWelcomeCommand,
     setLeaveCommand,
@@ -2603,9 +2603,16 @@ else if (text.startsWith(".mem")) {
 
     }
 
+    // Generic Crimson-tag reply is only for ordinary messages.
+    // Commands such as ".rob @Crimson" have already consumed the mention
+    // above and must not trigger a second tag response. If Crimson is AFK,
+    // handleAfkMessage() has already sent the AFK notice, so that also takes
+    // priority over the generic jealous reply.
     if (
         msg.key.remoteJid.endsWith("@g.us") &&
-        isCrimsonMentioned
+        isCrimsonMentioned &&
+        !text.startsWith(".") &&
+        !isAfkUser("164317513175043@lid")
     ) {
 
         await sock.sendMessage(
