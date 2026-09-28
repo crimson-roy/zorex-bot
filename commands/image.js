@@ -4,6 +4,42 @@ const { startProgress } = require("../lib/progressIndicator");
 
 const DEFAULT_SIZE = "1024x1024";
 
+const MAX_GENERATION_ATTEMPTS = 4;
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function getRetryAfterSeconds(response, errorText, attempt) {
+
+    const headerValue =
+        Number(response.headers.get("retry-after"));
+
+    if (
+        Number.isFinite(headerValue) &&
+        headerValue > 0
+    ) {
+        return Math.ceil(headerValue);
+    }
+
+    const match =
+        String(errorText || "")
+            .match(/retry after\s+(\d+)\s+seconds?/i);
+
+    if (match) {
+        return Math.max(
+            1,
+            Number(match[1])
+        );
+    }
+
+    // Fallback backoff when Azure omits Retry-After.
+    return Math.min(
+        5 * Math.pow(2, attempt),
+        30
+    );
+}
+
 function getImageEndpoint() {
 
     if (process.env.AZURE_IMAGE_ENDPOINT) {
@@ -175,43 +211,156 @@ async function generateImageFromPrompt(
             "🖼️ Generating image..."
         );
 
-        const response =
-            await fetch(
-                `${endpoint}/openai/v1/images/generations?api-version=preview`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                        "api-key":
-                            apiKey
-                    },
-                    body:
-                        JSON.stringify({
-                            model,
-                            prompt:
-                                cleanPrompt,
-                            n: 1,
-                            size:
-                                DEFAULT_SIZE
-                        })
-                }
-            );
+        let data = null;
+        let lastError = null;
 
-        if (!response.ok) {
+        for (
+            let attempt = 0;
+            attempt < MAX_GENERATION_ATTEMPTS;
+            attempt++
+        ) {
+
+            const response =
+                await fetch(
+                    `${endpoint}/openai/v1/images/generations?api-version=preview`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                            "api-key":
+                                apiKey
+                        },
+                        body:
+                            JSON.stringify({
+                                model,
+                                prompt:
+                                    cleanPrompt,
+                                n: 1,
+                                size:
+                                    DEFAULT_SIZE
+                            })
+                    }
+                );
+
+            if (response.ok) {
+
+                data =
+                    await response.json();
+
+                break;
+            }
 
             const errorText =
                 await response.text()
                     .catch(() => "");
 
-            throw new Error(
-                `Azure image API error ${response.status}: ${errorText}`
-            );
+            lastError =
+                new Error(
+                    `Azure image API error ${response.status}: ${errorText}`
+                );
+
+            const canRetry =
+                attempt <
+                MAX_GENERATION_ATTEMPTS - 1;
+
+            if (
+                response.status === 429 &&
+                canRetry
+            ) {
+
+                const waitSeconds =
+                    getRetryAfterSeconds(
+                        response,
+                        errorText,
+                        attempt
+                    );
+
+                await progress.update(
+                    `⏳ Rate limited — retrying in ${waitSeconds}s...`
+                );
+
+                await sleep(
+                    waitSeconds * 1000
+                );
+
+                await progress.update(
+                    "🖼️ Generating image..."
+                );
+
+                continue;
+            }
+
+            // A brand-new deployment can briefly return 404 while routing
+            // propagates across Foundry. Retry a couple of times before
+            // treating it as a real configuration error.
+            if (
+                response.status === 404 &&
+                canRetry
+            ) {
+
+                const waitSeconds =
+                    Math.min(
+                        5 * (attempt + 1),
+                        15
+                    );
+
+                await progress.update(
+                    `⏳ Image deployment is still becoming available — retrying in ${waitSeconds}s...`
+                );
+
+                await sleep(
+                    waitSeconds * 1000
+                );
+
+                await progress.update(
+                    "🖼️ Generating image..."
+                );
+
+                continue;
+            }
+
+            if (
+                (
+                    response.status === 408 ||
+                    response.status >= 500
+                ) &&
+                canRetry
+            ) {
+
+                const waitSeconds =
+                    Math.min(
+                        3 * Math.pow(2, attempt),
+                        15
+                    );
+
+                await progress.update(
+                    `⏳ Azure is temporarily unavailable — retrying in ${waitSeconds}s...`
+                );
+
+                await sleep(
+                    waitSeconds * 1000
+                );
+
+                await progress.update(
+                    "🖼️ Generating image..."
+                );
+
+                continue;
+            }
+
+            throw lastError;
 
         }
 
-        const data =
-            await response.json();
+        if (!data) {
+            throw (
+                lastError ||
+                new Error(
+                    "Azure image generation failed after retries."
+                )
+            );
+        }
 
         await progress.update(
             "📥 Fetching generated image..."
