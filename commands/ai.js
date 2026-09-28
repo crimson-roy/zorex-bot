@@ -658,6 +658,65 @@ async function handleAnswer(
     profileId
 ) {
 
+    if (media && media.type === "text") {
+
+        if (showThinking) {
+            await progress.update("🧠 Thinking...");
+        }
+
+        const conversation =
+            getConversationMessages(
+                profileId,
+                8
+            );
+
+        const combinedPrompt =
+            [
+                "The user replied to this WhatsApp message:",
+                "---",
+                media.text,
+                "---",
+                "",
+                "The user's current request:",
+                prompt,
+                "",
+                "Use the quoted message as source/context for the current request. Do not claim the quoted statement was independently verified merely because it was quoted."
+            ].join("\n");
+
+        const answer =
+            await callAI(
+                ZOREX_AI_SYSTEM_PROMPT,
+                [
+                    ...conversation,
+                    {
+                        role: "user",
+                        content: combinedPrompt
+                    }
+                ]
+            );
+
+        await splitAndSend(
+            sock,
+            chatId,
+            answer,
+            msg
+        );
+
+        appendHistory(
+            profileId,
+            {
+                type: "answer",
+                user:
+                    "Quoted: " +
+                    media.text.slice(0, 1200) +
+                    "\nQuestion: " +
+                    prompt,
+                assistant: answer
+            }
+        );
+
+        return;
+    }
     if (media && media.type === "image") {
 
         await progress.update("🖼️ Reviewing the image...");
