@@ -193,7 +193,8 @@ const {
     dutyCommand,
     jobInfoCommand,
     resumeMajorApplications,
-    startMajorAttendanceMonitor
+    startMajorAttendanceMonitor,
+    startJobResignationProcessor
 } = require("./commands/jobs");
 
 const {
