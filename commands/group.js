@@ -11,6 +11,7 @@ const dataPath = require("../lib/dataPath");
 const OWNERS_FILE = dataPath("owners.json");
 
 const MUTED_FILE = dataPath("muted.json");
+const MUTE_ALL_FILE = dataPath("muteall.json");
 
 
 // Load muted users
@@ -49,6 +50,54 @@ function saveMuted(data) {
 
 }
 
+
+function loadMuteAll() {
+
+    if (!fs.existsSync(MUTE_ALL_FILE)) {
+
+        fs.writeFileSync(
+            MUTE_ALL_FILE,
+            JSON.stringify({}, null, 4)
+        );
+
+    }
+
+    try {
+
+        const parsed =
+            JSON.parse(
+                fs.readFileSync(
+                    MUTE_ALL_FILE,
+                    "utf8"
+                )
+            );
+
+        return parsed &&
+            typeof parsed === "object"
+                ? parsed
+                : {};
+
+    } catch (_) {
+
+        return {};
+
+    }
+
+}
+
+
+function saveMuteAll(data) {
+
+    fs.writeFileSync(
+        MUTE_ALL_FILE,
+        JSON.stringify(
+            data,
+            null,
+            4
+        )
+    );
+
+}
 
 // Convert time
 function parseMuteTime(time) {
@@ -142,6 +191,51 @@ async function groupCommands(sock, msg, text) {
             {
                 text:
 "❌ You are not an admin."
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+    if (/^\.unmute\s+all$/i.test(text.trim())) {
+
+        const muteAll =
+            loadMuteAll();
+
+        if (!muteAll[groupJid]?.enabled) {
+
+            return await sock.sendMessage(
+                groupJid,
+                {
+                    text:
+`🔊 *Mute-all is already off.*
+
+Non-admin messages are no longer being auto-deleted.`
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+        delete muteAll[groupJid];
+
+        saveMuteAll(
+            muteAll
+        );
+
+        return await sock.sendMessage(
+            groupJid,
+            {
+                text:
+`🔊 *MUTE ALL DISABLED*
+
+Non-admin members can speak normally again.
+
+👑 Admin messages were never affected.`
             },
             {
                 quoted: msg
@@ -760,6 +854,61 @@ if (!botAdmin) {
                 {
                     text:
                     "❌ You are not an admin."
+                },
+                {
+                    quoted: msg
+                }
+            );
+
+        }
+
+        if (/^\.mute\s+all$/i.test(text.trim())) {
+
+            const muteAll =
+                loadMuteAll();
+
+            if (muteAll[groupJid]?.enabled) {
+
+                return await sock.sendMessage(
+                    groupJid,
+                    {
+                        text:
+`🔇 *Mute-all is already active.*
+
+Every new message from non-admin members is being deleted automatically.
+
+👑 Admins are exempt.`
+                    },
+                    {
+                        quoted: msg
+                    }
+                );
+
+            }
+
+            muteAll[groupJid] = {
+                enabled:
+                    true,
+                enabledAt:
+                    Date.now(),
+                enabledBy:
+                    sender
+            };
+
+            saveMuteAll(
+                muteAll
+            );
+
+            return await sock.sendMessage(
+                groupJid,
+                {
+                    text:
+`🔇 *MUTE ALL ACTIVATED*
+
+From now on, every new message sent by a non-admin member will be deleted automatically.
+
+👑 Group admins are exempt.
+🔊 Use *.unmute all* to stop it.`
                 },
                 {
                     quoted: msg
