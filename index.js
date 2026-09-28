@@ -729,7 +729,10 @@ Please behave yourself. 💙`
 
    const rawText =
         msg.message.conversation ||
-        msg.message.extendedTextMessage?.text;
+        msg.message.extendedTextMessage?.text ||
+        msg.message.imageMessage?.caption ||
+        msg.message.documentMessage?.caption ||
+        msg.message.videoMessage?.caption;
 
     if (!rawText) return;
 
