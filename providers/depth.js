@@ -32,7 +32,7 @@ const {
 const SPACE_NAME =
     "depth-anything/Depth-Anything-V2";
 
-const ENDPOINT =
+const PREFERRED_ENDPOINT =
     "/on_submit";
 
 const CONNECT_TIMEOUT_MS =
@@ -155,11 +155,114 @@ async function downloadToTemp(url) {
     return outputPath;
 }
 
+async function resolveApiShape(
+    app
+) {
+    try {
+        const info =
+            await app.view_api();
+
+        const endpoints = {
+            ...(info?.named_endpoints || {}),
+            ...(info?.unnamed_endpoints || {})
+        };
+
+        const names =
+            Object.keys(
+                endpoints
+            );
+
+        let endpoint =
+            endpoints[PREFERRED_ENDPOINT]
+                ? PREFERRED_ENDPOINT
+                : null;
+
+        if (!endpoint) {
+            endpoint =
+                names.find(name => {
+                    const returns =
+                        endpoints[name]?.returns ||
+                        [];
+
+                    return returns.some(output =>
+                        /grayscale\s+depth/i.test(
+                            String(
+                                output?.label ||
+                                ""
+                            )
+                        )
+                    );
+                }) ||
+                null;
+        }
+
+        if (
+            !endpoint &&
+            names.length === 1
+        ) {
+            endpoint =
+                names[0];
+        }
+
+        if (!endpoint) {
+            throw new Error(
+                `could not identify depth endpoint; available endpoints: ${names.join(", ") || "none"}`
+            );
+        }
+
+        const returns =
+            endpoints[endpoint]
+                ?.returns ||
+            [];
+
+        const grayIndex =
+            returns.findIndex(output =>
+                /grayscale\s+depth/i.test(
+                    String(
+                        output?.label ||
+                        ""
+                    )
+                )
+            );
+
+        return {
+            endpoint,
+            grayIndex:
+                grayIndex >= 0
+                    ? grayIndex
+                    : 1
+        };
+
+    } catch (err) {
+
+        console.warn(
+            "[depth] API discovery failed; falling back to preferred endpoint:",
+            err.message
+        );
+
+        return {
+            endpoint:
+                PREFERRED_ENDPOINT,
+            grayIndex:
+                1
+        };
+
+    }
+}
+
 async function generateDepthMap(
     inputPathOrUrl
 ) {
     const app =
         await connectToSpace();
+
+    const {
+        endpoint,
+        grayIndex
+    } =
+        await resolveApiShape(
+            app
+        );
 
     let result;
 
@@ -167,7 +270,7 @@ async function generateDepthMap(
         result =
             await withTimeout(
                 app.predict(
-                    ENDPOINT,
+                    endpoint,
                     [
                         handle_file(
                             inputPathOrUrl
@@ -175,7 +278,7 @@ async function generateDepthMap(
                     ]
                 ),
                 PREDICT_TIMEOUT_MS,
-                `generating depth map via ${ENDPOINT}`
+                `generating depth map via ${endpoint}`
             );
     } catch (err) {
         throw new Error(
@@ -188,14 +291,14 @@ async function generateDepthMap(
         [];
 
     const grayDepth =
-        data[1];
+        data[grayIndex];
 
     if (
         !grayDepth ||
         !grayDepth.url
     ) {
         throw new Error(
-            "Depth provider: Space returned no grayscale depth map at data[1]."
+            `Depth provider: Space returned no grayscale depth map at data[${grayIndex}].`
         );
     }
 
