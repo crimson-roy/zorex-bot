@@ -705,5 +705,6 @@ ${icon} ${card.name}
 }
 
 module.exports = {
-    cshopCommands
+    cshopCommands,
+    getCurrentRotation
 };
