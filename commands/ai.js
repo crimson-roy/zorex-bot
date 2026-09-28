@@ -647,6 +647,16 @@ ${partials.join("\n\n---\n\n")}`
     );
 }
 
+function isPureImageTextExtractionRequest(prompt) {
+    const value =
+        String(prompt || "")
+            .trim()
+            .toLowerCase();
+
+    return /\b(ocr|extract(?: all)? text|copy(?: all)? text|transcribe(?: all)? text|read(?: all)? the text|what text is (?:in|on) (?:this|the) image)\b/i
+        .test(value);
+}
+
 async function handleAnswer(
     sock,
     msg,
@@ -720,6 +730,53 @@ async function handleAnswer(
     if (media && media.type === "image") {
 
         await progress.update("🖼️ Reviewing the image...");
+
+        if (
+            isPureImageTextExtractionRequest(
+                prompt
+            )
+        ) {
+            await progress.update(
+                "🔤 Extracting image text..."
+            );
+
+            const extracted =
+                await readDocument(
+                    media.buffer,
+                    {
+                        mimeType:
+                            media.mimeType,
+                        fileName:
+                            media.fileName ||
+                            "image"
+                    }
+                );
+
+            const output =
+                "📝 *Extracted text*\n\n" +
+                extracted.text;
+
+            await splitAndSend(
+                sock,
+                chatId,
+                output,
+                msg
+            );
+
+            appendHistory(
+                profileId,
+                {
+                    type:
+                        "vision",
+                    user:
+                        prompt,
+                    assistant:
+                        output
+                }
+            );
+
+            return;
+        }
 
         if (showThinking) {
             await progress.update("🧠 Thinking...");
