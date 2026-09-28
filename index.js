@@ -204,6 +204,7 @@ const { commandOffCommand, commandOnCommand, isCommandsOff } = require("./comman
 // timeout and 5-minute session-inactivity timeout get enforced in the
 // background (see lib/tradeTimeouts.js).
 const { aiCommand } = require("./commands/ai");
+const { imageCommand } = require("./commands/image");
 const { tradeCommands } = require("./commands/trade");
 const { startTradeSweeper } = require("./lib/tradeTimeouts");
 
@@ -1866,6 +1867,13 @@ ${board}
         text
     );
 
+} else if (
+    text === ".image" ||
+    text.startsWith(".image ")
+) {
+
+    await imageCommand(sock, msg, text);
+
 } else if (text.startsWith(".ai")) {
 
     await aiCommand(sock, msg, text);
@@ -2394,6 +2402,7 @@ else if (text.startsWith(".mem")) {
 
 ╭─═🤖 AI & CHLOE 🤖═─╮
 │ ✦ .ai
+│ ✦ .image
 │ ✦ .relation
 │ ✦ .mem
 ╰────────────────────╯
