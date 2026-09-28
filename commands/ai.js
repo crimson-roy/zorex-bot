@@ -336,55 +336,315 @@ async function showAiHistory(
     );
 }
 
+function messageText(message) {
+    if (!message) return "";
+
+    return String(
+        message.conversation ||
+        message.extendedTextMessage?.text ||
+        message.imageMessage?.caption ||
+        message.documentMessage?.caption ||
+        message.videoMessage?.caption ||
+        ""
+    ).trim();
+}
+
+async function downloadMessageBuffer(
+    messageInfo
+) {
+    const downloadMediaMessage =
+        await getDownloadMediaMessage();
+
+    return await downloadMediaMessage(
+        messageInfo,
+        "buffer",
+        {}
+    );
+}
+
 /**
- * Pulls the quoted message's media (image or PDF) out of a .ai reply.
- * Returns null if the reply isn't to media, or isn't a reply at all.
+ * Finds the source material for an .ai request.
  *
- * @param {import('@whiskeysockets/baileys').WASocket} sock
- * @param {import('@whiskeysockets/baileys').proto.IWebMessageInfo} msg
- * @returns {Promise<{type:'image'|'pdf', buffer:Buffer, mimeType:string}|null>}
+ * Priority:
+ * 1. Replied/quoted message (text, image, document)
+ * 2. Media attached directly to the current .ai message
+ *
+ * @returns {Promise<
+ *   | {type:"text", text:string, quoted:boolean}
+ *   | {type:"image", buffer:Buffer, mimeType:string, fileName:string, sourceText:string, quoted:boolean}
+ *   | {type:"pdf"|"document", buffer:Buffer, mimeType:string, fileName:string, sourceText:string, quoted:boolean}
+ *   | null
+ * >}
  */
-async function getQuotedMedia(sock, msg) {
+async function getAiSource(
+    sock,
+    msg
+) {
+    const context =
+        msg.message
+            ?.extendedTextMessage
+            ?.contextInfo;
 
-    const context = msg.message?.extendedTextMessage?.contextInfo;
-    const quoted = context?.quotedMessage;
+    const quoted =
+        context?.quotedMessage;
 
-    if (!quoted) return null;
+    if (quoted) {
+        const sourceText =
+            messageText(
+                quoted
+            );
 
-    const fakeMsg = {
-        key: {
-            remoteJid: msg.key.remoteJid,
-            id: context.stanzaId,
-            participant: context.participant,
-            fromMe: false
-        },
-        message: quoted
-    };
+        const fakeMsg = {
+            key: {
+                remoteJid:
+                    msg.key.remoteJid,
+                id:
+                    context.stanzaId,
+                participant:
+                    context.participant,
+                fromMe:
+                    false
+            },
+            message:
+                quoted
+        };
 
-   if (quoted.imageMessage) {
-    const downloadMediaMessage = await getDownloadMediaMessage();
-    const buffer = await downloadMediaMessage(fakeMsg, "buffer", {});
+        if (quoted.imageMessage) {
+            const buffer =
+                await downloadMessageBuffer(
+                    fakeMsg
+                );
 
-    return {
-        type: "image",
-        buffer,
-        mimeType: quoted.imageMessage.mimetype || "image/jpeg"
-    };
+            return {
+                type:
+                    "image",
+                buffer,
+                mimeType:
+                    quoted.imageMessage
+                        .mimetype ||
+                    "image/jpeg",
+                fileName:
+                    quoted.imageMessage
+                        .fileName ||
+                    "image",
+                sourceText,
+                quoted:
+                    true
+            };
+        }
+
+        if (quoted.documentMessage) {
+            const buffer =
+                await downloadMessageBuffer(
+                    fakeMsg
+                );
+
+            const mimeType =
+                quoted.documentMessage
+                    .mimetype ||
+                "application/octet-stream";
+
+            const fileName =
+                quoted.documentMessage
+                    .fileName ||
+                "document";
+
+            return {
+                type:
+                    mimeType.includes(
+                        "pdf"
+                    )
+                        ? "pdf"
+                        : "document",
+                buffer,
+                mimeType,
+                fileName,
+                sourceText,
+                quoted:
+                    true
+            };
+        }
+
+        if (sourceText) {
+            return {
+                type:
+                    "text",
+                text:
+                    sourceText,
+                quoted:
+                    true
+            };
+        }
+    }
+
+    if (msg.message?.imageMessage) {
+        const buffer =
+            await downloadMessageBuffer(
+                msg
+            );
+
+        return {
+            type:
+                "image",
+            buffer,
+            mimeType:
+                msg.message.imageMessage
+                    .mimetype ||
+                "image/jpeg",
+            fileName:
+                msg.message.imageMessage
+                    .fileName ||
+                "image",
+            sourceText:
+                "",
+            quoted:
+                false
+        };
+    }
+
+    if (msg.message?.documentMessage) {
+        const buffer =
+            await downloadMessageBuffer(
+                msg
+            );
+
+        const mimeType =
+            msg.message.documentMessage
+                .mimetype ||
+            "application/octet-stream";
+
+        const fileName =
+            msg.message.documentMessage
+                .fileName ||
+            "document";
+
+        return {
+            type:
+                mimeType.includes(
+                    "pdf"
+                )
+                    ? "pdf"
+                    : "document",
+            buffer,
+            mimeType,
+            fileName,
+            sourceText:
+                "",
+            quoted:
+                false
+        };
+    }
+
+    return null;
 }
 
-if (quoted.documentMessage && (quoted.documentMessage.mimetype || "").includes("pdf")) {
-    const downloadMediaMessage = await getDownloadMediaMessage();
-    const buffer = await downloadMediaMessage(fakeMsg, "buffer", {});
+function chunkSourceText(
+    value,
+    size = 5000
+) {
+    const text =
+        String(value || "")
+            .trim();
 
-    return {
-        type: "pdf",
-        buffer,
-        mimeType: "application/pdf"
-    };
+    if (!text) return [];
+
+    const chunks = [];
+
+    for (
+        let i = 0;
+        i < text.length;
+        i += size
+    ) {
+        chunks.push(
+            text.slice(
+                i,
+                i + size
+            )
+        );
+    }
+
+    return chunks;
 }
 
-return null;
+async function answerFromExtractedDocument(
+    prompt,
+    extractedText,
+    fileName,
+    progress
+) {
+    const chunks =
+        chunkSourceText(
+            extractedText,
+            5000
+        );
 
+    if (!chunks.length) {
+        throw new Error(
+            "No readable document text was extracted."
+        );
+    }
+
+    const partials = [];
+
+    for (
+        let i = 0;
+        i < chunks.length;
+        i++
+    ) {
+        if (progress) {
+            await progress.update(
+                `📄 Reading document... ${i + 1}/${chunks.length}`
+            );
+        }
+
+        const result =
+            await callAI(
+                "Answer the user's question using only the supplied document excerpt. Preserve the document's terminology and do not fill unsupported gaps with outside knowledge.",
+                [
+                    {
+                        role:
+                            "user",
+                        content:
+`Document: ${fileName || "attached document"}
+
+User's request:
+${prompt}
+
+Excerpt ${i + 1} of ${chunks.length}:
+${chunks[i]}`
+                    }
+                ]
+            );
+
+        partials.push(
+            result
+        );
+    }
+
+    if (
+        partials.length === 1
+    ) {
+        return partials[0];
+    }
+
+    return await callAI(
+        "Combine the excerpt-level answers into one cohesive response. Use only what the document excerpts support. If the document does not support a requested point, say so.",
+        [
+            {
+                role:
+                    "user",
+                content:
+`User's request:
+${prompt}
+
+Document:
+${fileName || "attached document"}
+
+Partial findings:
+${partials.join("\n\n---\n\n")}`
+            }
+        ]
+    );
 }
 
 async function handleAnswer(
