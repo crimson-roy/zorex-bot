@@ -472,6 +472,278 @@ async function searchBySeries(
 }
 
 // --------------------------------------------------
+// FULL CATALOG / MISSING-CARD AUDIT
+// --------------------------------------------------
+
+async function fetchAllMazokuCards() {
+
+    let page = 1;
+    const all = [];
+
+    while (true) {
+
+        const data =
+            await fetchMazokuPage(page, 100);
+
+        const results =
+            Array.isArray(data.cards)
+                ? data.cards
+                : [];
+
+        if (results.length === 0) {
+            break;
+        }
+
+        all.push(...results);
+
+        console.log(
+            `   📚 Catalog so far: ${all.length} cards`
+        );
+
+        if (results.length < 100) {
+            break;
+        }
+
+        page++;
+    }
+
+    // Deduplicate by Mazoku UUID in case the API ever repeats an item
+    // across page boundaries while new cards are being added.
+    const unique = new Map();
+
+    for (const card of all) {
+
+        if (!card?.id) {
+            continue;
+        }
+
+        unique.set(
+            String(card.id).toLowerCase(),
+            card
+        );
+    }
+
+    return [...unique.values()];
+}
+
+function buildMissingCardReport(missing) {
+
+    const grouped = new Map();
+
+    for (const card of missing) {
+
+        const series =
+            card.seriesName ||
+            "Unknown series";
+
+        if (!grouped.has(series)) {
+            grouped.set(series, []);
+        }
+
+        grouped.get(series).push(card);
+    }
+
+    const tierRank =
+        tier => {
+            const index =
+                TIER_ORDER.indexOf(
+                    String(tier || "C").toUpperCase()
+                );
+
+            return index === -1
+                ? 999
+                : index;
+        };
+
+    const lines = [];
+
+    lines.push("ZOREX — MISSING MAZOKU CARDS");
+    lines.push("================================");
+    lines.push(`Missing cards: ${missing.length}`);
+    lines.push(`Affected series: ${grouped.size}`);
+    lines.push("");
+
+    const sortedSeries =
+        [...grouped.entries()]
+            .sort(
+                ([a], [b]) =>
+                    a.localeCompare(b)
+            );
+
+    for (const [series, cards] of sortedSeries) {
+
+        cards.sort(
+            (a, b) =>
+                tierRank(a.tier) - tierRank(b.tier) ||
+                String(a.name || "").localeCompare(
+                    String(b.name || "")
+                )
+        );
+
+        lines.push(
+            `=== ${series} (${cards.length} missing) ===`
+        );
+
+        cards.forEach(
+            (card, index) => {
+
+                lines.push(
+                    `${index + 1}. [${String(card.tier || "C").toUpperCase()}] ${card.name || "Unknown"}`
+                );
+
+                lines.push(
+                    `   Mazoku ID: ${card.id}`
+                );
+            }
+        );
+
+        lines.push("");
+    }
+
+    return lines.join("\n");
+}
+
+async function auditMissingCards() {
+
+    console.log(
+        "\n🔎 Scanning local card.json..."
+    );
+
+    const cards =
+        loadCards();
+
+    const importedIds =
+        new Set(
+            Object.values(cards)
+                .map(card => card?.mazokuId)
+                .filter(Boolean)
+                .map(id => String(id).toLowerCase())
+        );
+
+    console.log(
+        `✅ Local cards with Mazoku IDs: ${importedIds.size}`
+    );
+
+    console.log(
+        "\n🌐 Scanning the full Mazoku catalog..."
+    );
+
+    const catalog =
+        await fetchAllMazokuCards();
+
+    const missing =
+        catalog.filter(
+            card =>
+                card?.id &&
+                !importedIds.has(
+                    String(card.id).toLowerCase()
+                )
+        );
+
+    missing.sort(
+        (a, b) =>
+            String(a.seriesName || "")
+                .localeCompare(
+                    String(b.seriesName || "")
+                ) ||
+            TIER_ORDER.indexOf(
+                String(a.tier || "C").toUpperCase()
+            ) -
+            TIER_ORDER.indexOf(
+                String(b.tier || "C").toUpperCase()
+            ) ||
+            String(a.name || "")
+                .localeCompare(
+                    String(b.name || "")
+                )
+    );
+
+    const report =
+        buildMissingCardReport(missing);
+
+    const reportPath =
+        path.join(
+            __dirname,
+            "..",
+            "missing-cards.txt"
+        );
+
+    const jsonPath =
+        path.join(
+            __dirname,
+            "..",
+            "missing-cards.json"
+        );
+
+    fs.writeFileSync(
+        reportPath,
+        report,
+        "utf8"
+    );
+
+    fs.writeFileSync(
+        jsonPath,
+        JSON.stringify(missing, null, 2),
+        "utf8"
+    );
+
+    const affectedSeries =
+        new Set(
+            missing.map(
+                card =>
+                    card.seriesName ||
+                    "Unknown series"
+            )
+        );
+
+    console.log(
+        `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 MAZOKU CARD AUDIT
+
+🌐 Mazoku catalog: ${catalog.length}
+✅ Already imported: ${catalog.length - missing.length}
+❌ Missing: ${missing.length}
+📚 Series affected: ${affectedSeries.size}
+
+📝 Full readable report:
+${reportPath}
+
+📦 JSON report:
+${jsonPath}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+    );
+
+    if (missing.length === 0) {
+
+        console.log(
+            "🎉 You currently have every non-spicy card returned by Mazoku."
+        );
+
+        return;
+    }
+
+    console.log(
+        "First 25 missing cards:\n"
+    );
+
+    missing.slice(0, 25).forEach(
+        (card, index) => {
+
+            console.log(
+                `${index + 1}. [${card.tier || "C"}] ${card.name} — ${card.seriesName || "Unknown series"}`
+            );
+        }
+    );
+
+    if (missing.length > 25) {
+
+        console.log(
+            `\n...and ${missing.length - 25} more. Open missing-cards.txt for the complete list.`
+        );
+    }
+}
+
+// --------------------------------------------------
 // SEARCH
 // --------------------------------------------------
 
@@ -1266,13 +1538,26 @@ async function main() {
     const seriesMode =
         args.includes("--series");
 
+    const missingMode =
+        args.includes("--missing");
+
     const positional =
         args.filter(
-            arg => arg !== "--all" && arg !== "--series"
+            arg =>
+                arg !== "--all" &&
+                arg !== "--series" &&
+                arg !== "--missing"
         );
 
     const searchTerm =
         positional.join(" ").trim();
+
+    if (missingMode) {
+
+        await auditMissingCards();
+
+        return;
+    }
 
     if (!searchTerm) {
 
@@ -1284,6 +1569,8 @@ Usage:
   node tools/importCard.js "character name" --all
 
   node tools/importCard.js "MAZOKU-CARD-UUID"
+
+  node tools/importCard.js --missing
 
 Examples:
 
