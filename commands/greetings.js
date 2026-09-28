@@ -174,12 +174,20 @@ async function configureGreeting(sock, msg, text, type) {
   };
   saveSettings(settings);
 
+  const preview =
+    renderTemplate(
+      raw,
+      'new_member@s.whatsapp.net',
+      'Example Group',
+      123
+    );
+
   return sock.sendMessage(
     groupId,
     {
       text:
         `✅ ${label[0].toUpperCase() + label.slice(1)} message saved for *this group*.\n\n` +
-        `Preview template:\n@new_member\n\n${raw}`,
+        `Preview:\n${preview}`,
     },
     { quoted: msg }
   );
