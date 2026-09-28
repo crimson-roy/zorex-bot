@@ -35,6 +35,7 @@ const { authorizeAiRequest } = require("../lib/aiAuth");
 const { appendHistory, getHistory } = require("../lib/aiUserStore");
 const {
     normalizeCommandPlan,
+    bindCommandContext,
     calculateExposure,
     requiresConfirmation,
     describePlan,
@@ -64,6 +65,16 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"balance"}
 {"name":"profile"}
 {"name":"company"}
+{"name":"inventory","index":1}
+{"name":"collection","index":1}
+{"name":"deposit","amount":50000}
+{"name":"deposit","amount":"all"}
+{"name":"withdraw","amount":50000}
+{"name":"withdraw","amount":"all"}
+{"name":"daily"}
+{"name":"work","tier":1}
+{"name":"company_upgrade"}
+{"name":"transfer","amount":250000}
 {"name":"card_search","query":"card name","tier":"SSR"}
 {"name":"series_search","query":"series name"}
 {"name":"casino","amount":5000,"repeats":10}
@@ -75,6 +86,21 @@ Rules:
 - "show my balance" => balance.
 - "show my profile" => profile.
 - "show my company" => company.
+- "show my inventory" => inventory with no index.
+- "show inventory item 3" => inventory index 3.
+- "show my collection" => collection with no index.
+- "show collection item 2" => collection index 2.
+- "deposit 50000" => deposit amount 50000.
+- "deposit all" => deposit amount "all".
+- "withdraw 20000" => withdraw amount 20000.
+- "withdraw all" => withdraw amount "all".
+- "claim daily" or "claim my daily reward" => daily.
+- "work" => work tier 1.
+- "work tier 2" or "do work 2" => work tier 2.
+- "upgrade my company" => company_upgrade.
+- "send 250000 to @user" or a transfer request made while replying to a
+  recipient => transfer amount 250000. Do NOT invent or output a target JID;
+  the executor binds the recipient from the actual WhatsApp mention/reply.
 - "search Rem SSR" or "find Rem SSR card" => card_search, query "Rem",
   tier "SSR".
 - "show JJK cards" or "search JJK series" => series_search.
@@ -82,7 +108,7 @@ Rules:
 - "casino and slots 5000 10 times each" => TWO commands, casino then slots.
 - If repeats are omitted, use 1.
 - Never create owner/admin commands, arbitrary shell commands, raw command
-  strings, money transfers, company mutations, moderation actions, or any
+  strings, company creation, employee management, moderation actions, or any
   command not listed above.
 - Asking "how does casino work?" is answer, NOT execute_commands.
 - Asking what a command does is answer, NOT execute_commands.
@@ -840,19 +866,24 @@ async function aiCommand(sock, msg, text) {
             "execute_commands"
         ) {
             const commands =
-                normalizeCommandPlan(
-                    routing.commands
+                bindCommandContext(
+                    normalizeCommandPlan(
+                        routing.commands
+                    ),
+                    msg
                 );
 
             if (commands.length > 0) {
                 const exposure =
                     calculateExposure(
-                        commands
+                        commands,
+                        auth.registeredUserId
                     );
 
                 if (
                     requiresConfirmation(
-                        commands
+                        commands,
+                        auth.registeredUserId
                     )
                 ) {
                     setPending(
@@ -876,7 +907,10 @@ async function aiCommand(sock, msg, text) {
                             text:
 `⚠️ *Confirm Zorex AI actions*
 
-${describePlan(commands)}
+${describePlan(
+    commands,
+    auth.registeredUserId
+)}
 
 This request exceeds the *5,000,000 🌙* confirmation threshold.
 
