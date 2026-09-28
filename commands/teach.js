@@ -16,9 +16,9 @@
 // slide came back blank. Now this uses pdfjs-dist per page:
 //   - every page's embedded raster images (paintImageXObject /
 //     paintJpegXObject operators) are detected and pulled out
-//   - a page with no embedded images -> its text goes to Groq, same as before
+//   - a page with no embedded images -> its text goes to Azure text AI
 //   - a page WITH embedded image(s) -> those images (rendered to real PNG
-//     buffers via the `canvas` package) are sent to Gemini vision
+//     buffers via the `canvas` package) are sent to Azure multimodal vision
 //     (lib/visionClient.js), along with any of the page's own text as
 //     context, so a slide with both a diagram AND a caption/heading gets
 //     both taken into account
@@ -36,7 +36,7 @@ const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 const { createCanvas } = require("canvas");
 
 const { SLIDES_DIR, listPdfFiles, resolveCourse } = require("../lib/slidesHelper");
-const { callAI } = require("../lib/aiClient");
+const { callAI } = require("../lib/textAIClient");
 const { callVision } = require("../lib/visionClient");
 
 // Character budget per page's text sent to the AI in one call. Kept
