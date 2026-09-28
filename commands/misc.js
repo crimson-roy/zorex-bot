@@ -1,6 +1,7 @@
 const fs = require("fs");
 const { checkCooldown } = require("./cooldown");
 const { getDailyStatus } = require("./dailylimit");
+const { MAIN_OWNER } = require("../config");
 
 // PERSISTENCE FIX: these used to be bare relative paths ("./users.json",
 // "./owners.json"), which live on the container's ephemeral disk and get
@@ -26,8 +27,37 @@ function loadOwners() {
     return JSON.parse(fs.readFileSync(OWNERS_FILE, "utf8"));
 }
 
+function normalizeJid(jid) {
+    if (!jid || typeof jid !== "string") {
+        return "";
+    }
+
+    const [left, server] =
+        jid.toLowerCase().split("@");
+
+    if (!server) {
+        return jid.toLowerCase();
+    }
+
+    return `${left.split(":")[0]}@${server}`;
+}
+
 function isOwner(userId) {
-    return loadOwners().includes(userId);
+    const target =
+        normalizeJid(userId);
+
+    if (
+        MAIN_OWNER &&
+        normalizeJid(MAIN_OWNER) === target
+    ) {
+        return true;
+    }
+
+    return loadOwners().some(
+        owner =>
+            normalizeJid(owner) ===
+            target
+    );
 }
 
 // Compact number formatter — Thousand/Million/Billion/Trillion/Quadrillion/Quintillion
@@ -53,8 +83,31 @@ function formatValue(n) {
 // Checks the sender's REAL WhatsApp admin/superadmin status in this group
 async function isGroupAdmin(sock, groupId, userId) {
     try {
-        const metadata = await sock.groupMetadata(groupId);
-        const participant = metadata.participants.find(p => p.id === userId);
+        const metadata =
+            await sock.groupMetadata(
+                groupId
+            );
+
+        const target =
+            normalizeJid(userId);
+
+        const participant =
+            metadata.participants.find(
+                p => {
+                    const ids = [
+                        p.id,
+                        p.lid,
+                        p.phoneNumber,
+                        p.jid
+                    ]
+                        .filter(Boolean)
+                        .map(normalizeJid);
+
+                    return ids.includes(
+                        target
+                    );
+                }
+            );
 
         return !!participant && (
             participant.admin === "admin" ||
