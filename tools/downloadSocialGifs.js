@@ -73,6 +73,13 @@ function runFFmpeg(input, output) {
             "-y",
             "-i", input,
             "-an",
+
+            // H.264 + yuv420p requires even width/height. Anime GIF packs
+            // commonly contain odd sizes such as 453x280 or 480x285,
+            // so round each dimension up to the nearest even pixel.
+            "-vf",
+            "scale=ceil(iw/2)*2:ceil(ih/2)*2",
+
             "-c:v", "libx264",
             "-preset", "veryfast",
             "-crf", "24",
