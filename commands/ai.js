@@ -974,7 +974,7 @@ async function handleGenerateFile(
         sourceContext =
             extracted.text;
 
-    } else     if (media && media.type === "image") {
+    } else if (media && media.type === "image") {
 
         await progress.update("🖼️ Reviewing the attached image...");
 
