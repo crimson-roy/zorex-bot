@@ -118,13 +118,7 @@ async function socialCommand(sock, msg, text) {
             msg.key.remoteJid,
             {
                 text:
-`⚠️ *.${actionName}* needs someone to target.
-
-> Mention someone
-`.${actionName} @user`
-
-> Or reply to their message with
-`.${actionName}`
+`⚠️ *.${actionName}* needs someone to target.\n\n> Mention someone\n\`.${actionName} @user\`\n\n> Or reply to their message with\n\`.${actionName}\``
             },
             { quoted: msg }
         );
