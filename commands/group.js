@@ -13,6 +13,93 @@ const OWNERS_FILE = dataPath("owners.json");
 const MUTED_FILE = dataPath("muted.json");
 const MUTE_ALL_FILE = dataPath("muteall.json");
 
+function normalizeJid(jid) {
+
+    if (!jid || typeof jid !== "string") {
+        return "";
+    }
+
+    const [left, server] =
+        jid.toLowerCase().split("@");
+
+    if (!server) {
+        return jid.toLowerCase();
+    }
+
+    return `${left.split(":")[0]}@${server}`;
+
+}
+
+function messageSenderAliases(msg) {
+
+    const key =
+        msg?.key || {};
+
+    return [
+        ...new Set(
+            [
+                key.participant,
+                key.participantAlt,
+                key.senderPn,
+                key.senderLid
+            ]
+                .filter(Boolean)
+                .map(String)
+        )
+    ];
+
+}
+
+function participantAliases(participant) {
+
+    return [
+        ...new Set(
+            [
+                participant?.id,
+                participant?.lid,
+                participant?.phoneNumber,
+                participant?.jid
+            ]
+                .filter(Boolean)
+                .map(normalizeJid)
+        )
+    ];
+
+}
+
+function participantMatches(
+    participant,
+    jid
+) {
+
+    const target =
+        normalizeJid(jid);
+
+    return participantAliases(
+        participant
+    ).includes(
+        target
+    );
+
+}
+
+function findParticipantByJid(
+    participants,
+    jid
+) {
+
+    return (
+        participants || []
+    ).find(participant =>
+        participantMatches(
+            participant,
+            jid
+        )
+    );
+
+}
+
+
 
 // Load muted users
 function loadMuted() {
@@ -172,14 +259,25 @@ async function groupCommands(sock, msg, text) {
     );
 };
 
+    const senderAliases =
+        messageSenderAliases(
+            msg
+        );
+
     const senderIsAdmin =
         metadata.participants.some(
             p =>
-            p.id === sender &&
-            (
-                p.admin === "admin" ||
-                p.admin === "superadmin"
-            )
+                senderAliases.some(
+                    alias =>
+                        participantMatches(
+                            p,
+                            alias
+                        )
+                ) &&
+                (
+                    p.admin === "admin" ||
+                    p.admin === "superadmin"
+                )
         );
 
         if (text.startsWith(".unmute")) {
@@ -374,8 +472,17 @@ if (text.startsWith(".promote")) {
     );
 
     const senderIsOwner =
-        sender === MAIN_OWNER ||
-        owners.includes(sender);
+        senderAliases.some(alias =>
+            (
+                MAIN_OWNER &&
+                normalizeJid(alias) ===
+                    normalizeJid(MAIN_OWNER)
+            ) ||
+            owners.some(owner =>
+                normalizeJid(owner) ===
+                    normalizeJid(alias)
+            )
+        );
 
     // =====================================
     // NOT GROUP ADMIN
@@ -466,8 +573,9 @@ if (text.startsWith(".promote")) {
     // =====================================
 
     const targetData =
-        metadata.participants.find(
-            p => p.id === target
+        findParticipantByJid(
+            metadata.participants,
+            target
         );
 
     if (
@@ -573,8 +681,17 @@ if (text.startsWith(".demote")) {
     );
 
     const senderIsOwner =
-        sender === MAIN_OWNER ||
-        owners.includes(sender);
+        senderAliases.some(alias =>
+            (
+                MAIN_OWNER &&
+                normalizeJid(alias) ===
+                    normalizeJid(MAIN_OWNER)
+            ) ||
+            owners.some(owner =>
+                normalizeJid(owner) ===
+                    normalizeJid(alias)
+            )
+        );
 
     // =====================================
     // NOT GROUP ADMIN
@@ -657,8 +774,9 @@ if (text.startsWith(".demote")) {
     // =====================================
 
     const targetData =
-        metadata.participants.find(
-            p => p.id === target
+        findParticipantByJid(
+            metadata.participants,
+            target
         );
 
     if (
