@@ -131,12 +131,33 @@ function escapeXml(value) {
 }
 
 function wrapText(value, maxChars = 18, maxLines = 3) {
-    const words = String(value || '')
+    const rawWords = String(value || '')
         .trim()
         .split(/\s+/)
         .filter(Boolean);
 
-    if (!words.length) return [];
+    if (!rawWords.length) return [];
+
+    // Split unusually long single words too, so even usernames / meme text
+    // without spaces cannot run outside the 512x512 sticker.
+    const words = [];
+
+    for (const rawWord of rawWords) {
+        let word = rawWord;
+
+        while (word.length > maxChars) {
+            words.push(
+                word.slice(0, maxChars)
+            );
+
+            word =
+                word.slice(maxChars);
+        }
+
+        if (word) {
+            words.push(word);
+        }
+    }
 
     const lines = [];
     let current = '';
@@ -171,6 +192,60 @@ function wrapText(value, maxChars = 18, maxLines = 3) {
     }
 
     return lines;
+}
+
+function clamp(value, min, max) {
+    return Math.max(
+        min,
+        Math.min(max, value)
+    );
+}
+
+function fittedFontSize(
+    lines,
+    {
+        baseSize,
+        minSize,
+        maxWidth,
+        widthFactor = 0.62,
+        linePenalty = 2
+    }
+) {
+    if (
+        !Array.isArray(lines) ||
+        lines.length === 0
+    ) {
+        return baseSize;
+    }
+
+    const longestLine =
+        lines.reduce(
+            (max, line) =>
+                Math.max(
+                    max,
+                    String(line || '').length
+                ),
+            0
+        ) || 1;
+
+    const estimated =
+        Math.floor(
+            maxWidth /
+            (
+                longestLine *
+                widthFactor
+            )
+        ) -
+        (
+            (lines.length - 1) *
+            linePenalty
+        );
+
+    return clamp(
+        estimated,
+        minSize,
+        baseSize
+    );
 }
 
 function parseStickerText(text) {
@@ -210,11 +285,426 @@ function parseStickerText(text) {
     };
 }
 
-async function createStickerTextOverlay(
-    mainText,
-    captionText
+const DEFAULT_STICKER_PACK =
+    'Zorex Stickers';
+
+const DEFAULT_STICKER_AUTHOR =
+    'Zorex';
+
+function makeWebpChunk(type, payload) {
+    const data =
+        Buffer.isBuffer(payload)
+            ? payload
+            : Buffer.from(payload || []);
+
+    const header =
+        Buffer.alloc(8);
+
+    header.write(
+        type,
+        0,
+        4,
+        'ascii'
+    );
+
+    header.writeUInt32LE(
+        data.length,
+        4
+    );
+
+    const padding =
+        data.length % 2
+            ? Buffer.from([0])
+            : Buffer.alloc(0);
+
+    return Buffer.concat([
+        header,
+        data,
+        padding
+    ]);
+}
+
+function parseWebpChunks(buffer) {
+    if (
+        !Buffer.isBuffer(buffer) ||
+        buffer.length < 12 ||
+        buffer.toString('ascii', 0, 4) !== 'RIFF' ||
+        buffer.toString('ascii', 8, 12) !== 'WEBP'
+    ) {
+        throw new Error(
+            'Invalid WebP sticker buffer.'
+        );
+    }
+
+    const chunks = [];
+    let offset = 12;
+
+    while (offset + 8 <= buffer.length) {
+        const type =
+            buffer.toString(
+                'ascii',
+                offset,
+                offset + 4
+            );
+
+        const size =
+            buffer.readUInt32LE(
+                offset + 4
+            );
+
+        const start =
+            offset + 8;
+
+        const end =
+            start + size;
+
+        if (end > buffer.length) {
+            throw new Error(
+                'Invalid WebP chunk length.'
+            );
+        }
+
+        chunks.push({
+            type,
+            data:
+                Buffer.from(
+                    buffer.subarray(
+                        start,
+                        end
+                    )
+                )
+        });
+
+        offset =
+            end +
+            (size % 2);
+    }
+
+    return chunks;
+}
+
+function read24LE(buffer, offset) {
+    return (
+        buffer[offset] |
+        (buffer[offset + 1] << 8) |
+        (buffer[offset + 2] << 16)
+    );
+}
+
+function write24LE(buffer, value, offset) {
+    buffer[offset] =
+        value & 0xff;
+
+    buffer[offset + 1] =
+        (value >> 8) & 0xff;
+
+    buffer[offset + 2] =
+        (value >> 16) & 0xff;
+}
+
+function getWebpCanvasSize(chunks) {
+    const vp8x =
+        chunks.find(
+            chunk =>
+                chunk.type === 'VP8X'
+        );
+
+    if (
+        vp8x &&
+        vp8x.data.length >= 10
+    ) {
+        return {
+            width:
+                read24LE(
+                    vp8x.data,
+                    4
+                ) + 1,
+            height:
+                read24LE(
+                    vp8x.data,
+                    7
+                ) + 1
+        };
+    }
+
+    const vp8 =
+        chunks.find(
+            chunk =>
+                chunk.type === 'VP8 '
+        );
+
+    if (
+        vp8 &&
+        vp8.data.length >= 10
+    ) {
+        return {
+            width:
+                vp8.data
+                    .readUInt16LE(6) &
+                0x3fff,
+            height:
+                vp8.data
+                    .readUInt16LE(8) &
+                0x3fff
+        };
+    }
+
+    const vp8l =
+        chunks.find(
+            chunk =>
+                chunk.type === 'VP8L'
+        );
+
+    if (
+        vp8l &&
+        vp8l.data.length >= 5
+    ) {
+        const bits =
+            vp8l.data
+                .readUInt32LE(1);
+
+        return {
+            width:
+                (bits & 0x3fff) + 1,
+            height:
+                ((bits >>> 14) & 0x3fff) + 1
+        };
+    }
+
+    throw new Error(
+        'Could not determine WebP canvas size.'
+    );
+}
+
+function hasVp8lAlpha(chunks) {
+    const vp8l =
+        chunks.find(
+            chunk =>
+                chunk.type === 'VP8L'
+        );
+
+    if (
+        !vp8l ||
+        vp8l.data.length < 5
+    ) {
+        return false;
+    }
+
+    const bits =
+        vp8l.data
+            .readUInt32LE(1);
+
+    return Boolean(
+        (bits >>> 28) & 1
+    );
+}
+
+function buildStickerExif(
+    packName,
+    author
 ) {
-    if (!mainText && !captionText) {
+    const json = {
+        'sticker-pack-id':
+            'zorex-ai',
+        'sticker-pack-name':
+            packName,
+        'sticker-pack-publisher':
+            author,
+        emojis:
+            ['']
+    };
+
+    const exifAttr =
+        Buffer.from([
+            0x49, 0x49, 0x2a, 0x00,
+            0x08, 0x00, 0x00, 0x00,
+            0x01, 0x00, 0x41, 0x57,
+            0x07, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x16, 0x00,
+            0x00, 0x00
+        ]);
+
+    const jsonBuffer =
+        Buffer.from(
+            JSON.stringify(json),
+            'utf8'
+        );
+
+    exifAttr.writeUIntLE(
+        jsonBuffer.length,
+        14,
+        4
+    );
+
+    return Buffer.concat([
+        exifAttr,
+        jsonBuffer
+    ]);
+}
+
+function addStickerMetadata(
+    webpBuffer,
+    packName,
+    author
+) {
+    let chunks =
+        parseWebpChunks(
+            webpBuffer
+        )
+            .filter(
+                chunk =>
+                    chunk.type !== 'EXIF'
+            );
+
+    const canvas =
+        getWebpCanvasSize(
+            chunks
+        );
+
+    let vp8xIndex =
+        chunks.findIndex(
+            chunk =>
+                chunk.type === 'VP8X'
+        );
+
+    if (vp8xIndex >= 0) {
+        const data =
+            Buffer.from(
+                chunks[vp8xIndex].data
+            );
+
+        if (data.length < 10) {
+            throw new Error(
+                'Invalid VP8X chunk.'
+            );
+        }
+
+        // VP8X EXIF-present flag.
+        data[0] |= 0x08;
+
+        chunks[vp8xIndex] = {
+            type: 'VP8X',
+            data
+        };
+
+    } else {
+        const data =
+            Buffer.alloc(10);
+
+        let flags =
+            0x08; // EXIF
+
+        if (
+            chunks.some(
+                chunk =>
+                    chunk.type === 'ICCP'
+            )
+        ) {
+            flags |= 0x20;
+        }
+
+        if (
+            chunks.some(
+                chunk =>
+                    chunk.type === 'ALPH'
+            ) ||
+            hasVp8lAlpha(chunks)
+        ) {
+            flags |= 0x10;
+        }
+
+        if (
+            chunks.some(
+                chunk =>
+                    chunk.type === 'XMP '
+            )
+        ) {
+            flags |= 0x04;
+        }
+
+        if (
+            chunks.some(
+                chunk =>
+                    chunk.type === 'ANIM' ||
+                    chunk.type === 'ANMF'
+            )
+        ) {
+            flags |= 0x02;
+        }
+
+        data[0] =
+            flags;
+
+        write24LE(
+            data,
+            canvas.width - 1,
+            4
+        );
+
+        write24LE(
+            data,
+            canvas.height - 1,
+            7
+        );
+
+        chunks.unshift({
+            type: 'VP8X',
+            data
+        });
+    }
+
+    chunks.push({
+        type: 'EXIF',
+        data:
+            buildStickerExif(
+                packName,
+                author
+            )
+    });
+
+    const body =
+        Buffer.concat(
+            chunks.map(
+                chunk =>
+                    makeWebpChunk(
+                        chunk.type,
+                        chunk.data
+                    )
+            )
+        );
+
+    const riffHeader =
+        Buffer.alloc(12);
+
+    riffHeader.write(
+        'RIFF',
+        0,
+        4,
+        'ascii'
+    );
+
+    riffHeader.writeUInt32LE(
+        body.length + 4,
+        4
+    );
+
+    riffHeader.write(
+        'WEBP',
+        8,
+        4,
+        'ascii'
+    );
+
+    return Buffer.concat([
+        riffHeader,
+        body
+    ]);
+}
+
+async function createStickerTextOverlay(
+    mainText
+) {
+    if (!mainText) {
         return null;
     }
 
@@ -225,54 +715,51 @@ async function createStickerTextOverlay(
             3
         );
 
-    const captionLines =
-        wrapText(
-            captionText,
-            28,
-            2
+    const mainFontSize =
+        fittedFontSize(
+            mainLines,
+            {
+                baseSize: 56,
+                minSize: 24,
+                maxWidth: 452,
+                widthFactor: 0.63,
+                linePenalty: 3
+            }
         );
 
-    const mainFontSize =
-        mainLines.length > 1
-            ? 48
-            : 56;
+    const mainStrokeWidth =
+        Math.max(
+            4,
+            Math.round(
+                mainFontSize * 0.12
+            )
+        );
 
-    const mainStartY = 54;
     const mainGap =
         Math.round(
-            mainFontSize * 1.05
+            mainFontSize * 1.08
         );
 
-    const captionFontSize = 28;
-    const captionGap = 32;
-    const captionStartY =
-        476 -
-        (
-            Math.max(
-                captionLines.length - 1,
-                0
-            ) *
-            captionGap
+    const mainStartY =
+        Math.max(
+            52,
+            78 -
+            (
+                (mainLines.length - 1) *
+                10
+            )
         );
 
     const mainSvg =
         mainLines
             .map(
                 (line, index) =>
-                    `<text x="256" y="${mainStartY + (index * mainGap)}" text-anchor="middle" font-family="sans-serif" font-size="${mainFontSize}" font-weight="800" fill="white" stroke="black" stroke-width="7" paint-order="stroke fill" stroke-linejoin="round">${escapeXml(line)}</text>`
-            )
-            .join('');
-
-    const captionSvg =
-        captionLines
-            .map(
-                (line, index) =>
-                    `<text x="256" y="${captionStartY + (index * captionGap)}" text-anchor="middle" font-family="sans-serif" font-size="${captionFontSize}" font-weight="700" fill="white" stroke="black" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round">${escapeXml(line)}</text>`
+                    `<text x="256" y="${mainStartY + (index * mainGap)}" text-anchor="middle" font-family="sans-serif" font-size="${mainFontSize}" font-weight="800" fill="white" stroke="black" stroke-width="${mainStrokeWidth}" paint-order="stroke fill" stroke-linejoin="round">${escapeXml(line)}</text>`
             )
             .join('');
 
     const svg =
-        `<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">${mainSvg}${captionSvg}</svg>`;
+        `<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">${mainSvg}</svg>`;
 
     return sharp(
         Buffer.from(svg)
@@ -283,13 +770,11 @@ async function createStickerTextOverlay(
 
 async function imageToSticker(
     buffer,
-    mainText = '',
-    captionText = ''
+    mainText = ''
 ) {
     const overlay =
         await createStickerTextOverlay(
-            mainText,
-            captionText
+            mainText
         );
 
     let pipeline =
@@ -327,8 +812,7 @@ async function imageToSticker(
 
 async function videoToSticker(
     media,
-    mainText = '',
-    captionText = ''
+    mainText = ''
 ) {
     const input =
         tempPath(
@@ -347,8 +831,7 @@ async function videoToSticker(
     try {
         const overlay =
             await createStickerTextOverlay(
-                mainText,
-                captionText
+                mainText
             );
 
         if (overlay) {
@@ -529,23 +1012,48 @@ async function stickerCommands(sock, msg, text) {
                 );
             }
 
-            const stickerBuffer =
-                media.kind === 'video'
-                    ? await videoToSticker(
-                        media,
-                        mainText,
-                        captionText
-                    )
-                    : await imageToSticker(
-                        media.buffer,
-                        mainText,
-                        captionText
-                    );
+            let stickerBuffer;
+
+            if (
+                media.kind === 'sticker' &&
+                !mainText &&
+                captionText
+            ) {
+                // Author-only change: preserve the existing sticker frames
+                // and simply replace its WhatsApp sticker metadata.
+                stickerBuffer =
+                    media.buffer;
+
+            } else {
+                stickerBuffer =
+                    media.kind === 'video'
+                        ? await videoToSticker(
+                            media,
+                            mainText
+                        )
+                        : await imageToSticker(
+                            media.buffer,
+                            mainText
+                        );
+            }
+
+            stickerBuffer =
+                addStickerMetadata(
+                    stickerBuffer,
+                    DEFAULT_STICKER_PACK,
+                    captionText ||
+                    DEFAULT_STICKER_AUTHOR
+                );
 
             return sock.sendMessage(
                 chatId,
-                { sticker: stickerBuffer },
-                { quoted: msg }
+                {
+                    sticker:
+                        stickerBuffer
+                },
+                {
+                    quoted: msg
+                }
             );
         }
 
