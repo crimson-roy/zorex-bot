@@ -208,6 +208,7 @@ const { aiCommand } = require("./commands/ai");
 const { askCommand } = require("./commands/ask");
 const { nameChangeCommand } = require("./commands/namechange");
 const { imageCommand } = require("./commands/image");
+const { videoCommand } = require("./commands/video");
 const { tradeCommands } = require("./commands/trade");
 const { startTradeSweeper } = require("./lib/tradeTimeouts");
 
@@ -1899,6 +1900,13 @@ ${board}
 ) {
 
     await imageCommand(sock, msg, text);
+
+} else if (
+    text === ".video" ||
+    text.startsWith(".video ")
+) {
+
+    await videoCommand(sock, msg, text);
 
 } else if (
     text === ".ask" ||
