@@ -32,7 +32,11 @@ const { buildDocx, buildXlsx, buildPptx, buildPdf } = require("../lib/fileBuilde
 const { generateImageFromPrompt } = require("./image");
 const { ZOREX_AI_SYSTEM_PROMPT } = require("../lib/zorexPersona");
 const { authorizeAiRequest } = require("../lib/aiAuth");
-const { appendHistory, getHistory } = require("../lib/aiUserStore");
+const {
+    appendHistory,
+    getHistory,
+    getConversationMessages
+} = require("../lib/aiUserStore");
 const {
     normalizeCommandPlan,
     bindCommandContext,
@@ -500,9 +504,17 @@ async function handleAnswer(
         await progress.update("🧠 Thinking...");
     }
 
+    const conversation =
+        getConversationMessages(
+            profileId,
+            8
+        );
+
     const answer = await callAI(
-        ZOREX_AI_SYSTEM_PROMPT,
+        ZOREX_AI_SYSTEM_PROMPT +
+            "\n\nUse the recent conversation to resolve follow-up references such as 'it', 'that', 'the show', 'him', or 'her'. Treat earlier assistant answers as conversational context, not as guaranteed factual authority. The current user message has priority.",
         [
+            ...conversation,
             {
                 role: "user",
                 content: prompt
