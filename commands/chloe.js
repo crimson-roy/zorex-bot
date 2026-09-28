@@ -7,7 +7,7 @@
 //
 // Important:
 // - Chloe never blocks the main command router.
-// - AI history is deliberately capped to keep Groq token usage low.
+// - AI history is deliberately capped to keep provider usage low.
 // - Only one Chloe AI request may run per chat at a time.
 // - The rest of Chloe's personality / relationship / sticker system
 //   remains unchanged.
@@ -21,7 +21,7 @@ const memory =
     require("../lib/chloeMemory");
 
 const { callAI } =
-    require("../lib/chloeOpenAI");
+    require("../lib/textAIClient");
 
 const { judgeExchange } =
     require("../lib/relationshipEngine");
@@ -53,7 +53,7 @@ const BOT_NAME = "chloe";
 // ============================================================
 //
 // These limits are deliberately conservative because Chloe's
-// old version could send thousands of input tokens to Groq.
+// old version could send thousands of input tokens to the provider.
 //
 // 6 messages is enough for short-term conversational context.
 // Individual messages are also truncated so one huge message
@@ -893,7 +893,7 @@ async function handleMessage(
         );
 
 
-        // Specific handling for Groq rate limits.
+        // Specific handling for provider rate limits.
         if (
             String(err.message)
                 .includes("429")
