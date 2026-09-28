@@ -251,7 +251,7 @@ async function openGroup(sock, msg) {
         );
 
     if (!allowed) {
-        return await sock.sendMessage(groupId, { text: `❌ Only group admins can use this command.` }, { quoted: msg });
+        return await sock.sendMessage(groupId, { text: `❌ Only Zorex owners or group admins can use this command.` }, { quoted: msg });
     }
 
     try {
@@ -282,7 +282,7 @@ async function closeGroup(sock, msg) {
         );
 
     if (!allowed) {
-        return await sock.sendMessage(groupId, { text: `❌ Only group admins can use this command.` }, { quoted: msg });
+        return await sock.sendMessage(groupId, { text: `❌ Only Zorex owners or group admins can use this command.` }, { quoted: msg });
     }
 
     try {
