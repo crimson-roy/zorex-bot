@@ -1582,6 +1582,268 @@ mazokuIndex.set(
 }
 
 // --------------------------------------------------
+// IMPORT FROM CACHED MISSING-CARD AUDIT
+// --------------------------------------------------
+
+const MISSING_CACHE_FILE =
+    path.join(
+        __dirname,
+        "..",
+        "missing-cards.json"
+    );
+
+function parseTierFilter(value) {
+
+    const raw =
+        String(value || "UR,SSR");
+
+    const tiers =
+        raw
+            .split(",")
+            .map(tier => tier.trim().toUpperCase())
+            .filter(Boolean);
+
+    const unique =
+        [...new Set(tiers)];
+
+    const invalid =
+        unique.filter(
+            tier => !TIER_VALUES[tier]
+        );
+
+    if (invalid.length) {
+
+        throw new Error(
+            `Unsupported tier(s): ${invalid.join(", ")}. Valid tiers: ${Object.keys(TIER_VALUES).join(", ")}`
+        );
+
+    }
+
+    return unique;
+
+}
+
+async function importMissingFromCache(
+    tierValue
+) {
+
+    if (!fs.existsSync(MISSING_CACHE_FILE)) {
+
+        throw new Error(
+            "missing-cards.json was not found. Run: node tools/importCard.js --missing"
+        );
+
+    }
+
+    let cached;
+
+    try {
+
+        cached =
+            JSON.parse(
+                fs.readFileSync(
+                    MISSING_CACHE_FILE,
+                    "utf8"
+                )
+            );
+
+    } catch (err) {
+
+        throw new Error(
+            `Could not read missing-cards.json: ${err.message}`
+        );
+
+    }
+
+    if (!Array.isArray(cached)) {
+
+        throw new Error(
+            "missing-cards.json is not a valid missing-card audit file."
+        );
+
+    }
+
+    const wantedTiers =
+        parseTierFilter(tierValue);
+
+    const wantedSet =
+        new Set(wantedTiers);
+
+    const cards =
+        loadCards();
+
+    const mazokuIndex =
+        buildMazokuIndex(cards);
+
+    const pending =
+        cached
+            .filter(
+                card =>
+                    card?.id &&
+                    wantedSet.has(
+                        String(card.tier || "").toUpperCase()
+                    ) &&
+                    !findExistingCard(
+                        mazokuIndex,
+                        card.id
+                    )
+            )
+            .sort(
+                (a, b) => {
+
+                    const tierA =
+                        TIER_ORDER.indexOf(
+                            String(a.tier || "C").toUpperCase()
+                        );
+
+                    const tierB =
+                        TIER_ORDER.indexOf(
+                            String(b.tier || "C").toUpperCase()
+                        );
+
+                    return (
+                        tierA - tierB ||
+                        String(a.seriesName || "")
+                            .localeCompare(
+                                String(b.seriesName || "")
+                            ) ||
+                        String(a.name || "")
+                            .localeCompare(
+                                String(b.name || "")
+                            )
+                    );
+
+                }
+            );
+
+    const cachedMatching =
+        cached.filter(
+            card =>
+                wantedSet.has(
+                    String(card?.tier || "").toUpperCase()
+                )
+        );
+
+    const alreadyImported =
+        cachedMatching.length -
+        pending.length;
+
+    console.log(
+        `\n📦 Cached missing-card import`
+    );
+
+    console.log(
+        `🏷️ Tiers: ${wantedTiers.join(", ")}`
+    );
+
+    console.log(
+        `📄 Matching cards in cache: ${cachedMatching.length}`
+    );
+
+    console.log(
+        `✅ Already imported since audit: ${alreadyImported}`
+    );
+
+    console.log(
+        `⬇️ Still to import: ${pending.length}\n`
+    );
+
+    if (!pending.length) {
+
+        console.log(
+            "🎉 Nothing left to import for those tiers."
+        );
+
+        return;
+
+    }
+
+    let added = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (
+        let index = 0;
+        index < pending.length;
+        index++
+    ) {
+
+        const card =
+            pending[index];
+
+        const tier =
+            String(
+                card.tier ||
+                "C"
+            ).toUpperCase();
+
+        console.log(
+            `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+        );
+
+        console.log(
+            `[${index + 1}/${pending.length}] [${tier}] ${card.name || "Unknown"}`
+        );
+
+        console.log(
+            `📚 ${card.seriesName || "Unknown series"}`
+        );
+
+        try {
+
+            const id =
+                await importOne(
+                    card,
+                    cards,
+                    mazokuIndex
+                );
+
+            if (id) {
+
+                added++;
+
+                // Save after EVERY successful card so a disconnect,
+                // Ctrl+C, or VPS restart never loses completed imports.
+                saveCards(cards);
+
+            } else {
+
+                skipped++;
+
+            }
+
+        } catch (err) {
+
+            failed++;
+
+            console.error(
+                `❌ Failed: ${card.name || "Unknown"} — ${err.message}`
+            );
+
+        }
+
+        // The media itself comes from Mazoku's CDN rather than the cards
+        // API, but a short gap still avoids hammering their servers.
+        if (index < pending.length - 1) {
+            await sleep(750);
+        }
+
+    }
+
+    console.log(
+        `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Cached high-tier import complete
+
+🏷️ Tiers:   ${wantedTiers.join(", ")}
+🎴 Added:   ${added}
+♻️ Skipped: ${skipped}
+❌ Failed:  ${failed}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+    );
+
+}
+
+// --------------------------------------------------
 // MAIN
 // --------------------------------------------------
 
@@ -1599,16 +1861,82 @@ async function main() {
     const missingMode =
         args.includes("--missing");
 
-    const positional =
-        args.filter(
-            arg =>
-                arg !== "--all" &&
-                arg !== "--series" &&
-                arg !== "--missing"
+    const importMissingMode =
+        args.includes("--import-missing");
+
+    let tierValue = null;
+
+    const inlineTierArg =
+        args.find(
+            arg => arg.startsWith("--tier=")
         );
+
+    if (inlineTierArg) {
+
+        tierValue =
+            inlineTierArg
+                .slice("--tier=".length)
+                .trim();
+
+    } else {
+
+        const tierIndex =
+            args.indexOf("--tier");
+
+        if (
+            tierIndex !== -1 &&
+            args[tierIndex + 1] &&
+            !args[tierIndex + 1].startsWith("--")
+        ) {
+
+            tierValue =
+                args[tierIndex + 1];
+
+        }
+
+    }
+
+    const positional = [];
+
+    for (
+        let index = 0;
+        index < args.length;
+        index++
+    ) {
+
+        const arg =
+            args[index];
+
+        if (
+            arg === "--all" ||
+            arg === "--series" ||
+            arg === "--missing" ||
+            arg === "--import-missing" ||
+            arg.startsWith("--tier=")
+        ) {
+            continue;
+        }
+
+        if (arg === "--tier") {
+            index++;
+            continue;
+        }
+
+        positional.push(arg);
+
+    }
 
     const searchTerm =
         positional.join(" ").trim();
+
+    if (importMissingMode) {
+
+        await importMissingFromCache(
+            tierValue
+        );
+
+        return;
+    }
 
     if (missingMode) {
 
@@ -1630,6 +1958,12 @@ Usage:
 
   node tools/importCard.js --missing
 
+  node tools/importCard.js --import-missing --tier UR,SSR
+
+  node tools/importCard.js --import-missing --tier UR
+
+  node tools/importCard.js --import-missing --tier SSR
+
 Examples:
 
   node tools/importCard.js "Rem"
@@ -1637,6 +1971,8 @@ Examples:
   node tools/importCard.js "Makima"
 
   node tools/importCard.js "Uta" --all
+
+  node tools/importCard.js --import-missing --tier UR,SSR
 
   node tools/importCard.js "22eceb73-8e8e-4aae-b9c6-7e2b6c565d2d"
 `);
