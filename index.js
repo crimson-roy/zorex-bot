@@ -205,6 +205,7 @@ const { commandOffCommand, commandOnCommand, isCommandsOff } = require("./comman
 // timeout and 5-minute session-inactivity timeout get enforced in the
 // background (see lib/tradeTimeouts.js).
 const { aiCommand } = require("./commands/ai");
+const { askCommand } = require("./commands/ask");
 const { imageCommand } = require("./commands/image");
 const { tradeCommands } = require("./commands/trade");
 const { startTradeSweeper } = require("./lib/tradeTimeouts");
@@ -1875,6 +1876,13 @@ ${board}
 
     await imageCommand(sock, msg, text);
 
+} else if (
+    text === ".ask" ||
+    text.startsWith(".ask ")
+) {
+
+    await askCommand(sock, msg, text);
+
 } else if (text.startsWith(".ai")) {
 
     await aiCommand(sock, msg, text);
@@ -2427,6 +2435,7 @@ else if (text.startsWith(".mem")) {
             text: `📚 *ZOREX COMMAND MENU*
 
 ╭─═🤖 AI & CHLOE 🤖═─╮
+│ ✦ .ask
 │ ✦ .ai
 │ ✦ .image
 │ ✦ .relation
