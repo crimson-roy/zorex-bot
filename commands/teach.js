@@ -52,8 +52,8 @@ const MESSAGE_CHARS = 3500;
 
 // Embedded images smaller than this (in either dimension) are almost
 // always decorative — bullet icons, logos, small dividers — not actual
-// diagrams/figures worth a vision call. Skipped to avoid wasting Gemini
-// calls (and money) on noise.
+// diagrams/figures worth a vision call. Skipped to avoid wasting Azure
+// vision calls on decorative noise.
 const MIN_IMAGE_DIMENSION = 80;
 
 const SUMMARY_SYSTEM_PROMPT = `
@@ -239,8 +239,8 @@ async function extractDocumentPages(pdfBuffer) {
 }
 
 /**
- * Summarizes a single page: text-only pages go through Groq exactly as
- * before; pages with embedded image(s) go through Gemini vision, with
+ * Summarizes a single page: text-only pages go through Azure text AI;
+ * pages with embedded image(s) go through Azure multimodal vision, with
  * the page's own text passed along as context. If vision fails for
  * every image on an image-page (API error, etc.), falls back to
  * summarizing whatever text is on that page rather than dropping it
