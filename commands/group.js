@@ -860,10 +860,23 @@ if (text.startsWith(".kick")) {
     const sender = msg.key.participant || msg.key.remoteJid;
 
 
-    // Check if sender is group admin
-    const senderAdmin = participants.find(
-        p => p.id === sender
-    )?.admin;
+    // Check if sender is group admin using all Baileys identity aliases.
+    const kickSenderAliases =
+        messageSenderAliases(
+            msg
+        );
+
+    const senderAdmin =
+        participants.find(
+            p =>
+                kickSenderAliases.some(
+                    alias =>
+                        participantMatches(
+                            p,
+                            alias
+                        )
+                )
+        )?.admin;
 
 
     if (!senderAdmin) {
@@ -871,27 +884,51 @@ if (text.startsWith(".kick")) {
     }
 
 
-    // Check if bot is admin
-    const botLid = sock.user.lid.split(":")[0] + "@lid";
+    // Check if the bot is admin, accepting either LID or phone-JID identity.
+    const botAliases = [
+        sock.user?.id,
+        sock.user?.lid
+    ]
+        .filter(Boolean)
+        .map(value => {
+            const raw =
+                String(value);
 
-console.log("BOT LID:", botLid);
+            if (
+                raw.includes(":") &&
+                raw.includes("@")
+            ) {
+                const [
+                    left,
+                    server
+                ] =
+                    raw.split("@");
 
-console.log(
-    "GROUP PARTICIPANTS:",
-    participants.map(p => ({
-        id: p.id,
-        admin: p.admin
-    }))
-);
+                return `${left.split(":")[0]}@${server}`;
+            }
 
-const botAdmin = participants.find(
-    p => p.id === botLid
-)?.admin;
+            return raw;
+        });
+
+    const botParticipant =
+        participants.find(
+            p =>
+                botAliases.some(
+                    alias =>
+                        participantMatches(
+                            p,
+                            alias
+                        )
+                )
+        );
+
+    const botAdmin =
+        botParticipant?.admin;
 
 
-if (!botAdmin) {
-    return reply("❌ I need to be an admin before I can kick members.");
-}
+    if (!botAdmin) {
+        return reply("❌ I need to be an admin before I can kick members.");
+    }
 
     const context =
         msg.message?.extendedTextMessage
@@ -930,7 +967,13 @@ if (!botAdmin) {
 
 
     // Prevent kicking bot
-    if (target === botLid) {
+    if (
+        botParticipant &&
+        participantMatches(
+            botParticipant,
+            target
+        )
+    ) {
         return reply("😐 I can't kick myself.");
     }
 
