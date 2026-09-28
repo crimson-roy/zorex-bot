@@ -111,11 +111,20 @@ function formatCardBlock(cardId, card, owners) {
 
     const icon = TIER_ICONS[card.tier] || "⚪";
     const label = TIER_LABELS[card.tier] || card.tier;
+    const users = loadUsers();
 
-    const ownerLine =
+    const ownerLines =
         owners.length === 0
             ? "No one yet — be the first!"
-            : owners.map(o => `@${o.split("@")[0]}`).join(", ");
+            : owners
+                .map((ownerId, index) => {
+                    const registeredName =
+                        users[ownerId]?.name ||
+                        "Unregistered User";
+
+                    return `${index + 1}. ${registeredName}`;
+                })
+                .join("\n");
 
     const text =
 `┌─── 📋 Card Info ───────────
@@ -125,9 +134,10 @@ function formatCardBlock(cardId, card, owners) {
 │ 💎 Value: ${card.valueMin.toLocaleString()} – ${card.valueMax.toLocaleString()} 🌙
 │ 🆔 #${cardId}
 └─────────────────────────────
-👤 Owners: ${ownerLine}`;
+👤 Owners:
+${ownerLines}`;
 
-    return { text, mentions: owners };
+    return { text };
 
 }
 
@@ -157,23 +167,20 @@ async function sendCardDisplay(sock, msg, cardId, card, owners, extraText = "") 
         await sock.sendMessage(msg.key.remoteJid, {
             video: fs.readFileSync(videoPath),
             caption,
-            gifPlayback: true,
-            mentions: block.mentions
+            gifPlayback: true
         }, { quoted: msg });
 
     } else if (card.image && fs.existsSync(card.image)) {
 
         await sock.sendMessage(msg.key.remoteJid, {
             image: fs.readFileSync(card.image),
-            caption,
-            mentions: block.mentions
+            caption
         }, { quoted: msg });
 
     } else {
 
         await sock.sendMessage(msg.key.remoteJid, {
-            text: caption,
-            mentions: block.mentions
+            text: caption
         }, { quoted: msg });
 
     }
