@@ -4,29 +4,30 @@ const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
 
-const API_BASE = "https://nekos.best/api/v2";
 const ROOT = path.resolve(__dirname, "..");
 const SOCIAL_ROOT = path.join(ROOT, "media", "social");
 
-// Zorex social command -> nekos.best GIF category.
-// "kill" deliberately uses the playful "yeet" category rather than
-// anything graphic. A separate seppuku pack should be curated manually.
-const CATEGORY_MAP = {
-    hug: "hug",
-    kiss: "kiss",
-    slap: "slap",
-    pat: "pat",
-    poke: "poke",
-    cuddle: "cuddle",
-    bite: "bite",
-    highfive: "highfive",
-    dance: "dance",
-    kill: "yeet"
-};
+const SOURCE_OWNER = "ZekaiDev";
+const SOURCE_REPO = "anime-reaction-gif";
+const SOURCE_BRANCH = "main";
+const RAW_BASE =
+    `https://raw.githubusercontent.com/${SOURCE_OWNER}/${SOURCE_REPO}/${SOURCE_BRANCH}`;
 
-const USER_AGENT =
-    process.env.NEKOS_USER_AGENT ||
-    "Zorex-AI (https://github.com/crimson-roy/zorex-bot)";
+// Zorex command -> source folder + number of GIFs in that folder.
+// highfive uses "brofist" because this pack has no highfive folder.
+// kill uses "punch" to keep it exaggerated/cartoonish rather than graphic.
+const CATEGORY_MAP = {
+    hug:      { source: "hug",      count: 40 },
+    kiss:     { source: "kiss",     count: 36 },
+    slap:     { source: "slap",     count: 25 },
+    pat:      { source: "pat",      count: 28 },
+    poke:     { source: "poke",     count: 18 },
+    cuddle:   { source: "cuddle",   count: 30 },
+    bite:     { source: "bite",     count: 20 },
+    highfive: { source: "brofist",  count: 9  },
+    dance:    { source: "dance",    count: 33 },
+    kill:     { source: "punch",    count: 15 }
+};
 
 function usage() {
     console.log(`
@@ -44,18 +45,26 @@ Available categories:
 
 Notes:
   - count defaults to 10
-  - each API request asks for at most 20 GIFs
-  - downloaded GIFs are converted to MP4 for WhatsApp gifPlayback
+  - source is the public ZekaiDev/anime-reaction-gif GitHub pack
+  - GIFs are converted to MP4 for WhatsApp gifPlayback
   - files are saved under media/social/<category>/
+  - reruns skip source GIFs already recorded in metadata.json
 `.trim());
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function ensureDir(dir) {
     fs.mkdirSync(dir, { recursive: true });
+}
+
+function shuffle(values) {
+    const copy = [...values];
+
+    for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+
+    return copy;
 }
 
 function runFFmpeg(input, output) {
@@ -96,27 +105,13 @@ function runFFmpeg(input, output) {
     });
 }
 
-async function fetchJson(url) {
-    const response = await fetch(url, {
-        headers: {
-            "User-Agent": USER_AGENT,
-            "Accept": "application/json"
-        }
-    });
-
-    if (!response.ok) {
-        throw new Error(
-            `API request failed: HTTP ${response.status} ${await response.text()}`
-        );
-    }
-
-    return response.json();
-}
-
 async function downloadBuffer(url) {
     const response = await fetch(url, {
         headers: {
-            "User-Agent": USER_AGENT
+            "User-Agent":
+                "Zorex-AI-Social-GIF-Downloader/1.0",
+            "Accept":
+                "image/gif,image/*;q=0.9,*/*;q=0.8"
         }
     });
 
@@ -136,8 +131,12 @@ function nextIndex(folder) {
 
     const nums = fs.readdirSync(folder)
         .map(name => {
-            const match = name.match(/^(\d+)\.mp4$/i);
-            return match ? Number(match[1]) : null;
+            const match =
+                name.match(/^(\d+)\.mp4$/i);
+
+            return match
+                ? Number(match[1])
+                : null;
         })
         .filter(Number.isFinite);
 
@@ -146,21 +145,54 @@ function nextIndex(folder) {
         : 1;
 }
 
-async function fetchBatch(sourceCategory, amount) {
-    const url =
-        `${API_BASE}/${encodeURIComponent(sourceCategory)}?amount=${amount}`;
+function loadMetadata(metadataFile) {
+    if (!fs.existsSync(metadataFile)) {
+        return [];
+    }
 
-    const data = await fetchJson(url);
+    try {
+        const parsed =
+            JSON.parse(
+                fs.readFileSync(
+                    metadataFile,
+                    "utf8"
+                )
+            );
 
-    return Array.isArray(data.results)
-        ? data.results
-        : [];
+        return Array.isArray(parsed)
+            ? parsed
+            : [];
+
+    } catch (_) {
+        return [];
+    }
+}
+
+function saveMetadata(metadataFile, metadata) {
+    fs.writeFileSync(
+        metadataFile,
+        JSON.stringify(
+            metadata,
+            null,
+            2
+        )
+    );
+}
+
+function sourceUrl(sourceCategory, sourceNumber) {
+    return (
+        `${RAW_BASE}/` +
+        `${encodeURIComponent(sourceCategory)}/` +
+        `${sourceNumber}.gif`
+    );
 }
 
 async function downloadCategory(targetCategory, wantedCount) {
-    const sourceCategory = CATEGORY_MAP[targetCategory];
 
-    if (!sourceCategory) {
+    const config =
+        CATEGORY_MAP[targetCategory];
+
+    if (!config) {
         throw new Error(
             `Unsupported category: ${targetCategory}`
         );
@@ -174,184 +206,165 @@ async function downloadCategory(targetCategory, wantedCount) {
 
     ensureDir(folder);
 
-    let index =
-        nextIndex(folder);
-
-    let saved = 0;
-    let attempts = 0;
-    const seen = new Set();
-
     const metadataFile =
         path.join(
             folder,
             "metadata.json"
         );
 
-    let metadata = [];
+    const metadata =
+        loadMetadata(metadataFile);
 
-    if (fs.existsSync(metadataFile)) {
-        try {
-            metadata =
-                JSON.parse(
-                    fs.readFileSync(
-                        metadataFile,
-                        "utf8"
-                    )
-                );
+    const seen =
+        new Set(
+            metadata
+                .map(item => item.sourceUrl || item.url)
+                .filter(Boolean)
+        );
 
-            for (const item of metadata) {
-                if (item.url) {
-                    seen.add(item.url);
-                }
-            }
-        } catch (_) {
-            metadata = [];
-        }
-    }
+    let outputIndex =
+        nextIndex(folder);
+
+    let saved = 0;
+
+    const candidates =
+        shuffle(
+            Array.from(
+                { length: config.count },
+                (_, index) => index + 1
+            )
+        );
 
     console.log(
-        `\n📦 ${targetCategory}: downloading ${wantedCount} clip(s) from "${sourceCategory}"...`
+        `\n📦 ${targetCategory}: downloading up to ${wantedCount} new clip(s) from GitHub folder "${config.source}"...`
     );
 
-    while (
-        saved < wantedCount &&
-        attempts < 20
-    ) {
-        attempts++;
+    for (const sourceNumber of candidates) {
 
-        const remaining =
-            wantedCount - saved;
-
-        const requestAmount =
-            Math.min(
-                Math.max(remaining, 1),
-                20
-            );
-
-        const results =
-            await fetchBatch(
-                sourceCategory,
-                requestAmount
-            );
-
-        if (!results.length) {
-            console.log(
-                `⚠️ No results returned for ${targetCategory}`
-            );
+        if (saved >= wantedCount) {
             break;
         }
 
-        for (const item of results) {
-            if (saved >= wantedCount) break;
+        const url =
+            sourceUrl(
+                config.source,
+                sourceNumber
+            );
 
-            if (
-                !item?.url ||
-                seen.has(item.url)
-            ) {
-                continue;
-            }
-
-            seen.add(item.url);
-
-            const stem =
-                String(index)
-                    .padStart(3, "0");
-
-            const gifPath =
-                path.join(
-                    folder,
-                    `.${stem}.download.gif`
-                );
-
-            const mp4Path =
-                path.join(
-                    folder,
-                    `${stem}.mp4`
-                );
-
-            try {
-                process.stdout.write(
-                    `  ⬇️ ${targetCategory} ${stem}... `
-                );
-
-                const buffer =
-                    await downloadBuffer(
-                        item.url
-                    );
-
-                fs.writeFileSync(
-                    gifPath,
-                    buffer
-                );
-
-                await runFFmpeg(
-                    gifPath,
-                    mp4Path
-                );
-
-                fs.rmSync(
-                    gifPath,
-                    { force: true }
-                );
-
-                metadata.push({
-                    file: `${stem}.mp4`,
-                    category: targetCategory,
-                    sourceCategory,
-                    animeName:
-                        item.anime_name || null,
-                    url:
-                        item.url,
-                    downloadedAt:
-                        new Date().toISOString()
-                });
-
-                fs.writeFileSync(
-                    metadataFile,
-                    JSON.stringify(
-                        metadata,
-                        null,
-                        2
-                    )
-                );
-
-                console.log("✅");
-
-                saved++;
-                index++;
-
-            } catch (err) {
-                fs.rmSync(
-                    gifPath,
-                    { force: true }
-                );
-
-                fs.rmSync(
-                    mp4Path,
-                    { force: true }
-                );
-
-                console.log(
-                    `❌ ${err.message}`
-                );
-            }
+        if (seen.has(url)) {
+            continue;
         }
 
-        if (saved < wantedCount) {
-            // Keep requests polite and well below the API's category
-            // rate limit.
-            await sleep(750);
+        const stem =
+            String(outputIndex)
+                .padStart(3, "0");
+
+        const gifPath =
+            path.join(
+                folder,
+                `.${stem}.download.gif`
+            );
+
+        const mp4Path =
+            path.join(
+                folder,
+                `${stem}.mp4`
+            );
+
+        try {
+
+            process.stdout.write(
+                `  ⬇️ ${targetCategory} ${stem} (source #${sourceNumber})... `
+            );
+
+            const buffer =
+                await downloadBuffer(url);
+
+            fs.writeFileSync(
+                gifPath,
+                buffer
+            );
+
+            await runFFmpeg(
+                gifPath,
+                mp4Path
+            );
+
+            fs.rmSync(
+                gifPath,
+                { force: true }
+            );
+
+            metadata.push({
+                file:
+                    `${stem}.mp4`,
+                category:
+                    targetCategory,
+                sourceCategory:
+                    config.source,
+                sourceNumber,
+                sourceUrl:
+                    url,
+                repository:
+                    `${SOURCE_OWNER}/${SOURCE_REPO}`,
+                downloadedAt:
+                    new Date().toISOString()
+            });
+
+            saveMetadata(
+                metadataFile,
+                metadata
+            );
+
+            seen.add(url);
+
+            console.log("✅");
+
+            saved++;
+            outputIndex++;
+
+        } catch (err) {
+
+            fs.rmSync(
+                gifPath,
+                { force: true }
+            );
+
+            fs.rmSync(
+                mp4Path,
+                { force: true }
+            );
+
+            console.log(
+                `❌ ${err.message}`
+            );
         }
     }
+
+    const remainingAvailable =
+        Math.max(
+            0,
+            config.count - seen.size
+        );
 
     console.log(
         `✅ ${targetCategory}: saved ${saved}/${wantedCount} new clip(s) to ${path.relative(ROOT, folder)}`
     );
 
+    if (
+        saved < wantedCount &&
+        remainingAvailable === 0
+    ) {
+        console.log(
+            `ℹ️ No unseen source GIFs remain for ${targetCategory}.`
+        );
+    }
+
     return saved;
 }
 
 async function main() {
+
     const requested =
         String(process.argv[2] || "")
             .toLowerCase();
@@ -376,10 +389,12 @@ async function main() {
             : [requested];
 
     for (const category of categories) {
+
         if (!CATEGORY_MAP[category]) {
             console.error(
                 `❌ Unknown category: ${category}`
             );
+
             usage();
             process.exitCode = 1;
             return;
