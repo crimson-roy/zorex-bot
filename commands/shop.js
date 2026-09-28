@@ -226,5 +226,6 @@ async function shopCommands(sock, msg, text) {
 }
 
 module.exports = {
-    shopCommands
+    shopCommands,
+    loadShop
 };
