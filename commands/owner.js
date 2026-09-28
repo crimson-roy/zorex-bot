@@ -47,17 +47,96 @@ function loadOwners() {
 }
 
 
-// Now also always trusts MAIN_OWNER from config.js, same as auction.js —
-// no longer relies solely on owners.json.
+function normalizeJid(jid) {
+
+    if (!jid || typeof jid !== "string") {
+        return "";
+    }
+
+    const [left, server] =
+        jid.toLowerCase().split("@");
+
+    if (!server) {
+        return jid.toLowerCase();
+    }
+
+    return `${left.split(":")[0]}@${server}`;
+
+}
+
+function senderAliases(msg) {
+
+    const key =
+        msg?.key || {};
+
+    return [
+        ...new Set(
+            [
+                key.participant,
+                key.participantAlt,
+                key.senderPn,
+                key.senderLid,
+                key.remoteJid
+            ]
+                .filter(Boolean)
+                .map(String)
+        )
+    ];
+
+}
+
+// Trusts MAIN_OWNER plus owners.json and accepts Baileys' alternate
+// phone/LID sender fields when they are present.
 function isOwner(userId) {
 
-    if (!userId) return false;
+    const target =
+        normalizeJid(userId);
 
-    if (MAIN_OWNER && userId === MAIN_OWNER) return true;
+    if (!target) return false;
 
-    const owners = loadOwners();
+    if (
+        MAIN_OWNER &&
+        normalizeJid(MAIN_OWNER) === target
+    ) {
+        return true;
+    }
 
-    return owners.includes(userId);
+    const owners =
+        loadOwners();
+
+    return owners.some(
+        owner =>
+            normalizeJid(owner) ===
+            target
+    );
+
+}
+
+function isOwnerMessage(msg) {
+
+    return senderAliases(msg)
+        .some(alias =>
+            isOwner(alias)
+        );
+
+}
+
+function isMainOwnerMessage(msg) {
+
+    if (!MAIN_OWNER) {
+        return false;
+    }
+
+    const main =
+        normalizeJid(
+            MAIN_OWNER
+        );
+
+    return senderAliases(msg)
+        .some(alias =>
+            normalizeJid(alias) ===
+            main
+        );
 
 }
 
@@ -131,7 +210,7 @@ console.log("OWNERS FILE:", loadOwners());
     if (text.startsWith(".addowner")) {
 
 
-        if (sender !== "164317513175043@lid") {
+        if (!isMainOwnerMessage(msg)) {
 
             return await sock.sendMessage(
                 msg.key.remoteJid,
@@ -234,7 +313,7 @@ Example:
     else if (text.startsWith(".removeowner")) {
 
 
-        if (sender !== "164317513175043@lid") {
+        if (!isMainOwnerMessage(msg)) {
 
             return await sock.sendMessage(
                 msg.key.remoteJid,
@@ -501,7 +580,7 @@ ${role}`,
 else if (text.startsWith(".resetcd")) {
 
 
-    if (sender !== "164317513175043@lid") {
+    if (!isMainOwnerMessage(msg)) {
 
         return await sock.sendMessage(
             msg.key.remoteJid,
@@ -603,7 +682,7 @@ else if (text.startsWith(".resetcd")) {
 else if (text.startsWith(".resetdl")) {
 
 
-    if (sender !== "164317513175043@lid") {
+    if (!isMainOwnerMessage(msg)) {
 
         return await sock.sendMessage(
             msg.key.remoteJid,
@@ -706,7 +785,7 @@ else if (text.startsWith(".resetdl")) {
 else if (text.startsWith(".resetbal")) {
 
 
-    if (sender !== "164317513175043@lid") {
+    if (!isMainOwnerMessage(msg)) {
 
         return await sock.sendMessage(
             msg.key.remoteJid,
