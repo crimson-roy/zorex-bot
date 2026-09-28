@@ -28,6 +28,17 @@ const CARD_DIR = path.join(__dirname, "..", "cards");
 const MAZOKU_API = "https://api.mazoku.cc/cards";
 const MAZOKU_CDN = "https://cdn7.mazoku.cc/cards";
 
+// Be polite to Mazoku's API during full-catalog scans. The normal importer
+// only makes a few requests, but --missing can require 40+ pages.
+const MAZOKU_PAGE_DELAY_MS = 850;
+const MAZOKU_MAX_RETRIES = 8;
+
+function sleep(ms) {
+    return new Promise(
+        resolve => setTimeout(resolve, ms)
+    );
+}
+
 // --------------------------------------------------
 // TIER VALUES
 // --------------------------------------------------
@@ -214,17 +225,58 @@ async function fetchMazokuPage(
         `&order=DESC` +
         `&spicy=false`;
 
-    console.log(
-        `📡 Fetching Mazoku page ${page}...`
-    );
+    for (
+        let attempt = 0;
+        attempt <= MAZOKU_MAX_RETRIES;
+        attempt++
+    ) {
 
-    const response =
-        await fetch(url);
+        console.log(
+            attempt === 0
+                ? `📡 Fetching Mazoku page ${page}...`
+                : `🔁 Retrying Mazoku page ${page} (attempt ${attempt + 1}/${MAZOKU_MAX_RETRIES + 1})...`
+        );
 
-    if (!response.ok) {
+        const response =
+            await fetch(url);
+
+        if (response.ok) {
+            return await response.json();
+        }
 
         const message =
             await getApiErrorMessage(response);
+
+        // Full-catalog scans can hit Mazoku's rate limit. Respect the
+        // server's Retry-After header when supplied; otherwise back off
+        // progressively and retry the SAME page instead of losing the scan.
+        if (
+            response.status === 429 &&
+            attempt < MAZOKU_MAX_RETRIES
+        ) {
+
+            const retryAfter =
+                Number(
+                    response.headers.get("retry-after")
+                );
+
+            const waitMs =
+                Number.isFinite(retryAfter) &&
+                retryAfter > 0
+                    ? Math.ceil(retryAfter * 1000)
+                    : Math.min(
+                        5000 * Math.pow(2, attempt),
+                        60000
+                    );
+
+            console.log(
+                `   ⏳ Mazoku rate limit hit. Waiting ${Math.ceil(waitMs / 1000)}s before retrying page ${page}...`
+            );
+
+            await sleep(waitMs);
+
+            continue;
+        }
 
         throw new Error(
             `Mazoku API failed: ${message}`
@@ -232,7 +284,9 @@ async function fetchMazokuPage(
 
     }
 
-    return await response.json();
+    throw new Error(
+        `Mazoku API failed after ${MAZOKU_MAX_RETRIES + 1} attempts on page ${page}.`
+    );
 
 }
 
@@ -505,6 +559,10 @@ async function fetchAllMazokuCards() {
         }
 
         page++;
+
+        // --missing walks the entire public catalog, so leave a short gap
+        // between pages rather than firing dozens of requests back-to-back.
+        await sleep(MAZOKU_PAGE_DELAY_MS);
     }
 
     // Deduplicate by Mazoku UUID in case the API ever repeats an item
