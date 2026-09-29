@@ -2,6 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { spawn } = require("child_process");
 const dataPath = require("../lib/dataPath");
 
 const USERS_FILE = dataPath("users.json");
@@ -15,6 +16,25 @@ const SOCIAL_MEDIA_ROOT =
     );
 
 const lastClipByCategory =
+    new Map();
+
+const SOCIAL_SOURCE_BASE =
+    "https://raw.githubusercontent.com/ZekaiDev/anime-reaction-gif/main";
+
+const SOCIAL_SOURCE_MAP = {
+    hug:      { folder: "hug",     count: 40 },
+    kiss:     { folder: "kiss",    count: 36 },
+    slap:     { folder: "slap",    count: 25 },
+    pat:      { folder: "pat",     count: 28 },
+    poke:     { folder: "poke",    count: 18 },
+    cuddle:   { folder: "cuddle",  count: 30 },
+    bite:     { folder: "bite",    count: 20 },
+    highfive: { folder: "brofist", count: 9  },
+    dance:    { folder: "dance",   count: 33 },
+    kill:     { folder: "punch",   count: 15 }
+};
+
+const bootstrapPromises =
     new Map();
 
 const TARGETED_ACTIONS = {
@@ -62,6 +82,246 @@ const TARGETLESS_ACTIONS = {
         line: actor => `${actor} started dancing like nobody was watching ✨`
     }
 };
+
+function ensureSocialDir(
+    category
+) {
+    const folder =
+        path.join(
+            SOCIAL_MEDIA_ROOT,
+            category
+        );
+
+    fs.mkdirSync(
+        folder,
+        {
+            recursive:
+                true
+        }
+    );
+
+    return folder;
+}
+
+function runFfmpeg(
+    inputPath,
+    outputPath
+) {
+    return new Promise(
+        (
+            resolve,
+            reject
+        ) => {
+
+            const proc =
+                spawn(
+                    "ffmpeg",
+                    [
+                        "-y",
+                        "-i",
+                        inputPath,
+                        "-an",
+                        "-vf",
+                        "scale=ceil(iw/2)*2:ceil(ih/2)*2",
+                        "-c:v",
+                        "libx264",
+                        "-preset",
+                        "veryfast",
+                        "-crf",
+                        "24",
+                        "-pix_fmt",
+                        "yuv420p",
+                        "-movflags",
+                        "+faststart",
+                        outputPath
+                    ],
+                    {
+                        stdio:
+                            [
+                                "ignore",
+                                "ignore",
+                                "pipe"
+                            ]
+                    }
+                );
+
+            let stderr =
+                "";
+
+            proc.stderr.on(
+                "data",
+                chunk => {
+                    stderr +=
+                        chunk.toString();
+                }
+            );
+
+            proc.on(
+                "error",
+                reject
+            );
+
+            proc.on(
+                "close",
+                code => {
+
+                    if (
+                        code ===
+                        0
+                    ) {
+                        resolve();
+                        return;
+                    }
+
+                    reject(
+                        new Error(
+                            `ffmpeg exited with code ${code}: ${stderr.slice(-1200)}`
+                        )
+                    );
+
+                }
+            );
+
+        }
+    );
+}
+
+async function bootstrapSocialClip(
+    category
+) {
+    if (
+        bootstrapPromises.has(
+            category
+        )
+    ) {
+        return await bootstrapPromises.get(
+            category
+        );
+    }
+
+    const job =
+        (async () => {
+
+            const source =
+                SOCIAL_SOURCE_MAP[
+                    category
+                ];
+
+            if (!source) {
+                return null;
+            }
+
+            const folder =
+                ensureSocialDir(
+                    category
+                );
+
+            const existing =
+                socialMediaFiles(
+                    category
+                );
+
+            if (existing.length) {
+                return existing[0];
+            }
+
+            const sourceNumber =
+                1 +
+                Math.floor(
+                    Math.random() *
+                    source.count
+                );
+
+            const sourceUrl =
+                `${SOCIAL_SOURCE_BASE}/${encodeURIComponent(source.folder)}/${sourceNumber}.gif`;
+
+            const gifPath =
+                path.join(
+                    folder,
+                    ".bootstrap.gif"
+                );
+
+            const mp4Path =
+                path.join(
+                    folder,
+                    "001.mp4"
+                );
+
+            const response =
+                await fetch(
+                    sourceUrl,
+                    {
+                        headers: {
+                            "User-Agent":
+                                "Zorex-Social/1.0"
+                        }
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    `reaction download HTTP ${response.status}`
+                );
+            }
+
+            fs.writeFileSync(
+                gifPath,
+                Buffer.from(
+                    await response.arrayBuffer()
+                )
+            );
+
+            try {
+
+                await runFfmpeg(
+                    gifPath,
+                    mp4Path
+                );
+
+            } finally {
+
+                fs.rmSync(
+                    gifPath,
+                    {
+                        force:
+                            true
+                    }
+                );
+
+            }
+
+            return mp4Path;
+
+        })()
+            .catch(
+                err => {
+
+                    console.warn(
+                        `[social] Failed bootstrapping ${category} reaction:`,
+                        err.message
+                    );
+
+                    return null;
+
+                }
+            )
+            .finally(
+                () => {
+
+                    bootstrapPromises.delete(
+                        category
+                    );
+
+                }
+            );
+
+    bootstrapPromises.set(
+        category,
+        job
+    );
+
+    return await job;
+}
 
 function socialMediaFiles(
     category
@@ -178,10 +438,19 @@ async function sendSocialReaction(
     const chatId =
         msg.key.remoteJid;
 
-    const clip =
+    let clip =
         randomSocialClip(
             actionName
         );
+
+    if (!clip) {
+
+        clip =
+            await bootstrapSocialClip(
+                actionName
+            );
+
+    }
 
     if (clip) {
 
