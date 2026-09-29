@@ -186,7 +186,7 @@ Add quality/max/hq to trade speed for a veryslow CRF 14 final encode.`,
             },
             requirements: {
                 gpu: true,
-                minVramGb: 4,
+                minVramGb: 1,
                 capabilities: ["realesrgan"]
             }
         });
