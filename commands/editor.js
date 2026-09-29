@@ -48,12 +48,15 @@ async function editorCommand(sock, msg, text) {
 
         return sock.sendMessage(
             chatId,
-            { text: "🎬 *Zorex Editor Jobs*\n\n" + lines.join("\n\n") },
+            { text: "🎬 *Zorex Editor Queue*\n\n" + lines.join("\n\n") },
             { quoted: msg }
         );
     }
 
-    const cancelMatch = trimmed.match(/^\.canceljob\s+(ZRX-[A-F0-9]+)$/i);
+        const cancelMatch =
+        trimmed.match(
+            /^\.queue\s+cancel\s+(ZRX-[A-F0-9]+)$/i
+        );
     if (cancelMatch) {
         const result = cancelJob(cancelMatch[1], sender);
 
@@ -80,7 +83,10 @@ async function editorCommand(sock, msg, text) {
         );
     }
 
-    const jobMatch = trimmed.match(/^\.job\s+(ZRX-[A-F0-9]+)$/i);
+        const jobMatch =
+        trimmed.match(
+            /^\.queue\s+(ZRX-[A-F0-9]+)$/i
+        );
     if (!jobMatch) {
         return sock.sendMessage(
             chatId,
@@ -88,9 +94,9 @@ async function editorCommand(sock, msg, text) {
                 text:
 `⚠️ Zorex Editor commands:
 
-.jobs
-.job ZRX-ABC123
-.canceljob ZRX-ABC123`
+.queue
+.queue ZRX-ABC123
+.queue cancel ZRX-ABC123`
             },
             { quoted: msg }
         );
