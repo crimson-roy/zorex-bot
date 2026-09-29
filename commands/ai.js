@@ -672,6 +672,14 @@ async function getAiSource(
             )
             : null;
 
+    const quotedVideo =
+        quoted
+            ? findNestedMessageNode(
+                quoted,
+                "videoMessage"
+            )
+            : null;
+
     if (quoted) {
         const sourceText =
             messageText(
@@ -784,6 +792,22 @@ async function getAiSource(
             };
         }
 
+        if (quotedVideo) {
+            return {
+                type:
+                    "video",
+                mimeType:
+                    quotedVideo.mimetype ||
+                    "video/mp4",
+                fileName:
+                    quotedVideo.fileName ||
+                    "video.mp4",
+                sourceText,
+                quoted:
+                    true
+            };
+        }
+
         if (sourceText) {
             return {
                 type:
@@ -811,6 +835,12 @@ async function getAiSource(
         findNestedMessageNode(
             msg.message,
             "documentMessage"
+        );
+
+    const directVideo =
+        findNestedMessageNode(
+            msg.message,
+            "videoMessage"
         );
 
     if (directImage) {
@@ -867,6 +897,24 @@ async function getAiSource(
             mimeType,
             fileName,
             sourceText:
+                "",
+            quoted:
+                false
+        };
+    }
+
+    if (directVideo) {
+        return {
+            type:
+                "video",
+            mimeType:
+                directVideo.mimetype ||
+                "video/mp4",
+            fileName:
+                directVideo.fileName ||
+                "video.mp4",
+            sourceText:
+                directVideo.caption ||
                 "",
             quoted:
                 false
@@ -1745,17 +1793,23 @@ async function aiCommand(sock, msg, text) {
         }
 
         const mediaDescription =
-            media
+            media?.type === "video"
                 ? (
-                    media.type === "text"
-                        ? "the user replied to a text message"
-                        : media.quoted
-                            ? `the user replied to an ${media.type} source`
-                            : `an ${media.type} source is attached`
+                    media.quoted
+                        ? "the user replied to a video source"
+                        : "a video source is attached"
                 )
-                : messageHasQuotedVideo(msg.message)
-                    ? "the user replied to a video source"
-                    : "nothing is attached";
+                : media
+                    ? (
+                        media.type === "text"
+                            ? "the user replied to a text message"
+                            : media.quoted
+                                ? `the user replied to an ${media.type} source`
+                                : `an ${media.type} source is attached`
+                    )
+                    : messageHasQuotedVideo(msg.message)
+                        ? "the user replied to a video source"
+                        : "nothing is attached";
 
         const routingRaw =
             await callAI(
