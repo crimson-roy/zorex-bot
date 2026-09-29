@@ -558,6 +558,48 @@ function messageText(message) {
     ).trim();
 }
 
+function findContextInfoRecursive(
+    value,
+    depth = 0,
+    seen = new Set()
+) {
+    if (
+        !value ||
+        typeof value !== "object" ||
+        depth > 8 ||
+        seen.has(value)
+    ) {
+        return null;
+    }
+
+    seen.add(value);
+
+    if (value.contextInfo) {
+        return value.contextInfo;
+    }
+
+    if (value.messageContextInfo?.quotedMessage) {
+        return value.messageContextInfo;
+    }
+
+    for (const child of Object.values(value)) {
+        if (child && typeof child === "object") {
+            const found =
+                findContextInfoRecursive(
+                    child,
+                    depth + 1,
+                    seen
+                );
+
+            if (found) {
+                return found;
+            }
+        }
+    }
+
+    return null;
+}
+
 function getMessageContextInfo(message) {
     if (!message) return null;
 
@@ -572,6 +614,10 @@ function getMessageContextInfo(message) {
         inner.documentMessage?.contextInfo ||
         inner.videoMessage?.contextInfo ||
         inner.stickerMessage?.contextInfo ||
+        inner.messageContextInfo ||
+        message.messageContextInfo ||
+        findContextInfoRecursive(inner) ||
+        findContextInfoRecursive(message) ||
         null
     );
 }
