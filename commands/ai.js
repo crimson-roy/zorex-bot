@@ -1653,6 +1653,9 @@ async function aiCommand(sock, msg, text) {
         directReplyContext?.quotedMessage?.videoMessage ||
         null;
 
+    let directQuotedVideoBuffer =
+        null;
+
     console.log("[AI DEBUG] direct quoted-video snapshot:", {
         hasDirectContext: Boolean(directReplyContext),
         hasDirectQuotedVideo: Boolean(directQuotedVideo),
@@ -1677,6 +1680,31 @@ async function aiCommand(sock, msg, text) {
 
     const profileId =
         auth.profileId;
+
+    if (directQuotedVideo) {
+        try {
+            directQuotedVideoBuffer =
+                await downloadMediaNodeBuffer(
+                    directQuotedVideo,
+                    "video"
+                );
+
+            console.log("[AI DEBUG] direct quoted video downloaded:", {
+                bytes:
+                    Buffer.isBuffer(directQuotedVideoBuffer)
+                        ? directQuotedVideoBuffer.length
+                        : 0
+            });
+        } catch (err) {
+            console.error(
+                "[AI DEBUG] direct quoted video download failed:",
+                err.message
+            );
+
+            directQuotedVideoBuffer =
+                null;
+        }
+    }
 
     if (/^history(?:\s+\d+)?$/i.test(body)) {
         return await showAiHistory(
@@ -1917,6 +1945,8 @@ async function aiCommand(sock, msg, text) {
 
             media = {
                 type: "video",
+                buffer:
+                    directQuotedVideoBuffer,
                 mimeType:
                     directQuotedVideo.mimetype ||
                     "video/mp4",
@@ -2070,7 +2100,20 @@ This request exceeds the *5,000,000 🌙* confirmation threshold.
                         sock,
                         msg,
                         auth.registeredUserId,
-                        commands
+                        commands,
+                        {
+                            media:
+                                media?.type === "video" &&
+                                Buffer.isBuffer(media.buffer)
+                                    ? {
+                                        type: "video",
+                                        buffer: media.buffer,
+                                        mimeType:
+                                            media.mimeType ||
+                                            "video/mp4"
+                                    }
+                                    : null
+                        }
                     );
 
                 appendHistory(
