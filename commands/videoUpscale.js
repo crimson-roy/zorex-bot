@@ -128,7 +128,7 @@ async function upscaleCommand(sock, msg, args) {
 Examples:
 .upscale 4            (AI upscale x4)
 .upscale 4 60         (AI upscale x4, then re-encode to 60fps)
-,
+.upscale 4 60 6000    (AI upscale x4, 60fps @ 6000kbps)
 .upscale 4 quality     (AI upscale x4 + maximum-quality final encode)
 .upscale 4 60 6000 quality
 
