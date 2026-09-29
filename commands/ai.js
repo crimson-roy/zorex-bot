@@ -564,11 +564,21 @@ async function getAiSource(
         };
 
         if (quotedInner?.imageMessage) {
+            console.log(
+                "[AI SOURCE] Quoted image detected."
+            );
+
             const buffer =
                 await downloadMediaNodeBuffer(
                     quotedInner.imageMessage,
                     "image"
                 );
+
+            console.log(
+                "[AI SOURCE] Quoted image downloaded:",
+                buffer.length,
+                "bytes"
+            );
 
             return {
                 type:
