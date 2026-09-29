@@ -639,10 +639,57 @@ async function downloadMediaNodeBuffer(
  *   | null
  * >}
  */
+function safeObjectKeys(value) {
+    try {
+        return value && typeof value === "object"
+            ? Object.keys(value)
+            : [];
+    } catch (_) {
+        return [];
+    }
+}
+
+function logAiQuotedMediaDebug(msg, stage = "unknown") {
+    try {
+        const root = msg?.message;
+        const context = getMessageContextInfo(root);
+        const quoted = context?.quotedMessage;
+        const quotedVideo = quoted
+            ? findNestedMessageNode(quoted, "videoMessage")
+            : null;
+        const quotedImage = quoted
+            ? findNestedMessageNode(quoted, "imageMessage")
+            : null;
+        const quotedDocument = quoted
+            ? findNestedMessageNode(quoted, "documentMessage")
+            : null;
+
+        console.log("[AI DEBUG]", {
+            stage,
+            messageKeys: safeObjectKeys(root),
+            hasContextInfo: Boolean(context),
+            contextKeys: safeObjectKeys(context),
+            hasQuotedMessage: Boolean(quoted),
+            quotedKeys: safeObjectKeys(quoted),
+            quotedHasVideo: Boolean(quotedVideo),
+            quotedHasImage: Boolean(quotedImage),
+            quotedHasDocument: Boolean(quotedDocument),
+            quotedVideoMime: quotedVideo?.mimetype || null,
+            quotedVideoSeconds: quotedVideo?.seconds || null,
+            stanzaId: context?.stanzaId || null,
+            participant: context?.participant || null
+        });
+    } catch (err) {
+        console.error("[AI DEBUG] failed to inspect quoted media:", err.message);
+    }
+}
+
 async function getAiSource(
     sock,
     msg
 ) {
+    logAiQuotedMediaDebug(msg, "getAiSource:start");
+
     const context =
         getMessageContextInfo(
             msg.message
@@ -681,6 +728,13 @@ async function getAiSource(
             : null;
 
     if (quoted) {
+        console.log("[AI DEBUG] getAiSource quoted media candidates:", {
+            quotedImage: Boolean(quotedImage),
+            quotedDocument: Boolean(quotedDocument),
+            quotedVideo: Boolean(quotedVideo),
+            quotedText: Boolean(messageText(quotedInner))
+        });
+
         const sourceText =
             messageText(
                 quotedInner
@@ -793,6 +847,8 @@ async function getAiSource(
         }
 
         if (quotedVideo) {
+            console.log("[AI DEBUG] getAiSource selected quoted VIDEO");
+
             return {
                 type:
                     "video",
@@ -809,6 +865,8 @@ async function getAiSource(
         }
 
         if (sourceText) {
+            console.log("[AI DEBUG] getAiSource selected quoted TEXT");
+
             return {
                 type:
                     "text",
@@ -1792,6 +1850,18 @@ async function aiCommand(sock, msg, text) {
             return;
         }
 
+        console.log("[AI DEBUG] getAiSource result:", media
+            ? {
+                type: media.type,
+                quoted: Boolean(media.quoted),
+                mimeType: media.mimeType || null,
+                hasBuffer: Buffer.isBuffer(media.buffer),
+                bufferBytes: Buffer.isBuffer(media.buffer) ? media.buffer.length : 0,
+                sourceTextLength: String(media.sourceText || media.text || "").length
+            }
+            : null
+        );
+
         const mediaDescription =
             media?.type === "video"
                 ? (
@@ -1811,6 +1881,9 @@ async function aiCommand(sock, msg, text) {
                         ? "the user replied to a video source"
                         : "nothing is attached";
 
+        console.log("[AI DEBUG] router mediaDescription:", mediaDescription);
+        console.log("[AI DEBUG] router prompt:", body);
+
         const routingRaw =
             await callAI(
                 ROUTING_SYSTEM_PROMPT,
@@ -1823,8 +1896,12 @@ async function aiCommand(sock, msg, text) {
                 ]
             );
 
+        console.log("[AI DEBUG] router raw response:", routingRaw);
+
         const routing =
             safeParseJson(routingRaw);
+
+        console.log("[AI DEBUG] router parsed response:", routing);
 
         const showThinking =
             requestNeedsThinking(
