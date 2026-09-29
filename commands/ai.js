@@ -239,7 +239,8 @@ function requestNeedsThinking(prompt, media, routing = null) {
 
     if (
         routing?.action === "generate_file" ||
-        routing?.action === "generate_image"
+        routing?.action === "generate_image" ||
+        routing?.action === "generate_video"
     ) {
         return true;
     }
@@ -523,7 +524,7 @@ async function getAiSource(
                     false
             },
             message:
-                quoted
+                quotedInner
         };
 
         if (quotedInner?.imageMessage) {
@@ -1472,7 +1473,9 @@ async function aiCommand(sock, msg, text) {
                 ? (
                     media.type === "text"
                         ? "the user replied to a text message"
-                        : `an ${media.type} source is attached`
+                        : media.quoted
+                            ? `the user replied to an ${media.type} source`
+                            : `an ${media.type} source is attached`
                 )
                 : "nothing is attached";
 
