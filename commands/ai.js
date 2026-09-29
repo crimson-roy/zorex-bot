@@ -396,17 +396,69 @@ async function showAiHistory(
     );
 }
 
+function unwrapMessage(message) {
+    let current =
+        message;
+
+    for (
+        let depth = 0;
+        depth < 6 &&
+        current;
+        depth++
+    ) {
+
+        const wrapped =
+            current.ephemeralMessage?.message ||
+            current.viewOnceMessage?.message ||
+            current.viewOnceMessageV2?.message ||
+            current.viewOnceMessageV2Extension?.message ||
+            current.documentWithCaptionMessage?.message;
+
+        if (!wrapped) {
+            break;
+        }
+
+        current =
+            wrapped;
+    }
+
+    return current || message;
+}
+
 function messageText(message) {
     if (!message) return "";
 
+    const inner =
+        unwrapMessage(
+            message
+        );
+
     return String(
-        message.conversation ||
-        message.extendedTextMessage?.text ||
-        message.imageMessage?.caption ||
-        message.documentMessage?.caption ||
-        message.videoMessage?.caption ||
+        inner.conversation ||
+        inner.extendedTextMessage?.text ||
+        inner.imageMessage?.caption ||
+        inner.documentMessage?.caption ||
+        inner.videoMessage?.caption ||
         ""
     ).trim();
+}
+
+function getMessageContextInfo(message) {
+    if (!message) return null;
+
+    const inner =
+        unwrapMessage(
+            message
+        );
+
+    return (
+        inner.extendedTextMessage?.contextInfo ||
+        inner.imageMessage?.contextInfo ||
+        inner.documentMessage?.contextInfo ||
+        inner.videoMessage?.contextInfo ||
+        inner.stickerMessage?.contextInfo ||
+        null
+    );
 }
 
 async function downloadMessageBuffer(
@@ -441,17 +493,22 @@ async function getAiSource(
     msg
 ) {
     const context =
-        msg.message
-            ?.extendedTextMessage
-            ?.contextInfo;
+        getMessageContextInfo(
+            msg.message
+        );
 
     const quoted =
         context?.quotedMessage;
 
+    const quotedInner =
+        unwrapMessage(
+            quoted
+        );
+
     if (quoted) {
         const sourceText =
             messageText(
-                quoted
+                quotedInner
             );
 
         const fakeMsg = {
@@ -469,7 +526,7 @@ async function getAiSource(
                 quoted
         };
 
-        if (quoted.imageMessage) {
+        if (quotedInner?.imageMessage) {
             const buffer =
                 await downloadMessageBuffer(
                     fakeMsg
@@ -480,11 +537,11 @@ async function getAiSource(
                     "image",
                 buffer,
                 mimeType:
-                    quoted.imageMessage
+                    quotedInner.imageMessage
                         .mimetype ||
                     "image/jpeg",
                 fileName:
-                    quoted.imageMessage
+                    quotedInner.imageMessage
                         .fileName ||
                     "image",
                 sourceText,
@@ -493,19 +550,19 @@ async function getAiSource(
             };
         }
 
-        if (quoted.documentMessage) {
+        if (quotedInner?.documentMessage) {
             const buffer =
                 await downloadMessageBuffer(
                     fakeMsg
                 );
 
             const mimeType =
-                quoted.documentMessage
+                quotedInner.documentMessage
                     .mimetype ||
                 "application/octet-stream";
 
             const fileName =
-                quoted.documentMessage
+                quotedInner.documentMessage
                     .fileName ||
                 "document";
 
@@ -537,7 +594,12 @@ async function getAiSource(
         }
     }
 
-    if (msg.message?.imageMessage) {
+    const directInner =
+        unwrapMessage(
+            msg.message
+        );
+
+    if (directInner?.imageMessage) {
         const buffer =
             await downloadMessageBuffer(
                 msg
@@ -548,11 +610,11 @@ async function getAiSource(
                 "image",
             buffer,
             mimeType:
-                msg.message.imageMessage
+                directInner.imageMessage
                     .mimetype ||
                 "image/jpeg",
             fileName:
-                msg.message.imageMessage
+                directInner.imageMessage
                     .fileName ||
                 "image",
             sourceText:
@@ -562,19 +624,19 @@ async function getAiSource(
         };
     }
 
-    if (msg.message?.documentMessage) {
+    if (directInner?.documentMessage) {
         const buffer =
             await downloadMessageBuffer(
                 msg
             );
 
         const mimeType =
-            msg.message.documentMessage
+            directInner.documentMessage
                 .mimetype ||
             "application/octet-stream";
 
         const fileName =
-            msg.message.documentMessage
+            directInner.documentMessage
                 .fileName ||
             "document";
 
@@ -859,7 +921,7 @@ async function handleAnswer(
 
         const answer = await callVision(
             ZOREX_AI_SYSTEM_PROMPT +
-                "\n\nAnalyze the attached image directly. Read visible text when relevant, but also use visual context, layout, diagrams, objects and relationships shown in the image.",
+                "\n\nThe CURRENT attached/replied image is the primary subject of this request. Analyze that image directly and answer the user's request about it. Do not continue an older conversation topic unless the user explicitly asks you to connect it. Read visible text when relevant, but also use visual context, layout, diagrams, objects and relationships shown in the image.",
             imagePrompt,
             media.buffer,
             media.mimeType
