@@ -290,6 +290,11 @@ async function bootstrapSocialClip(
 
             }
 
+            console.log(
+                `[social] Bootstrapped ${category} clip:`,
+                mp4Path
+            );
+
             return mp4Path;
 
         })()
@@ -455,6 +460,11 @@ async function sendSocialReaction(
     if (clip) {
 
         try {
+
+            console.log(
+                `[social] Sending local ${actionName} clip:`,
+                clip
+            );
 
             return await sock.sendMessage(
                 chatId,
