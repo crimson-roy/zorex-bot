@@ -99,6 +99,7 @@ const {
 
 const { removeBackground } = require('../providers/removebg');
 const { generateDepthMap } = require('../providers/depth');
+const { generateLocalDepthMap } = require('../providers/localDepth');
 const { startProgress } = require('../lib/progressIndicator');
 const { checkCooldown, setCooldown } = require('./cooldown');
 
@@ -476,7 +477,7 @@ async function depthVideoCommand(
             try {
 
                 depthPath =
-                    await generateDepthMap(
+                    await generateLocalDepthMap(
                         framePath
                     );
 
@@ -702,10 +703,30 @@ async function depthGraphCommand(
 
     try {
 
-        depthPath =
-            await generateDepthMap(
-                inputPath
+        try {
+
+            depthPath =
+                await generateDepthMap(
+                    inputPath
+                );
+
+        } catch (remoteErr) {
+
+            console.warn(
+                "[.graph depth] remote depth provider failed; trying local model:",
+                remoteErr.message
             );
+
+            await progress.update(
+                "🧠 Remote depth is unavailable — using local Depth Anything..."
+            );
+
+            depthPath =
+                await generateLocalDepthMap(
+                    inputPath
+                );
+
+        }
 
         await sock.sendMessage(
             chatId,
