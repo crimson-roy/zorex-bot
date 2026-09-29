@@ -106,7 +106,7 @@ async function fetchQuotedVideoOrWarn(sock, msg, logLabel) {
  * @param {string[]} args
  * @returns {Promise<void>}
  */
-async function upscaleCommand(sock, msg, args) {
+async function upscaleCommand(sock, msg, args, mediaOverride = null) {
 
     const chatId = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -154,7 +154,18 @@ Add quality/max/hq to trade speed for a veryslow CRF 14 final encode.`,
         }, { quoted: msg });
     }
 
-    const media = await fetchQuotedVideoOrWarn(sock, msg, 'upscale');
+    const media =
+        mediaOverride &&
+        Buffer.isBuffer(mediaOverride.buffer)
+            ? {
+                buffer:
+                    mediaOverride.buffer,
+                mimeType:
+                    mediaOverride.mimeType ||
+                    "video/mp4"
+            }
+            : await fetchQuotedVideoOrWarn(sock, msg, 'upscale');
+
     if (!media) return;
 
     setCooldown(sender, 'video-upscale');

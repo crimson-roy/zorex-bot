@@ -356,7 +356,8 @@ or a hex code like #ff8800.`,
 async function depthVideoCommand(
     sock,
     msg,
-    args = []
+    args = [],
+    mediaOverride = null
 ) {
 
     const chatId = msg.key.remoteJid;
@@ -394,10 +395,22 @@ async function depthVideoCommand(
     // are accepted explicitly for readability, but max quality is the default.
     const quality = 'max';
 
-    let media;
+    let media =
+        mediaOverride &&
+        Buffer.isBuffer(mediaOverride.buffer)
+            ? {
+                buffer:
+                    mediaOverride.buffer,
+                mimeType:
+                    mediaOverride.mimeType ||
+                    "video/mp4"
+            }
+            : null;
 
     try {
-        media = await getQuotedVideo(sock, msg);
+        if (!media) {
+            media = await getQuotedVideo(sock, msg);
+        }
     } catch (err) {
         console.error(
             '[.graph depthvideo] failed to download quoted video:',
