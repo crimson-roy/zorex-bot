@@ -30,7 +30,7 @@ async function editorCommand(sock, msg, text) {
     const sender = msg.key.participant || msg.key.remoteJid;
     const trimmed = String(text || "").trim();
 
-    if (/^\.jobs\b/i.test(trimmed)) {
+    if (/^\.queue\s*$/i.test(trimmed)) {
         const jobs = listJobs({ ownerId: sender, limit: 10 });
 
         if (!jobs.length) {
@@ -53,7 +53,7 @@ async function editorCommand(sock, msg, text) {
         );
     }
 
-        const cancelMatch =
+    const cancelMatch =
         trimmed.match(
             /^\.queue\s+cancel\s+(ZRX-[A-F0-9]+)$/i
         );
@@ -83,7 +83,7 @@ async function editorCommand(sock, msg, text) {
         );
     }
 
-        const jobMatch =
+    const jobMatch =
         trimmed.match(
             /^\.queue\s+(ZRX-[A-F0-9]+)$/i
         );
