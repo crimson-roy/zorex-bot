@@ -430,11 +430,36 @@ async function runAIForChat(
                 userId
             );
 
+        console.log(
+            "[CHLOE AI] Request starting.",
+            {
+                historyMessages:
+                    messagesForAI.length
+            }
+        );
+
+        const startedAt =
+            Date.now();
+
         const reply =
             await callAI(
                 systemPrompt,
-                messagesForAI
+                messagesForAI,
+                {
+                    timeoutMs:
+                        25000,
+                    maxRetries:
+                        1,
+                    maxCompletionTokens:
+                        350
+                }
             );
+
+        console.log(
+            "[CHLOE AI] Response received in",
+            Date.now() - startedAt,
+            "ms"
+        );
 
         return reply;
 
