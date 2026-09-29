@@ -9,13 +9,10 @@
  * (image AI upscale) and commands/graphics.js (local sharp edits), but
  * split the same way those two files split image work:
  *
- *   .upscale  -> hits providers/videoUpscale.js, the Real-ESRGAN video
- *                Space on Hugging Face (Nick088/Real-ESRGAN_Pytorch) —
- *                same "free community Space, can go down" caveat as
- *                providers/upscale.js. AI resolution upscaling only;
- *                the Space takes a MULTIPLIER (2x/4x/8x the source
- *                resolution), not a target like "1080p"/"4k" — there's
- *                no such option in its API.
+ *   .upscale  -> creates a persistent Zorex Editor GPU job. The source
+ *                video is saved before the command returns, so a bot
+ *                restart does not destroy the pending edit. A compatible
+ *                worker with the "realesrgan" capability claims it later.
  *
  *   .fps      -> local-only ffmpeg re-encode via
  *                lib/videoHelper.js's reencodeVideo(). No Space call.
@@ -57,8 +54,8 @@ const {
     reencodeVideo,
 } = require('../lib/videoHelper');
 
-const { upscaleVideo } = require('../providers/videoUpscale');
 const { startProgress } = require('../lib/progressIndicator');
+const { createJob } = require('../lib/editorJobs');
 const { checkCooldown, setCooldown } = require('./cooldown');
 
 const AI_COOLDOWN_MS = 60000;    // hits the shared community Space — same as upscle.js
@@ -111,7 +108,10 @@ async function upscaleCommand(sock, msg, args, mediaOverride = null) {
     const chatId = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
 
-    const scaleArg = args[0];
+    const scaleArg =
+        String(args[0] || "")
+            .toLowerCase()
+            .replace(/x$/, "");
     const rest = args.slice(1);
     const qualityMode = rest.some(value => /^(?:quality|max|hq)$/i.test(String(value)));
     const numericArgs = rest.filter(value => /^\d+(?:\.\d+)?$/.test(String(value)));
@@ -170,54 +170,68 @@ Add quality/max/hq to trade speed for a veryslow CRF 14 final encode.`,
 
     setCooldown(sender, 'video-upscale');
 
-    const inputPath = saveVideoBufferToTemp(media.buffer, media.mimeType);
-
-    const progress = await startProgress(
-        sock,
-        msg,
-        qualityMode
-            ? `🔎 Upscaling video x${scaleArg} in MAX QUALITY mode... speed is not prioritized.`
-            : `🔎 Upscaling video x${scaleArg}... this can take a while, especially on the first run.`
-    );
-
-    let upscaledPath;
-    let finalPath;
-
     try {
+        const job = createJob({
+            type: "video_upscale",
+            ownerId: sender,
+            chatId,
+            inputBuffer: media.buffer,
+            mimeType: media.mimeType,
+            sourceMessageId: msg.key.id || null,
+            options: {
+                scale: Number(scaleArg),
+                fps: fps > 0 ? fps : null,
+                bitrateKbps: bitrateKbps > 0 ? bitrateKbps : null,
+                quality: qualityMode ? "max" : "normal"
+            },
+            requirements: {
+                gpu: true,
+                minVramGb: 4,
+                capabilities: ["realesrgan"]
+            }
+        });
 
-        const result = await upscaleVideo(inputPath, scaleArg);
-        upscaledPath = result.filePath;
+        await sock.sendMessage(
+            chatId,
+            {
+                text:
+`🎬 *Zorex Editor job created*
 
-        if (fps > 0 || bitrateKbps > 0 || qualityMode) {
-            finalPath = await reencodeVideo(upscaledPath, {
-                fps: fps > 0 ? fps : undefined,
-                bitrateKbps: bitrateKbps > 0 ? bitrateKbps : undefined,
-                quality: qualityMode ? 'max' : undefined,
-            });
-        } else {
-            finalPath = upscaledPath;
-        }
+Job: *${job.id}*
+Task: AI Upscale ×${scaleArg}
+Status: Queued
+Quality: ${qualityMode ? "Maximum" : "Normal"}${fps > 0 ? `\nTarget FPS: ${fps}` : ""}${bitrateKbps > 0 ? `\nTarget bitrate: ${bitrateKbps} kbps` : ""}
 
-        await sock.sendMessage(chatId, {
-            video: { url: finalPath },
-            mimetype: 'video/mp4',
-        }, { quoted: msg });
+Your source video has been saved persistently.
+The job will start automatically when a compatible GPU worker is online.
 
-        await progress.succeed();
+Use:
+.job ${job.id}
+.jobs`
+            },
+            { quoted: msg }
+        );
+
+        console.log("[.upscale] queued editor job", {
+            id: job.id,
+            scale: scaleArg,
+            fps,
+            bitrateKbps,
+            qualityMode
+        });
 
     } catch (err) {
+        console.error("[.upscale] failed to queue editor job:", err.message);
 
-        console.error('[.upscale] failed:', err.message);
-        await progress.fail();
-
-    } finally {
-
-        cleanupTempFile(inputPath);
-        cleanupTempFile(upscaledPath);
-        if (finalPath !== upscaledPath) cleanupTempFile(finalPath);
-
+        await sock.sendMessage(
+            chatId,
+            {
+                text:
+                    "❌ I couldn't save this upscale job. The edit was not started."
+            },
+            { quoted: msg }
+        );
     }
-
 }
 
 /**

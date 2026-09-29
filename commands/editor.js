@@ -1,0 +1,144 @@
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+const {
+    getJob,
+    listJobs,
+    cancelJob,
+    JOBS_DIR
+} = require("../lib/editorJobs");
+
+function statusIcon(status) {
+    switch (status) {
+        case "completed": return "✅";
+        case "processing": return "⚙️";
+        case "failed": return "❌";
+        case "cancelled": return "🚫";
+        default: return "⏳";
+    }
+}
+
+function progressBar(progress) {
+    const pct = Math.max(0, Math.min(100, Number(progress || 0)));
+    const filled = Math.round(pct / 10);
+    return "█".repeat(filled) + "░".repeat(10 - filled);
+}
+
+async function editorCommand(sock, msg, text) {
+    const chatId = msg.key.remoteJid;
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const trimmed = String(text || "").trim();
+
+    if (/^\.jobs\b/i.test(trimmed)) {
+        const jobs = listJobs({ ownerId: sender, limit: 10 });
+
+        if (!jobs.length) {
+            return sock.sendMessage(
+                chatId,
+                { text: "🎬 You don't have any Zorex Editor jobs yet." },
+                { quoted: msg }
+            );
+        }
+
+        const lines = jobs.map(job =>
+            `${statusIcon(job.status)} *${job.id}* — ${job.type}\n` +
+            `   ${progressBar(job.progress)} ${Math.round(Number(job.progress || 0))}% • ${job.stage || job.status}`
+        );
+
+        return sock.sendMessage(
+            chatId,
+            { text: "🎬 *Zorex Editor Jobs*\n\n" + lines.join("\n\n") },
+            { quoted: msg }
+        );
+    }
+
+    const cancelMatch = trimmed.match(/^\.canceljob\s+(ZRX-[A-F0-9]+)$/i);
+    if (cancelMatch) {
+        const result = cancelJob(cancelMatch[1], sender);
+
+        if (result === false) {
+            return sock.sendMessage(
+                chatId,
+                { text: "❌ That editor job doesn't belong to you." },
+                { quoted: msg }
+            );
+        }
+
+        if (!result) {
+            return sock.sendMessage(
+                chatId,
+                { text: "⚠️ Editor job not found." },
+                { quoted: msg }
+            );
+        }
+
+        return sock.sendMessage(
+            chatId,
+            { text: `🚫 *${result.id}* cancelled.` },
+            { quoted: msg }
+        );
+    }
+
+    const jobMatch = trimmed.match(/^\.job\s+(ZRX-[A-F0-9]+)$/i);
+    if (!jobMatch) {
+        return sock.sendMessage(
+            chatId,
+            {
+                text:
+`⚠️ Zorex Editor commands:
+
+.jobs
+.job ZRX-ABC123
+.canceljob ZRX-ABC123`
+            },
+            { quoted: msg }
+        );
+    }
+
+    const job = getJob(jobMatch[1]);
+
+    if (!job || job.ownerId !== String(sender)) {
+        return sock.sendMessage(
+            chatId,
+            { text: "⚠️ Editor job not found." },
+            { quoted: msg }
+        );
+    }
+
+    const summary =
+`${statusIcon(job.status)} *${job.id}*
+Task: ${job.type}
+Status: ${job.status}
+${progressBar(job.progress)} ${Math.round(Number(job.progress || 0))}%
+Stage: ${job.stage || "-"}
+Worker: ${job.workerId || "waiting"}
+Created: ${job.createdAt}
+${job.error ? `Error: ${job.error}` : ""}`;
+
+    await sock.sendMessage(
+        chatId,
+        { text: summary },
+        { quoted: msg }
+    );
+
+    if (job.status === "completed" && job.outputName) {
+        const outputPath = path.join(JOBS_DIR, job.id, job.outputName);
+
+        if (fs.existsSync(outputPath)) {
+            await sock.sendMessage(
+                chatId,
+                {
+                    video: { url: outputPath },
+                    mimetype: job.outputMimeType || "video/mp4",
+                    caption: `🎬 *${job.id}* result`
+                },
+                { quoted: msg }
+            );
+        }
+    }
+}
+
+module.exports = {
+    editorCommand
+};

@@ -245,6 +245,10 @@ const { upscleCommands } = require("./commands/upscle");
 const { graphicsCommands } = require("./commands/graphics");
 const { broadcastCommand } = require("./commands/broadcast");
 const { videoUpscaleCommands } = require('./commands/videoUpscale');
+const { editorCommand } = require("./commands/editor");
+const { startEditorWorkerServer } = require("./lib/editorWorkerServer");
+
+startEditorWorkerServer();
 const {
     companyCommand,
     companyCreateCommand,
@@ -1918,6 +1922,14 @@ ${board}
 } else if (text.startsWith(".ai")) {
 
     await aiCommand(sock, msg, text);
+
+} else if (
+    text === ".jobs" ||
+    text.startsWith(".job ") ||
+    text.startsWith(".canceljob ")
+) {
+
+    await editorCommand(sock, msg, text);
 
 } else if (text === ".inviteowner") {
 
