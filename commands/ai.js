@@ -105,6 +105,9 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"video_depth","mist":"mist"}
 {"name":"video_depth","mist":"heavy"}
 {"name":"video_upscale","scale":4,"quality":true}
+{"name":"editor_queue"}
+{"name":"editor_job","job_id":"ZRX-ABC123"}
+{"name":"editor_cancel","job_id":"ZRX-ABC123"}
 
 Rules:
 - Use execute_commands only when the user wants Zorex to PERFORM or SHOW
@@ -186,6 +189,11 @@ Rules:
 - "make this video depth with heavy mist" => video_depth mist "heavy".
 - When the user replies to a video and asks to upscale/enhance its resolution,
   use video_upscale. Use scale 4 unless they explicitly request 2x or 8x.
+- "show my edit queue", "show my current edits", "show my current editing jobs",
+  or "what edits are running" => editor_queue.
+- "show ZRX-ABC123" or "show edit job ZRX-ABC123" => editor_job with that job_id.
+- "cancel ZRX-ABC123" or "cancel edit job ZRX-ABC123" => editor_cancel with that job_id.
+- Only accept editor job ids that begin with ZRX-. Never invent a job id.
 - Requests for "best quality", "maximum quality", "quality over speed", or
   "take as long as needed" => video_upscale quality true.
 - These media actions ONLY operate on the real replied WhatsApp video.
