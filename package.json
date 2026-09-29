@@ -32,6 +32,7 @@
     "sharp": "^0.35.3",
     "tesseract.js": "^7.0.0",
     "yt-dlp-exec": "^1.0.2",
-    "yt-search": "^2.13.1"
+    "yt-search": "^2.13.1",
+    "@huggingface/transformers": "^3.8.1"
   }
 }
