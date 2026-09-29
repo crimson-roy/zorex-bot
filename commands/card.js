@@ -18,7 +18,8 @@ const SERIES_ALIASES = {
     ygo: "yu-gi-oh",
     nge: "evangelion",
     sxf: "spy x family",
-    hsr: "honkai"
+    hsr: "honkai",
+    "solo levelling": "solo leveling"
 };
 
 // PERSISTENCE FIX: collection.json is written by other command files
@@ -257,21 +258,150 @@ function buildSeriesGroups(cards) {
 // opens "Dragon Ball" directly even when "Dragon Ball Series" also exists.
 // Alias expansion still happens first, and partial searches still return all
 // matching series when there is no exact match.
+function editDistance(a, b) {
+
+    const left = String(a || "");
+    const right = String(b || "");
+
+    const row =
+        Array.from(
+            { length: right.length + 1 },
+            (_, index) => index
+        );
+
+    for (let i = 1; i <= left.length; i++) {
+
+        let previousDiagonal =
+            row[0];
+
+        row[0] =
+            i;
+
+        for (let j = 1; j <= right.length; j++) {
+
+            const old =
+                row[j];
+
+            row[j] =
+                Math.min(
+                    row[j] + 1,
+                    row[j - 1] + 1,
+                    previousDiagonal +
+                        (
+                            left[i - 1] === right[j - 1]
+                                ? 0
+                                : 1
+                        )
+                );
+
+            previousDiagonal =
+                old;
+
+        }
+
+    }
+
+    return row[right.length];
+}
+
 function resolveSeriesMatches(searchTerm, cards) {
 
-    const term = searchTerm.trim().toLowerCase();
-    const searchFor = normalizeSeriesName(SERIES_ALIASES[term] || term);
+    const term =
+        searchTerm
+            .trim()
+            .toLowerCase();
+
+    const alias =
+        SERIES_ALIASES[term] ||
+        term;
+
+    const searchFor =
+        normalizeSeriesName(
+            alias
+        );
 
     if (!searchFor) return [];
 
-    const groups = buildSeriesGroups(cards);
-    const exactMatches = groups.filter(group => group.key === searchFor);
+    const groups =
+        buildSeriesGroups(cards);
+
+    const exactMatches =
+        groups.filter(
+            group =>
+                group.key ===
+                searchFor
+        );
 
     if (exactMatches.length > 0) {
         return exactMatches;
     }
 
-    return groups.filter(group => group.key.includes(searchFor));
+    const substringMatches =
+        groups.filter(
+            group =>
+                group.key.includes(searchFor) ||
+                searchFor.includes(group.key)
+        );
+
+    if (substringMatches.length > 0) {
+        return substringMatches;
+    }
+
+    // Small typo tolerance for full-title searches such as
+    // "solo levelling" vs "Solo Leveling". Keep this conservative so
+    // short searches like ".ss s" still behave as broad substring search.
+    if (searchFor.length >= 6) {
+
+        const ranked =
+            groups
+                .map(
+                    group => ({
+                        group,
+                        distance:
+                            editDistance(
+                                searchFor,
+                                group.key
+                            )
+                    })
+                )
+                .filter(
+                    item =>
+                        item.distance <=
+                        Math.max(
+                            1,
+                            Math.floor(
+                                searchFor.length *
+                                0.18
+                            )
+                        )
+                )
+                .sort(
+                    (a, b) =>
+                        a.distance -
+                        b.distance
+                );
+
+        if (ranked.length) {
+
+            const bestDistance =
+                ranked[0].distance;
+
+            return ranked
+                .filter(
+                    item =>
+                        item.distance ===
+                        bestDistance
+                )
+                .map(
+                    item =>
+                        item.group
+                );
+
+        }
+
+    }
+
+    return [];
 
 }
 
