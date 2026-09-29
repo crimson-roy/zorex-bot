@@ -43,6 +43,12 @@ const REAL_ESRGAN_BIN =
     process.env.REAL_ESRGAN_BIN ||
     "realesrgan-ncnn-vulkan";
 
+const REAL_ESRGAN_MODELS =
+    String(
+        process.env.REAL_ESRGAN_MODELS ||
+        ""
+    ).trim();
+
 const FFMPEG_BIN =
     process.env.FFMPEG_BIN ||
     "ffmpeg";
@@ -492,6 +498,34 @@ async function uploadOutput(
 
 }
 
+function realesrganArgs(
+    input,
+    output,
+    scale
+) {
+    const args = [
+        "-i",
+        input,
+        "-o",
+        output,
+        "-n",
+        "realesrgan-x4plus",
+        "-s",
+        String(scale),
+        "-f",
+        "png"
+    ];
+
+    if (REAL_ESRGAN_MODELS) {
+        args.push(
+            "-m",
+            REAL_ESRGAN_MODELS
+        );
+    }
+
+    return args;
+}
+
 async function processUpscale(
     job
 ) {
@@ -632,18 +666,11 @@ async function processUpscale(
 
         await run(
             REAL_ESRGAN_BIN,
-            [
-                "-i",
+            realesrganArgs(
                 framesDir,
-                "-o",
                 passOneDir,
-                "-n",
-                "realesrgan-x4plus",
-                "-s",
-                "4",
-                "-f",
-                "png"
-            ]
+                4
+            )
         );
 
         await reportProgress(
@@ -654,36 +681,22 @@ async function processUpscale(
 
         await run(
             REAL_ESRGAN_BIN,
-            [
-                "-i",
+            realesrganArgs(
                 passOneDir,
-                "-o",
                 upscaledDir,
-                "-n",
-                "realesrgan-x4plus",
-                "-s",
-                "2",
-                "-f",
-                "png"
-            ]
+                2
+            )
         );
 
     } else {
 
         await run(
             REAL_ESRGAN_BIN,
-            [
-                "-i",
+            realesrganArgs(
                 framesDir,
-                "-o",
                 upscaledDir,
-                "-n",
-                "realesrgan-x4plus",
-                "-s",
-                String(scale),
-                "-f",
-                "png"
-            ]
+                scale
+            )
         );
 
     }
@@ -859,6 +872,9 @@ async function main() {
                 WORKER_ID,
             realEsrgan:
                 REAL_ESRGAN_BIN,
+            models:
+                REAL_ESRGAN_MODELS ||
+                "default",
             vramGb:
                 GPU_VRAM_GB
         }
