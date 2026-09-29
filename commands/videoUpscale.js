@@ -111,7 +111,12 @@ async function upscaleCommand(sock, msg, args) {
     const chatId = msg.key.remoteJid;
     const sender = msg.key.participant || msg.key.remoteJid;
 
-    const [scaleArg, fpsArg, bitrateArg] = args;
+    const scaleArg = args[0];
+    const rest = args.slice(1);
+    const qualityMode = rest.some(value => /^(?:quality|max|hq)$/i.test(String(value)));
+    const numericArgs = rest.filter(value => /^\d+(?:\.\d+)?$/.test(String(value)));
+    const fpsArg = numericArgs[0];
+    const bitrateArg = numericArgs[1];
 
     if (!scaleArg || !VALID_SCALES.includes(scaleArg)) {
         return await sock.sendMessage(chatId, {
@@ -123,9 +128,12 @@ async function upscaleCommand(sock, msg, args) {
 Examples:
 .upscale 4            (AI upscale x4)
 .upscale 4 60         (AI upscale x4, then re-encode to 60fps)
-.upscale 4 60 6000    (AI upscale x4, re-encode to 60fps @ 6000kbps)
+.upscale 4 60 6000    (AI upscale x4, 60fps @ 6000kbps)
+.upscale 4 quality     (AI upscale x4 + maximum-quality final encode)
+.upscale 4 60 6000 quality
 
-scale must be 2, 4, or 8 — it's a multiplier of the source resolution, not a fixed target like "1080p".`,
+scale must be 2, 4, or 8 — it's a multiplier of the source resolution, not a fixed target like "1080p".
+Add quality/max/hq to trade speed for a veryslow CRF 14 final encode.`,
         }, { quoted: msg });
     }
 
@@ -156,7 +164,9 @@ scale must be 2, 4, or 8 — it's a multiplier of the source resolution, not a f
     const progress = await startProgress(
         sock,
         msg,
-        `🔎 Upscaling video x${scaleArg}... this can take a while, especially on the first run.`
+        qualityMode
+            ? `🔎 Upscaling video x${scaleArg} in MAX QUALITY mode... speed is not prioritized.`
+            : `🔎 Upscaling video x${scaleArg}... this can take a while, especially on the first run.`
     );
 
     let upscaledPath;
@@ -167,10 +177,11 @@ scale must be 2, 4, or 8 — it's a multiplier of the source resolution, not a f
         const result = await upscaleVideo(inputPath, scaleArg);
         upscaledPath = result.filePath;
 
-        if (fps > 0 || bitrateKbps > 0) {
+        if (fps > 0 || bitrateKbps > 0 || qualityMode) {
             finalPath = await reencodeVideo(upscaledPath, {
                 fps: fps > 0 ? fps : undefined,
                 bitrateKbps: bitrateKbps > 0 ? bitrateKbps : undefined,
+                quality: qualityMode ? 'max' : undefined,
             });
         } else {
             finalPath = upscaledPath;
@@ -330,4 +341,4 @@ async function videoUpscaleCommands(sock, msg, text) {
 
 }
 
-module.exports = { videoUpscaleCommands };
+module.exports = { videoUpscaleCommands, upscaleCommand };
