@@ -426,6 +426,82 @@ function unwrapMessage(message) {
     return current || message;
 }
 
+function findNestedMessageNode(
+    value,
+    keyName,
+    depth = 0,
+    seen = new Set()
+) {
+    if (
+        !value ||
+        typeof value !== "object" ||
+        depth > 8 ||
+        seen.has(value)
+    ) {
+        return null;
+    }
+
+    seen.add(value);
+
+    if (
+        Object.prototype.hasOwnProperty.call(
+            value,
+            keyName
+        ) &&
+        value[keyName]
+    ) {
+        return value[keyName];
+    }
+
+    for (const child of Object.values(value)) {
+        if (
+            child &&
+            typeof child === "object"
+        ) {
+            const found =
+                findNestedMessageNode(
+                    child,
+                    keyName,
+                    depth + 1,
+                    seen
+                );
+
+            if (found) {
+                return found;
+            }
+        }
+    }
+
+    return null;
+}
+
+function messageHasQuotedMedia(
+    message
+) {
+    const context =
+        getMessageContextInfo(
+            message
+        );
+
+    const quoted =
+        context?.quotedMessage;
+
+    if (!quoted) {
+        return false;
+    }
+
+    return Boolean(
+        findNestedMessageNode(
+            quoted,
+            "imageMessage"
+        ) ||
+        findNestedMessageNode(
+            quoted,
+            "documentMessage"
+        )
+    );
+}
+
 function messageText(message) {
     if (!message) return "";
 
@@ -542,6 +618,22 @@ async function getAiSource(
             quoted
         );
 
+    const quotedImage =
+        quoted
+            ? findNestedMessageNode(
+                quoted,
+                "imageMessage"
+            )
+            : null;
+
+    const quotedDocument =
+        quoted
+            ? findNestedMessageNode(
+                quoted,
+                "documentMessage"
+            )
+            : null;
+
     if (quoted) {
         const sourceText =
             messageText(
@@ -563,16 +655,39 @@ async function getAiSource(
                 quotedInner
         };
 
-        if (quotedInner?.imageMessage) {
+        if (quotedImage) {
             console.log(
                 "[AI SOURCE] Quoted image detected."
             );
 
-            const buffer =
-                await downloadMediaNodeBuffer(
-                    quotedInner.imageMessage,
-                    "image"
+            let buffer;
+
+            try {
+                buffer =
+                    await downloadMediaNodeBuffer(
+                        quotedImage,
+                        "image"
+                    );
+            } catch (directErr) {
+                console.warn(
+                    "[AI SOURCE] Direct quoted image download failed; trying full-message fallback:",
+                    directErr.message
                 );
+
+                buffer =
+                    await downloadMessageBuffer(
+                        fakeMsg
+                    );
+            }
+
+            if (
+                !Buffer.isBuffer(buffer) ||
+                buffer.length === 0
+            ) {
+                throw new Error(
+                    "Quoted image download returned an empty buffer."
+                );
+            }
 
             console.log(
                 "[AI SOURCE] Quoted image downloaded:",
@@ -585,11 +700,11 @@ async function getAiSource(
                     "image",
                 buffer,
                 mimeType:
-                    quotedInner.imageMessage
+                    quotedImage
                         .mimetype ||
                     "image/jpeg",
                 fileName:
-                    quotedInner.imageMessage
+                    quotedImage
                         .fileName ||
                     "image",
                 sourceText,
@@ -598,20 +713,20 @@ async function getAiSource(
             };
         }
 
-        if (quotedInner?.documentMessage) {
+        if (quotedDocument) {
             const buffer =
                 await downloadMediaNodeBuffer(
-                    quotedInner.documentMessage,
+                    quotedDocument,
                     "document"
                 );
 
             const mimeType =
-                quotedInner.documentMessage
+                quotedDocument
                     .mimetype ||
                 "application/octet-stream";
 
             const fileName =
-                quotedInner.documentMessage
+                quotedDocument
                     .fileName ||
                 "document";
 
@@ -648,10 +763,22 @@ async function getAiSource(
             msg.message
         );
 
-    if (directInner?.imageMessage) {
+    const directImage =
+        findNestedMessageNode(
+            msg.message,
+            "imageMessage"
+        );
+
+    const directDocument =
+        findNestedMessageNode(
+            msg.message,
+            "documentMessage"
+        );
+
+    if (directImage) {
         const buffer =
             await downloadMediaNodeBuffer(
-                directInner.imageMessage,
+                directImage,
                 "image"
             );
 
@@ -660,11 +787,11 @@ async function getAiSource(
                 "image",
             buffer,
             mimeType:
-                directInner.imageMessage
+                directImage
                     .mimetype ||
                 "image/jpeg",
             fileName:
-                directInner.imageMessage
+                directImage
                     .fileName ||
                 "image",
             sourceText:
@@ -674,20 +801,20 @@ async function getAiSource(
         };
     }
 
-    if (directInner?.documentMessage) {
+    if (directDocument) {
         const buffer =
             await downloadMediaNodeBuffer(
-                directInner.documentMessage,
+                directDocument,
                 "document"
             );
 
         const mimeType =
-            directInner.documentMessage
+            directDocument
                 .mimetype ||
             "application/octet-stream";
 
         const fileName =
-            directInner.documentMessage
+            directDocument
                 .fileName ||
             "document";
 
@@ -1515,7 +1642,68 @@ async function aiCommand(sock, msg, text) {
                 err.message
             );
 
+            if (
+                messageHasQuotedMedia(
+                    msg.message
+                )
+            ) {
+                await progress.fail(
+                    "❌ Couldn't read the replied media"
+                );
+
+                return await sock.sendMessage(
+                    chatId,
+                    {
+                        text:
+                            "⚠️ I can see that you replied to an image/file, but WhatsApp wouldn't let me download it. Please resend the image normally, then reply with .ai explain this."
+                    },
+                    {
+                        quoted:
+                            msg
+                    }
+                );
+            }
+
             media = null;
+        }
+
+        // Image analysis should never depend on the text router. Once an
+        // image source is present, analyze it directly unless the user is
+        // explicitly asking to generate/animate something from it.
+        const explicitMediaGeneration =
+            /\b(generate|create|make|draw|render|animate|turn|convert)\b[\s\S]*\b(image|picture|photo|video|animation)\b|\b(image|picture|photo|video)\b[\s\S]*\b(generate|create|make|animate|turn|convert)\b/i
+                .test(body);
+
+        if (
+            media?.type === "image" &&
+            !explicitMediaGeneration
+        ) {
+            const directThinking =
+                requestNeedsThinking(
+                    body,
+                    media,
+                    {
+                        action:
+                            "answer"
+                    }
+                );
+
+            await handleAnswer(
+                sock,
+                msg,
+                chatId,
+                body,
+                media,
+                progress,
+                directThinking,
+                profileId
+            );
+
+            await progress.succeed(
+                "✅ Response ready"
+            );
+
+            return;
         }
 
         const mediaDescription =
