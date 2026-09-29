@@ -1644,6 +1644,22 @@ async function handleConfirmedGeneration(sock, msg, chatId, pendingReq) {
 
 async function aiCommand(sock, msg, text) {
 
+    const directReplyContext =
+        msg?.message?.extendedTextMessage?.contextInfo ||
+        msg?.message?.messageContextInfo ||
+        null;
+
+    const directQuotedVideo =
+        directReplyContext?.quotedMessage?.videoMessage ||
+        null;
+
+    console.log("[AI DEBUG] direct quoted-video snapshot:", {
+        hasDirectContext: Boolean(directReplyContext),
+        hasDirectQuotedVideo: Boolean(directQuotedVideo),
+        directVideoMime: directQuotedVideo?.mimetype || null,
+        directVideoSeconds: directQuotedVideo?.seconds || null
+    });
+
     const chatId = msg.key.remoteJid;
     const senderId = msg.key.participant || msg.key.remoteJid;
     const body = text.replace(/^\.ai/i, "").trim();
@@ -1894,6 +1910,25 @@ async function aiCommand(sock, msg, text) {
             );
 
             return;
+        }
+
+        if (!media && directQuotedVideo) {
+            console.log("[AI DEBUG] getAiSource missed video; using direct snapshot fallback");
+
+            media = {
+                type: "video",
+                mimeType:
+                    directQuotedVideo.mimetype ||
+                    "video/mp4",
+                fileName:
+                    directQuotedVideo.fileName ||
+                    "video.mp4",
+                sourceText:
+                    directQuotedVideo.caption ||
+                    "",
+                quoted:
+                    true
+            };
         }
 
         console.log("[AI DEBUG] getAiSource result:", media
