@@ -33,6 +33,7 @@
     "tesseract.js": "^7.0.0",
     "yt-dlp-exec": "^1.0.2",
     "yt-search": "^2.13.1",
-    "@huggingface/transformers": "^3.8.1"
+    "@huggingface/transformers": "^3.8.1",
+    "@fal-ai/client": "^1.10.1"
   }
 }
