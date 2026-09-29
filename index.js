@@ -1924,9 +1924,8 @@ ${board}
     await aiCommand(sock, msg, text);
 
 } else if (
-    text === ".jobs" ||
-    text.startsWith(".job ") ||
-    text.startsWith(".canceljob ")
+    text === ".queue" ||
+    text.startsWith(".queue ")
 ) {
 
     await editorCommand(sock, msg, text);
