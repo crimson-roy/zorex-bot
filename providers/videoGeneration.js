@@ -750,18 +750,85 @@ async function generateVideo(
     const provider =
         selectedProvider();
 
+    const configuredMode =
+        String(
+            process.env.VIDEO_GENERATION_PROVIDER ||
+            "auto"
+        )
+            .trim()
+            .toLowerCase();
+
+    console.log("[VIDEO PROVIDER] selected", {
+        provider,
+        mode:
+            configuredMode,
+        hasFalKey:
+            Boolean(String(process.env.FAL_KEY || "").trim()),
+        hasRunwayKey:
+            Boolean(String(process.env.RUNWAYML_API_SECRET || "").trim())
+    });
+
     if (
         provider ===
         "fal"
     ) {
-        return await generateWithFal(
-            options
-        );
+        try {
+            return await generateWithFal(
+                options
+            );
+        } catch (err) {
+            console.error("[VIDEO PROVIDER] Fal failed", {
+                name:
+                    err?.name,
+                message:
+                    err?.message,
+                status:
+                    err?.status ||
+                    err?.response?.status ||
+                    null
+            });
+
+            const canFallback =
+                configuredMode === "auto" &&
+                Boolean(
+                    String(
+                        process.env.RUNWAYML_API_SECRET ||
+                        ""
+                    ).trim()
+                );
+
+            if (!canFallback) {
+                throw err;
+            }
+
+            console.warn(
+                "[VIDEO PROVIDER] falling back from Fal to Runway"
+            );
+
+            return await generateWithRunway(
+                options
+            );
+        }
     }
 
-    return await generateWithRunway(
-        options
-    );
+    try {
+        return await generateWithRunway(
+            options
+        );
+    } catch (err) {
+        console.error("[VIDEO PROVIDER] Runway failed", {
+            name:
+                err?.name,
+            message:
+                err?.message,
+            status:
+                err?.status ||
+                err?.response?.status ||
+                null
+        });
+
+        throw err;
+    }
 }
 
 module.exports = {
