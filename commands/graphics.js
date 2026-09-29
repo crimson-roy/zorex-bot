@@ -92,10 +92,8 @@ const {
 const {
     getQuotedVideo,
     saveVideoBufferToTemp,
-    extractVideoFrames,
-    buildVideoFromFrames,
-    cleanupTempDir,
 } = require('../lib/videoHelper');
+const { createDepthVideoEffect } = require('../lib/videoEffects');
 
 const { removeBackground } = require('../providers/removebg');
 const { generateDepthMap } = require('../providers/depth');
@@ -112,9 +110,6 @@ const COOLDOWN_MS = 5000; // short — these are cheap, instant local operations
 const SILHOUETTE_COOLDOWN_MS = 60000;
 const DEPTH_COOLDOWN_MS = 60000;
 const DEPTH_VIDEO_COOLDOWN_MS = 120000;
-const DEPTH_VIDEO_SAMPLE_FPS = 3;
-const DEPTH_VIDEO_OUTPUT_FPS = 12;
-const DEPTH_VIDEO_MAX_SECONDS = 5;
 
 const COLOR_MAP = {
     red: { r: 255, g: 0, b: 0 },
@@ -323,9 +318,15 @@ async function graphSubcommand(sock, msg, args) {
             String(args[1] || '').toLowerCase() === 'video'
         )
     ) {
+        const videoArgs =
+            token === 'depth'
+                ? args.slice(2)
+                : args.slice(1);
+
         return await depthVideoCommand(
             sock,
-            msg
+            msg,
+            videoArgs
         );
     }
 
@@ -354,22 +355,18 @@ or a hex code like #ff8800.`,
 
 async function depthVideoCommand(
     sock,
-    msg
+    msg,
+    args = []
 ) {
 
-    const chatId =
-        msg.key.remoteJid;
+    const chatId = msg.key.remoteJid;
+    const sender = msg.key.participant || msg.key.remoteJid;
 
-    const sender =
-        msg.key.participant ||
-        msg.key.remoteJid;
-
-    const remaining =
-        checkCooldown(
-            sender,
-            'graph-depthvideo',
-            DEPTH_VIDEO_COOLDOWN_MS
-        );
+    const remaining = checkCooldown(
+        sender,
+        'graph-depthvideo',
+        DEPTH_VIDEO_COOLDOWN_MS
+    );
 
     if (remaining) {
         return await sock.sendMessage(
@@ -378,29 +375,35 @@ async function depthVideoCommand(
                 text:
                     `⏳ Depth-video generation is cooling down. Try again in ${Math.ceil(remaining / 1000)}s.`
             },
-            {
-                quoted:
-                    msg
-            }
+            { quoted: msg }
         );
     }
+
+    const options = args.map(value => String(value || '').toLowerCase());
+    let mist = 'none';
+
+    if (options.includes('heavy')) {
+        mist = 'heavy';
+    } else if (options.includes('soft')) {
+        mist = 'soft';
+    } else if (options.includes('mist') || options.includes('fog')) {
+        mist = 'mist';
+    }
+
+    // The new renderer is quality-first by design. "quality" / "max"
+    // are accepted explicitly for readability, but max quality is the default.
+    const quality = 'max';
 
     let media;
 
     try {
-        media =
-            await getQuotedVideo(
-                sock,
-                msg
-            );
+        media = await getQuotedVideo(sock, msg);
     } catch (err) {
         console.error(
             '[.graph depthvideo] failed to download quoted video:',
             err.message
         );
-
-        media =
-            null;
+        media = null;
     }
 
     if (!media) {
@@ -408,212 +411,85 @@ async function depthVideoCommand(
             chatId,
             {
                 text:
-                    '⚠️ Reply to a video with *.graph depthvideo*.'
+`⚠️ Reply to a video with one of these:
+
+.graph depthvideo
+.graph depthvideo mist
+.graph depthvideo mist soft
+.graph depthvideo mist heavy
+
+The renderer now preserves the source frame size and source frame rate, processes the full clip, and performs one quality-first final encode.`
             },
-            {
-                quoted:
-                    msg
-            }
+            { quoted: msg }
         );
     }
 
-    setCooldown(
-        sender,
-        'graph-depthvideo'
+    setCooldown(sender, 'graph-depthvideo');
+
+    const inputPath = saveVideoBufferToTemp(
+        media.buffer,
+        media.mimeType
     );
 
-    const inputPath =
-        saveVideoBufferToTemp(
-            media.buffer,
-            media.mimeType
-        );
+    const progress = await startProgress(
+        sock,
+        msg,
+        mist === 'none'
+            ? '🌖 Building full-quality depth video...'
+            : `🌫️ Building full-quality depth + ${mist} mist...`
+    );
 
-    const progress =
-        await startProgress(
-            sock,
-            msg,
-            '🎞️ Extracting video frames...'
-        );
-
-    let framesDir;
     let outputPath;
 
     try {
-
-        const extracted =
-            await extractVideoFrames(
-                inputPath,
-                {
-                    fps:
-                        DEPTH_VIDEO_SAMPLE_FPS,
-                    maxDuration:
-                        DEPTH_VIDEO_MAX_SECONDS,
-                    maxWidth:
-                        480
-                }
-            );
-
-        framesDir =
-            extracted.framesDir;
-
-        const total =
-            extracted.framePaths.length;
-
-        await progress.update(
-            `🌖 Estimating depth... 0/${total} frames`
+        const result = await createDepthVideoEffect(
+            inputPath,
+            {
+                mist,
+                quality,
+                progress
+            }
         );
 
-        for (
-            let index = 0;
-            index < total;
-            index++
-        ) {
-
-            const framePath =
-                extracted.framePaths[index];
-
-            let depthPath;
-
-            try {
-
-                depthPath =
-                    await generateLocalDepthMap(
-                        framePath
-                    );
-
-                const sourceMeta =
-                    await sharp(
-                        framePath
-                    ).metadata();
-
-                const targetPath =
-                    require('path').join(
-                        framesDir,
-                        `depth-${String(index + 1).padStart(5, '0')}.png`
-                    );
-
-                await sharp(
-                    depthPath
-                )
-                    .resize(
-                        sourceMeta.width,
-                        sourceMeta.height,
-                        {
-                            fit:
-                                'fill'
-                        }
-                    )
-                    .grayscale()
-                    .png()
-                    .toFile(
-                        targetPath
-                    );
-
-            } finally {
-
-                cleanupTempFile(
-                    depthPath
-                );
-
-            }
-
-            if (
-                index === total - 1 ||
-                index % 2 === 1
-            ) {
-                await progress.update(
-                    `🌖 Estimating depth... ${index + 1}/${total} frames`
-                );
-            }
-
-        }
-
-        await progress.update(
-            '🎬 Rebuilding depth video...'
-        );
-
-        outputPath =
-            await buildVideoFromFrames(
-                framesDir,
-                inputPath,
-                {
-                    inputFps:
-                        DEPTH_VIDEO_SAMPLE_FPS,
-                    outputFps:
-                        DEPTH_VIDEO_OUTPUT_FPS,
-                    duration:
-                        extracted.duration
-                }
-            );
-
-        const trimmed =
-            extracted.sourceDuration >
-            extracted.duration +
-                0.05;
+        outputPath = result.filePath;
 
         await sock.sendMessage(
             chatId,
             {
-                video: {
-                    url:
-                        outputPath
-                },
-                mimetype:
-                    'video/mp4',
+                video: { url: outputPath },
+                mimetype: 'video/mp4',
                 caption:
-                    trimmed
-                        ? `🌖 *Depth Video*\n\nProcessed the first ${DEPTH_VIDEO_MAX_SECONDS}s for this prototype.`
-                        : '🌖 *Depth Video*'
+                    mist === 'none'
+                        ? `🌖 *Depth Video*\n\n${result.frameCount} frames • ~${result.fps.toFixed(2)} FPS • quality-first encode`
+                        : `🌫️ *Depth Mist — ${mist.toUpperCase()}*\n\n${result.frameCount} frames • ~${result.fps.toFixed(2)} FPS • quality-first encode`
             },
-            {
-                quoted:
-                    msg
-            }
+            { quoted: msg }
         );
 
         await progress.succeed(
-            '✅ Depth video ready'
+            mist === 'none'
+                ? '✅ Depth video ready'
+                : '✅ Depth mist ready'
         );
 
     } catch (err) {
+        console.error('[.graph depthvideo] failed:', err.message);
 
-        console.error(
-            '[.graph depthvideo] failed:',
-            err.message
-        );
-
-        await progress.fail(
-            '❌ Depth-video generation failed'
-        );
+        await progress.fail('❌ Depth-video generation failed');
 
         await sock.sendMessage(
             chatId,
             {
                 text:
-                    '⚠️ I couldn\'t create the depth video right now. The depth service may be busy, or FFmpeg may have failed on this clip.'
+                    '⚠️ I couldn\'t create the depth video. Check that FFmpeg/FFprobe are installed and that the local depth model can load.'
             },
-            {
-                quoted:
-                    msg
-            }
+            { quoted: msg }
         );
 
     } finally {
-
-        cleanupTempFile(
-            inputPath
-        );
-
-        cleanupTempFile(
-            outputPath
-        );
-
-        cleanupTempDir(
-            framesDir
-        );
-
+        cleanupTempFile(inputPath);
+        cleanupTempFile(outputPath);
     }
-
 }
 
 async function depthGraphCommand(
@@ -941,4 +817,4 @@ async function graphicsCommands(sock, msg, text) {
 
 }
 
-module.exports = { graphicsCommands, compositeGreenScreenSilhouette };
+module.exports = { graphicsCommands, compositeGreenScreenSilhouette, depthVideoCommand };
