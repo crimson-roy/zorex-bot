@@ -1,5 +1,19 @@
 "use strict";
 
+const path = require("path");
+
+// Worker-specific config stays separate from the bot's normal .env.
+// Existing shell environment variables still take precedence.
+require("dotenv").config({
+    path:
+        path.resolve(
+            process.cwd(),
+            ".env.worker"
+        ),
+    override:
+        false
+});
+
 /**
  * Zorex Editor Worker
  *
@@ -17,11 +31,11 @@
  *   FFPROBE_BIN=ffprobe
  *   WORKER_DATA_DIR=./worker-data
  *   GPU_VRAM_GB=8
+ *   EDITOR_WORKER_PRIORITY=100
  *   EDITOR_POLL_MS=5000
  */
 
 const fs = require("fs");
-const path = require("path");
 const os = require("os");
 const { spawn } = require("child_process");
 
@@ -66,7 +80,13 @@ const WORK_ROOT =
 const GPU_VRAM_GB =
     Number(
         process.env.GPU_VRAM_GB ||
-        8
+        1
+    );
+
+const WORKER_PRIORITY =
+    Number(
+        process.env.EDITOR_WORKER_PRIORITY ||
+        50
     );
 
 const POLL_MS =
@@ -848,6 +868,8 @@ async function claim() {
                         true,
                     vramGb:
                         GPU_VRAM_GB,
+                    priority:
+                        WORKER_PRIORITY,
                     capabilities: [
                         "realesrgan"
                     ]
@@ -876,7 +898,9 @@ async function main() {
                 REAL_ESRGAN_MODELS ||
                 "default",
             vramGb:
-                GPU_VRAM_GB
+                GPU_VRAM_GB,
+            priority:
+                WORKER_PRIORITY
         }
     );
 
