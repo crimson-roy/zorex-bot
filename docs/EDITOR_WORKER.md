@@ -37,13 +37,14 @@ EDITOR_SERVER_URL=http://YOUR_VPS_HOST:3210
 EDITOR_WORKER_TOKEN=the-same-secret
 EDITOR_WORKER_ID=daniel-pc
 REAL_ESRGAN_BIN=/path/to/realesrgan-ncnn-vulkan
+REAL_ESRGAN_MODELS=/path/to/models
 GPU_VRAM_GB=8
 ```
 
 Then:
 
 ```bash
-node workers/editorWorker.js
+npm run editor-worker
 ```
 
 ## WhatsApp flow
