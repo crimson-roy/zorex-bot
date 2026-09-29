@@ -1,9 +1,21 @@
 "use strict";
 
 const fs = require("fs");
+const path = require("path");
 const dataPath = require("../lib/dataPath");
 
 const USERS_FILE = dataPath("users.json");
+
+const SOCIAL_MEDIA_ROOT =
+    path.join(
+        __dirname,
+        "..",
+        "media",
+        "social"
+    );
+
+const lastClipByCategory =
+    new Map();
 
 const TARGETED_ACTIONS = {
     hug: {
@@ -50,6 +62,180 @@ const TARGETLESS_ACTIONS = {
         line: actor => `${actor} started dancing like nobody was watching ✨`
     }
 };
+
+function socialMediaFiles(
+    category
+) {
+
+    const folder =
+        path.join(
+            SOCIAL_MEDIA_ROOT,
+            category
+        );
+
+    if (!fs.existsSync(folder)) {
+        return [];
+    }
+
+    try {
+
+        return fs.readdirSync(
+            folder
+        )
+            .filter(
+                name =>
+                    /\.mp4$/i.test(
+                        name
+                    )
+            )
+            .sort()
+            .map(
+                name =>
+                    path.join(
+                        folder,
+                        name
+                    )
+            );
+
+    } catch (err) {
+
+        console.warn(
+            `[social] Failed reading ${category} media folder:`,
+            err.message
+        );
+
+        return [];
+
+    }
+
+}
+
+function randomSocialClip(
+    category
+) {
+
+    const files =
+        socialMediaFiles(
+            category
+        );
+
+    if (!files.length) {
+        return null;
+    }
+
+    if (files.length === 1) {
+        lastClipByCategory.set(
+            category,
+            files[0]
+        );
+
+        return files[0];
+    }
+
+    const previous =
+        lastClipByCategory.get(
+            category
+        );
+
+    let candidates =
+        files.filter(
+            file =>
+                file !==
+                previous
+        );
+
+    if (!candidates.length) {
+        candidates =
+            files;
+    }
+
+    const selected =
+        candidates[
+            Math.floor(
+                Math.random() *
+                candidates.length
+            )
+        ];
+
+    lastClipByCategory.set(
+        category,
+        selected
+    );
+
+    return selected;
+}
+
+async function sendSocialReaction(
+    sock,
+    msg,
+    {
+        actionName,
+        caption,
+        mentions = []
+    }
+) {
+
+    const chatId =
+        msg.key.remoteJid;
+
+    const clip =
+        randomSocialClip(
+            actionName
+        );
+
+    if (clip) {
+
+        try {
+
+            return await sock.sendMessage(
+                chatId,
+                {
+                    video: {
+                        url:
+                            clip
+                    },
+                    gifPlayback:
+                        true,
+                    caption,
+                    mentions
+                },
+                {
+                    quoted:
+                        msg
+                }
+            );
+
+        } catch (err) {
+
+            console.warn(
+                `[social] Failed sending local ${actionName} clip; falling back to text:`,
+                err.message
+            );
+
+        }
+
+    } else {
+
+        console.warn(
+            `[social] No local clips found for "${actionName}" under ${path.join(SOCIAL_MEDIA_ROOT, actionName)}`
+        );
+
+    }
+
+    return await sock.sendMessage(
+        chatId,
+        {
+            text:
+                caption,
+            mentions
+        },
+        {
+            quoted:
+                msg
+        }
+    );
+
+}
 
 function loadUsers() {
     if (!fs.existsSync(USERS_FILE)) return {};
@@ -101,10 +287,14 @@ async function socialCommand(sock, msg, text) {
     if (TARGETLESS_ACTIONS[actionName]) {
         const action = TARGETLESS_ACTIONS[actionName];
 
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            { text: `${action.emoji} ${action.line(actorName)}` },
-            { quoted: msg }
+        return await sendSocialReaction(
+            sock,
+            msg,
+            {
+                actionName,
+                caption:
+                    `${action.emoji} ${action.line(actorName)}`
+            }
         );
     }
 
@@ -125,27 +315,29 @@ async function socialCommand(sock, msg, text) {
     }
 
     if (actionName === "kill" && target === sender) {
-        return await sock.sendMessage(
-            msg.key.remoteJid,
+        return await sendSocialReaction(
+            sock,
+            msg,
             {
-                text:
+                actionName,
+                caption:
                     `💀 ${actorName} committed seppuku 😭`
-            },
-            {
-                quoted: msg
             }
         );
     }
 
     const targetName = displayName(target, users);
 
-    return await sock.sendMessage(
-        msg.key.remoteJid,
+    return await sendSocialReaction(
+        sock,
+        msg,
         {
-            text: `${action.emoji} ${action.line(actorName, targetName)}`,
-            mentions: [target]
-        },
-        { quoted: msg }
+            actionName,
+            caption:
+                `${action.emoji} ${action.line(actorName, targetName)}`,
+            mentions:
+                [target]
+        }
     );
 }
 
