@@ -100,6 +100,11 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"series_search","query":"series name"}
 {"name":"casino","amount":5000,"repeats":10}
 {"name":"slots","amount":5000,"repeats":10}
+{"name":"video_depth","mist":"none"}
+{"name":"video_depth","mist":"soft"}
+{"name":"video_depth","mist":"mist"}
+{"name":"video_depth","mist":"heavy"}
+{"name":"video_upscale","scale":4,"quality":true}
 
 Rules:
 - Use execute_commands only when the user wants Zorex to PERFORM or SHOW
@@ -173,6 +178,18 @@ Rules:
 - "casino 5000 10 times" => casino amount 5000 repeats 10.
 - "casino and slots 5000 10 times each" => TWO commands, casino then slots.
 - If repeats are omitted, use 1.
+- When the user replies to a video and asks for a depth video, depth map,
+  or says "apply depth", use video_depth with mist "none".
+- When the user replies to a video and asks for depth plus mist/fog, use
+  video_depth. Use mist "soft" for subtle/light mist, "heavy" for dense/
+  strong mist, otherwise use "mist".
+- "make this video depth with heavy mist" => video_depth mist "heavy".
+- When the user replies to a video and asks to upscale/enhance its resolution,
+  use video_upscale. Use scale 4 unless they explicitly request 2x or 8x.
+- Requests for "best quality", "maximum quality", "quality over speed", or
+  "take as long as needed" => video_upscale quality true.
+- These media actions ONLY operate on the real replied WhatsApp video.
+  Never invent a URL, file path, or shell/FFmpeg command.
 - Never create owner/admin commands, arbitrary shell commands, raw command
   strings, company creation, employee management, moderation actions other
   than the explicitly listed set_welcome, set_leave, group_open, group_close,
@@ -498,6 +515,27 @@ function messageHasQuotedMedia(
         findNestedMessageNode(
             quoted,
             "documentMessage"
+        )
+    );
+}
+
+function messageHasQuotedVideo(message) {
+    const context =
+        getMessageContextInfo(
+            message
+        );
+
+    const quoted =
+        context?.quotedMessage;
+
+    if (!quoted) {
+        return false;
+    }
+
+    return Boolean(
+        findNestedMessageNode(
+            quoted,
+            "videoMessage"
         )
     );
 }
@@ -1715,7 +1753,9 @@ async function aiCommand(sock, msg, text) {
                             ? `the user replied to an ${media.type} source`
                             : `an ${media.type} source is attached`
                 )
-                : "nothing is attached";
+                : messageHasQuotedVideo(msg.message)
+                    ? "the user replied to a video source"
+                    : "nothing is attached";
 
         const routingRaw =
             await callAI(
