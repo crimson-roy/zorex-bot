@@ -475,6 +475,42 @@ async function downloadMessageBuffer(
     );
 }
 
+async function downloadMediaNodeBuffer(
+    mediaNode,
+    mediaType
+) {
+    const {
+        downloadContentFromMessage
+    } =
+        await import(
+            "@whiskeysockets/baileys"
+        );
+
+    const stream =
+        await downloadContentFromMessage(
+            mediaNode,
+            mediaType
+        );
+
+    const chunks =
+        [];
+
+    for await (
+        const chunk of
+        stream
+    ) {
+        chunks.push(
+            Buffer.from(
+                chunk
+            )
+        );
+    }
+
+    return Buffer.concat(
+        chunks
+    );
+}
+
 /**
  * Finds the source material for an .ai request.
  *
@@ -529,8 +565,9 @@ async function getAiSource(
 
         if (quotedInner?.imageMessage) {
             const buffer =
-                await downloadMessageBuffer(
-                    fakeMsg
+                await downloadMediaNodeBuffer(
+                    quotedInner.imageMessage,
+                    "image"
                 );
 
             return {
@@ -553,8 +590,9 @@ async function getAiSource(
 
         if (quotedInner?.documentMessage) {
             const buffer =
-                await downloadMessageBuffer(
-                    fakeMsg
+                await downloadMediaNodeBuffer(
+                    quotedInner.documentMessage,
+                    "document"
                 );
 
             const mimeType =
@@ -602,8 +640,9 @@ async function getAiSource(
 
     if (directInner?.imageMessage) {
         const buffer =
-            await downloadMessageBuffer(
-                msg
+            await downloadMediaNodeBuffer(
+                directInner.imageMessage,
+                "image"
             );
 
         return {
@@ -627,8 +666,9 @@ async function getAiSource(
 
     if (directInner?.documentMessage) {
         const buffer =
-            await downloadMessageBuffer(
-                msg
+            await downloadMediaNodeBuffer(
+                directInner.documentMessage,
+                "document"
             );
 
         const mimeType =
