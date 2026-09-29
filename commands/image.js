@@ -220,9 +220,23 @@ async function generateImageFromPrompt(
             attempt++
         ) {
 
+            const requestUrl =
+                `${endpoint}/openai/v1/images/generations?api-version=preview`;
+
+            console.log("[IMAGE PROVIDER] request", {
+                host:
+                    (() => {
+                        try { return new URL(requestUrl).host; }
+                        catch (_) { return "invalid-url"; }
+                    })(),
+                model,
+                attempt:
+                    attempt + 1
+            });
+
             const response =
                 await fetch(
-                    `${endpoint}/openai/v1/images/generations?api-version=preview`,
+                    requestUrl,
                     {
                         method: "POST",
                         headers: {
@@ -254,6 +268,21 @@ async function generateImageFromPrompt(
             const errorText =
                 await response.text()
                     .catch(() => "");
+
+            console.error("[IMAGE PROVIDER] Azure response error", {
+                status:
+                    response.status,
+                statusText:
+                    response.statusText,
+                model,
+                endpointHost:
+                    (() => {
+                        try { return new URL(endpoint).host; }
+                        catch (_) { return "invalid-url"; }
+                    })(),
+                body:
+                    String(errorText || "").slice(0, 1200)
+            });
 
             lastError =
                 new Error(
@@ -291,22 +320,19 @@ async function generateImageFromPrompt(
                 continue;
             }
 
-            // A brand-new deployment can briefly return 404 while routing
-            // propagates across Foundry. Retry a couple of times before
-            // treating it as a real configuration error.
+            // A 404 can mean deployment propagation, but it can also mean
+            // the endpoint/deployment/API route is wrong. Retry once only,
+            // then surface a configuration-oriented failure.
             if (
                 response.status === 404 &&
-                canRetry
+                canRetry &&
+                attempt === 0
             ) {
 
-                const waitSeconds =
-                    Math.min(
-                        5 * (attempt + 1),
-                        15
-                    );
+                const waitSeconds = 5;
 
                 await progress.update(
-                    `⏳ Image deployment is still becoming available — retrying in ${waitSeconds}s...`
+                    `⏳ Image endpoint returned 404 — retrying once in ${waitSeconds}s...`
                 );
 
                 await sleep(
@@ -407,11 +433,19 @@ async function generateImageFromPrompt(
 
         if (ownsProgress || options.source === "ai") {
 
+            const configHint =
+                /Azure image API error 404/i.test(err.message)
+                    ? "\n\nThe image endpoint or deployment name may be incorrect."
+                    : /Azure image API error 401|Azure image API error 403/i.test(err.message)
+                        ? "\n\nThe image API credentials or deployment access may be invalid."
+                        : "";
+
             await sock.sendMessage(
                 chatId,
                 {
                     text:
-                        "⚠️ I couldn't generate that image right now."
+                        "⚠️ I couldn't generate that image right now." +
+                        configHint
                 },
                 {
                     quoted: msg
