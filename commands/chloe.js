@@ -13,6 +13,8 @@
 //   remains unchanged.
 
 const fs = require("fs");
+const path = require("path");
+const sharp = require("sharp");
 
 const { CHLOE_SYSTEM_PROMPT } =
     require("../lib/chloePersona");
@@ -838,13 +840,71 @@ async function handleMessage(
                 stickerPath
             ) {
 
+                console.log(
+                    "[CHLOE STICKER] Selected:",
+                    stickerPath,
+                    "mood:",
+                    mood,
+                    "tier:",
+                    tier.key
+                );
+
+                const extension =
+                    path.extname(
+                        stickerPath
+                    )
+                        .toLowerCase();
+
+                let stickerBuffer;
+
+                if (
+                    extension ===
+                    ".webp"
+                ) {
+
+                    stickerBuffer =
+                        fs.readFileSync(
+                            stickerPath
+                        );
+
+                } else {
+
+                    stickerBuffer =
+                        await sharp(
+                            stickerPath,
+                            {
+                                animated:
+                                    extension === ".gif"
+                            }
+                        )
+                            .webp({
+                                quality:
+                                    88
+                            })
+                            .toBuffer();
+
+                }
+
                 await sock.sendMessage(
                     chatId,
                     {
                         sticker:
-                            fs.readFileSync(
-                                stickerPath
-                            )
+                            stickerBuffer
+                    }
+                );
+
+                console.log(
+                    "[CHLOE STICKER] Sent successfully."
+                );
+
+            } else {
+
+                console.warn(
+                    "[CHLOE STICKER] No local sticker found.",
+                    {
+                        mood,
+                        tier:
+                            tier.key
                     }
                 );
 
