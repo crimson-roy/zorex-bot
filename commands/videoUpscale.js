@@ -206,8 +206,8 @@ Your source video has been saved persistently.
 The job will start automatically when a compatible GPU worker is online.
 
 Use:
-.job ${job.id}
-.jobs`
+.queue ${job.id}
+.queue`
             },
             { quoted: msg }
         );
