@@ -132,15 +132,117 @@ ${job.error ? `Error: ${job.error}` : ""}`;
         const outputPath = path.join(JOBS_DIR, job.id, job.outputName);
 
         if (fs.existsSync(outputPath)) {
-            await sock.sendMessage(
-                chatId,
-                {
-                    video: { url: outputPath },
-                    mimetype: job.outputMimeType || "video/mp4",
-                    caption: `🎬 *${job.id}* result`
-                },
-                { quoted: msg }
-            );
+
+            if (
+                String(
+                    job.outputMimeType ||
+                    ""
+                )
+                    .toLowerCase()
+                    .includes(
+                        "json"
+                    )
+            ) {
+                try {
+                    const result =
+                        JSON.parse(
+                            fs.readFileSync(
+                                outputPath,
+                                "utf8"
+                            )
+                        );
+
+                    const styles =
+                        Array.isArray(
+                            result.styleFamilies
+                        ) &&
+                        result.styleFamilies.length
+                            ? result.styleFamilies
+                                .join(", ")
+                            : "No confident style family yet";
+
+                    const fingerprintId =
+                        job.analysisFingerprintId ||
+                        job.checkpoint
+                            ?.fingerprintId ||
+                        "saved";
+
+                    await sock.sendMessage(
+                        chatId,
+                        {
+                            text:
+                                "🧠 *Zorex Reference Analysis*\n\n" +
+                                "Fingerprint: *" +
+                                fingerprintId +
+                                "*\n" +
+                                "Styles: " +
+                                styles +
+                                "\n\n" +
+                                String(
+                                    result.summary ||
+                                    "Analysis completed."
+                                ) +
+                                "\n\n" +
+                                "Beat sync: " +
+                                Math.round(
+                                    Number(
+                                        result.metrics
+                                            ?.beatSyncRatio ||
+                                        0
+                                    ) *
+                                    100
+                                ) +
+                                "%\n" +
+                                "Cut candidates: " +
+                                Number(
+                                    result.evidence
+                                        ?.cutTimes
+                                        ?.length ||
+                                    0
+                                ) +
+                                "\n" +
+                                "Motion peaks: " +
+                                Number(
+                                    result.evidence
+                                        ?.visualPeakTimes
+                                        ?.length ||
+                                    0
+                                ) +
+                                "\n" +
+                                "Possible reverse regions: " +
+                                Number(
+                                    result.evidence
+                                        ?.reverseCandidates
+                                        ?.length ||
+                                    0
+                                )
+                        },
+                        {
+                            quoted:
+                                msg
+                        }
+                    );
+
+                } catch (err) {
+                    console.error(
+                        "[.queue] failed to read JSON editor result:",
+                        err.message
+                    );
+                }
+
+            } else {
+
+                await sock.sendMessage(
+                    chatId,
+                    {
+                        video: { url: outputPath },
+                        mimetype: job.outputMimeType || "video/mp4",
+                        caption: `🎬 *${job.id}* result`
+                    },
+                    { quoted: msg }
+                );
+
+            }
         }
     }
 }
