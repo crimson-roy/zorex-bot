@@ -38,6 +38,8 @@ require("dotenv").config({
 const fs = require("fs");
 const os = require("os");
 const { spawn } = require("child_process");
+const { normalizeTimeline } = require("../lib/editorTimeline");
+const { renderNativeTimeline } = require("./nativeTimelineRenderer");
 
 const SERVER =
     String(process.env.EDITOR_SERVER_URL || "")
@@ -818,6 +820,118 @@ async function processUpscale(
     );
 }
 
+async function processTimeline(
+    job
+) {
+
+    const jobDir =
+        path.join(
+            WORK_ROOT,
+            job.id
+        );
+
+    fs.mkdirSync(
+        jobDir,
+        {
+            recursive:
+                true
+        }
+    );
+
+    const inputPath =
+        path.join(
+            jobDir,
+            "input.mp4"
+        );
+
+    const outputPath =
+        path.join(
+            jobDir,
+            "output.mp4"
+        );
+
+    await reportProgress(
+        job.id,
+        2,
+        "downloading-source"
+    );
+
+    await downloadInput(
+        job,
+        inputPath
+    );
+
+    await reportProgress(
+        job.id,
+        5,
+        "validating-timeline"
+    );
+
+    const timeline =
+        normalizeTimeline(
+            job.options?.timeline
+        );
+
+    const metadata =
+        await probeVideo(
+            inputPath
+        );
+
+    const result =
+        await renderNativeTimeline({
+            timeline,
+            inputPath,
+            outputPath,
+            workDir:
+                jobDir,
+            sourceMetadata:
+                metadata,
+            ffmpegBin:
+                FFMPEG_BIN,
+            run,
+            reportProgress:
+                async (
+                    progress,
+                    stage,
+                    checkpoint = null
+                ) =>
+                    await reportProgress(
+                        job.id,
+                        progress,
+                        stage,
+                        checkpoint
+                    )
+        });
+
+    await reportProgress(
+        job.id,
+        97,
+        "uploading-result",
+        {
+            audioPreserved:
+                result.audioPreserved,
+            outputFps:
+                result.outputFps,
+            totalFrames:
+                result.totalFrames
+        }
+    );
+
+    await uploadOutput(
+        job,
+        outputPath
+    );
+
+    console.log(
+        "[WORKER] native timeline completed",
+        {
+            job:
+                job.id,
+            ...result
+        }
+    );
+}
+
 async function failJob(
     job,
     err,
@@ -871,7 +985,11 @@ async function claim() {
                     priority:
                         WORKER_PRIORITY,
                     capabilities: [
-                        "realesrgan"
+                        "realesrgan",
+                        "timeline_v1",
+                        "ffmpeg",
+                        "native-cc",
+                        "native-animation"
                     ]
                 }
             }
@@ -958,6 +1076,15 @@ async function main() {
             ) {
 
                 await processUpscale(
+                    job
+                );
+
+            } else if (
+                job.type ===
+                "timeline_render"
+            ) {
+
+                await processTimeline(
                     job
                 );
 
