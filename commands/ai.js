@@ -109,6 +109,7 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"video_depth","mist":"mist"}
 {"name":"video_depth","mist":"heavy"}
 {"name":"video_upscale","scale":4,"quality":true}
+{"name":"video_edit_animation","animation":"bend_zoom"}
 {"name":"editor_queue"}
 {"name":"editor_job","job_id":"ZRX-ABC123"}
 {"name":"editor_cancel","job_id":"ZRX-ABC123"}
@@ -193,6 +194,13 @@ Rules:
 - "make this video depth with heavy mist" => video_depth mist "heavy".
 - When the user replies to a video and asks to upscale/enhance its resolution,
   use video_upscale. Use scale 4 unless they explicitly request 2x or 8x.
+- When the user replies to a video and asks for a native Zorex animation,
+  use video_edit_animation. Supported animation names are zoom_in, zoom_out,
+  punch_zoom, pan_left, pan_right, pan_up, pan_down, bounce_zoom, bend_zoom,
+  whip_left, whip_right, soft_shake and cinematic_push.
+- Natural phrases such as "pan in", "zoom in", "bend zoom", "soft shake",
+  "whip left" or "cinematic push" should map to the closest supported native
+  animation. Never invent an animation name outside this list.
 - "show my edit queue", "show my current edits", "show my current editing jobs",
   or "what edits are running" => editor_queue.
 - "show ZRX-ABC123" or "show edit job ZRX-ABC123" => editor_job with that job_id.
