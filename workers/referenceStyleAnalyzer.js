@@ -218,9 +218,18 @@ function detectReverseCandidates(frames, analysisFps) {
         const prev = matches[i - 1];
         const cur = matches[i];
 
+        const localMotion =
+            cur.frame > 0
+                ? hashDistance(
+                    frames[cur.frame].hash,
+                    frames[cur.frame - 1].hash
+                )
+                : 0;
+
         const descending =
             cur.distance < 0.055 &&
             prev.distance < 0.055 &&
+            localMotion > 0.012 &&
             cur.match === prev.match - 1;
 
         if (descending) {
@@ -382,18 +391,91 @@ async function analyzeReference({
     const cutFrames = localPeaks(diffs, cutThreshold, Math.round(analysisFps * 0.15));
     const visualPeakFrames = localPeaks(diffs, motionThreshold, Math.round(analysisFps * 0.10));
 
-    const flashThreshold =
-        Math.max(
-            0.12,
-            median(brightnessDelta) +
-            mad(brightnessDelta) * 4
+    const brightnessValues =
+        frames.map(
+            frame =>
+                frame.brightness
         );
 
-    const flashFrames = localPeaks(
-        brightnessDelta,
-        flashThreshold,
-        Math.round(analysisFps * 0.10)
-    );
+    const brightnessCenter =
+        median(
+            brightnessValues
+        );
+
+    const brightnessSpread =
+        mad(
+            brightnessValues,
+            brightnessCenter
+        );
+
+    const flashLiftThreshold =
+        Math.max(
+            0.10,
+            brightnessSpread *
+                2.5
+        );
+
+    const flashScores =
+        brightnessValues.map(
+            (
+                value,
+                index
+            ) => {
+
+                if (
+                    index === 0 ||
+                    index ===
+                        brightnessValues.length -
+                            1
+                ) {
+                    return 0;
+                }
+
+                const neighborMean =
+                    (
+                        brightnessValues[
+                            index -
+                            1
+                        ] +
+                        brightnessValues[
+                            index +
+                            1
+                        ]
+                    ) /
+                    2;
+
+                return Math.max(
+                    0,
+                    value -
+                        neighborMean
+                );
+            }
+        );
+
+    const rawFlashFrames =
+        localPeaks(
+            flashScores,
+            flashLiftThreshold,
+            Math.round(
+                analysisFps *
+                0.10
+            )
+        );
+
+    const flashFrames =
+        rawFlashFrames.filter(
+            frame =>
+                nearestDistance(
+                    frame /
+                        analysisFps,
+                    cutFrames.map(
+                        cut =>
+                            cut /
+                            analysisFps
+                    )
+                ) >
+                0.16
+        );
 
     await reportProgress(62, "analyzing-audio");
 
@@ -434,7 +516,16 @@ async function analyzeReference({
     const nonCutMotionTimes =
         visualPeakTimes.filter(
             time =>
-                nearestDistance(time, cutTimes) > 0.16
+                nearestDistance(
+                    time,
+                    cutTimes
+                ) >
+                    0.16 &&
+                nearestDistance(
+                    time,
+                    flashTimes
+                ) >
+                    0.12
         );
 
     const alignedMotion =
