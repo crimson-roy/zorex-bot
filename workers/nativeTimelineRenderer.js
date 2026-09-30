@@ -17,7 +17,59 @@ function lerp(a, b, t) {
     return a + (b - a) * t;
 }
 
-function ease(t, mode) {
+function cubicBezierCoord(t, p1, p2) {
+    const u = 1 - t;
+
+    return (
+        3 * u * u * t * p1 +
+        3 * u * t * t * p2 +
+        t * t * t
+    );
+}
+
+function cubicBezierEase(t, curve) {
+    const points =
+        Array.isArray(curve) &&
+        curve.length === 4
+            ? curve.map(Number)
+            : [0.25, 0.1, 0.25, 1];
+
+    const [
+        x1,
+        y1,
+        x2,
+        y2
+    ] = points;
+
+    let lo = 0;
+    let hi = 1;
+    let s = clamp(t, 0, 1);
+
+    for (let i = 0; i < 18; i++) {
+        s = (lo + hi) / 2;
+
+        const x =
+            cubicBezierCoord(
+                s,
+                x1,
+                x2
+            );
+
+        if (x < t) {
+            lo = s;
+        } else {
+            hi = s;
+        }
+    }
+
+    return cubicBezierCoord(
+        s,
+        y1,
+        y2
+    );
+}
+
+function ease(t, mode, curve) {
     const x = clamp(t, 0, 1);
 
     switch (mode) {
@@ -32,6 +84,11 @@ function ease(t, mode) {
             return x < 0.5
                 ? 4 * x * x * x
                 : 1 - Math.pow(-2 * x + 2, 3) / 2;
+        case "bezier":
+            return cubicBezierEase(
+                x,
+                curve
+            );
         default:
             return x;
     }
@@ -65,7 +122,11 @@ function evaluate(frames, time, fallback) {
         }
 
         const span = Math.max(0.000001, b.time - a.time);
-        const t = ease((time - a.time) / span, a.easing || "linear");
+        const t = ease(
+            (time - a.time) / span,
+            a.easing || "linear",
+            a.curve
+        );
 
         return lerp(
             num(a.value, fallback),

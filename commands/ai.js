@@ -110,6 +110,7 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"video_depth","mist":"heavy"}
 {"name":"video_upscale","scale":4,"quality":true}
 {"name":"video_edit_animation","animation":"bend_zoom"}
+{"name":"video_edit_style","style":"celestial_velocity","graph":"z_ease"}
 {"name":"editor_queue"}
 {"name":"editor_job","job_id":"ZRX-ABC123"}
 {"name":"editor_cancel","job_id":"ZRX-ABC123"}
@@ -201,6 +202,18 @@ Rules:
 - Natural phrases such as "pan in", "zoom in", "bend zoom", "soft shake",
   "whip left" or "cinematic push" should map to the closest supported native
   animation. Never invent an animation name outside this list.
+- For higher-level velocity recipes, use video_edit_style. Supported styles:
+  celestial_velocity, forward_reverse_70_30 and zoom_out_hold_in.
+- Supported named graph presets for video_edit_style are straight, z_ease,
+  u_graph, l_graph, reverse_l, soft_ease, punch and float.
+- "apply Celestial Velocity" => video_edit_style style celestial_velocity,
+  graph z_ease unless the user names another graph.
+- "70% forward then 30% reverse" => video_edit_style
+  forward_reverse_70_30.
+- "zoom out for 50%, hold 30%, zoom in 20%" => video_edit_style
+  zoom_out_hold_in.
+- If the user asks for Z ease/U graph/L graph, preserve that named graph in
+  the action rather than replacing it with a generic easing.
 - "show my edit queue", "show my current edits", "show my current editing jobs",
   or "what edits are running" => editor_queue.
 - "show ZRX-ABC123" or "show edit job ZRX-ABC123" => editor_job with that job_id.
