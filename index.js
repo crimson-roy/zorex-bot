@@ -247,6 +247,7 @@ const { graphicsCommands } = require("./commands/graphics");
 const { broadcastCommand } = require("./commands/broadcast");
 const { videoUpscaleCommands } = require('./commands/videoUpscale');
 const { editorCommand } = require("./commands/editor");
+const { editCommand } = require("./commands/edit");
 const { startEditorWorkerServer } = require("./lib/editorWorkerServer");
 
 startEditorWorkerServer();
@@ -1923,6 +1924,13 @@ ${board}
 } else if (text.startsWith(".ai")) {
 
     await aiCommand(sock, msg, text);
+
+} else if (
+    text === ".edit" ||
+    text.startsWith(".edit ")
+) {
+
+    await editCommand(sock, msg, text);
 
 } else if (
     text === ".queue" ||
