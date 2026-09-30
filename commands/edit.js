@@ -73,7 +73,8 @@ function animationHelp() {
 async function editCommand(
     sock,
     msg,
-    text
+    text,
+    mediaOverride = null
 ) {
 
     const chatId =
@@ -134,14 +135,28 @@ async function editCommand(
         );
     }
 
-    let media;
+    let media =
+        mediaOverride &&
+        Buffer.isBuffer(
+            mediaOverride.buffer
+        )
+            ? {
+                buffer:
+                    mediaOverride.buffer,
+                mimeType:
+                    mediaOverride.mimeType ||
+                    "video/mp4"
+            }
+            : null;
 
     try {
-        media =
-            await getQuotedVideo(
-                sock,
-                msg
-            );
+        if (!media) {
+            media =
+                await getQuotedVideo(
+                    sock,
+                    msg
+                );
+        }
     } catch (err) {
         console.error(
             "[.edit] quoted video failed:",
