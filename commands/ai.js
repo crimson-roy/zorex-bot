@@ -33,6 +33,7 @@ const { buildDocx, buildXlsx, buildPptx, buildPdf } = require("../lib/fileBuilde
 const { generateImageFromPrompt } = require("./image");
 const { generateVideoFromPrompt } = require("./video");
 const { ZOREX_AI_SYSTEM_PROMPT } = require("../lib/zorexPersona");
+const { buildAiCapabilityList } = require("../lib/commandRegistry");
 const { authorizeAiRequest } = require("../lib/aiAuth");
 const {
     appendHistory,
@@ -67,6 +68,9 @@ Reply with STRICT JSON ONLY, no markdown, matching exactly one shape:
 {"action":"generate_file","format":"pptx"}
 {"action":"generate_file","format":"pdf"}
 {"action":"execute_commands","commands":[...]}
+
+Known executable Zorex command capabilities:
+${buildAiCapabilityList()}
 
 For execute_commands, commands may ONLY use these exact schemas:
 {"name":"balance"}
