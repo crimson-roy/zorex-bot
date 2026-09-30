@@ -40,6 +40,7 @@ const os = require("os");
 const { spawn } = require("child_process");
 const { normalizeTimeline } = require("../lib/editorTimeline");
 const { renderNativeTimeline } = require("./nativeTimelineRenderer");
+const { analyzeReference } = require("./referenceStyleAnalyzer");
 
 const SERVER =
     String(process.env.EDITOR_SERVER_URL || "")
@@ -323,6 +324,123 @@ function capture(
     );
 }
 
+function captureBuffer(
+    command,
+    args,
+    maxBytes =
+        16 * 1024 * 1024
+) {
+
+    return new Promise(
+        (resolve, reject) => {
+
+            const child =
+                spawn(
+                    command,
+                    args,
+                    {
+                        stdio:
+                            [
+                                "ignore",
+                                "pipe",
+                                "pipe"
+                            ]
+                    }
+                );
+
+            const stdout =
+                [];
+
+            const stderr =
+                [];
+
+            let size =
+                0;
+
+            child.stdout.on(
+                "data",
+                chunk => {
+
+                    size +=
+                        chunk.length;
+
+                    if (
+                        size >
+                        maxBytes
+                    ) {
+                        child.kill(
+                            "SIGKILL"
+                        );
+
+                        reject(
+                            new Error(
+                                "captureBuffer exceeded maximum size"
+                            )
+                        );
+
+                        return;
+                    }
+
+                    stdout.push(
+                        Buffer.from(
+                            chunk
+                        )
+                    );
+
+                }
+            );
+
+            child.stderr.on(
+                "data",
+                chunk =>
+                    stderr.push(
+                        Buffer.from(
+                            chunk
+                        )
+                    )
+            );
+
+            child.once(
+                "error",
+                reject
+            );
+
+            child.once(
+                "exit",
+                code => {
+
+                    if (
+                        code ===
+                        0
+                    ) {
+                        resolve(
+                            Buffer.concat(
+                                stdout
+                            )
+                        );
+                    } else {
+                        reject(
+                            new Error(
+                                Buffer.concat(
+                                    stderr
+                                )
+                                    .toString(
+                                        "utf8"
+                                    ) ||
+                                command +
+                                    " exited with code " +
+                                    code
+                            )
+                        );
+                    }
+
+                }
+            );
+
+        }
+    );
+}
+
 function parseFraction(value) {
 
     const raw =
@@ -371,7 +489,7 @@ async function probeVideo(
                 "-select_streams",
                 "v:0",
                 "-show_entries",
-                "stream=avg_frame_rate,width,height",
+                "stream=avg_frame_rate,width,height:format=duration",
                 "-of",
                 "json",
                 inputPath
@@ -386,6 +504,11 @@ async function probeVideo(
         {};
 
     return {
+        duration:
+            Number(
+                parsed?.format?.duration ||
+                0
+            ),
         fps:
             parseFraction(
                 stream.avg_frame_rate
@@ -471,7 +594,9 @@ async function downloadInput(
 
 async function uploadOutput(
     job,
-    outputPath
+    outputPath,
+    mimeType =
+        "video/mp4"
 ) {
 
     const stat =
@@ -494,7 +619,7 @@ async function uploadOutput(
                 headers:
                     authHeaders({
                         "Content-Type":
-                            "video/mp4",
+                            mimeType,
                         "Content-Length":
                             String(
                                 stat.size
@@ -932,6 +1057,127 @@ async function processTimeline(
     );
 }
 
+async function processReferenceAnalysis(
+    job
+) {
+
+    const jobDir =
+        path.join(
+            WORK_ROOT,
+            job.id
+        );
+
+    fs.mkdirSync(
+        jobDir,
+        {
+            recursive:
+                true
+        }
+    );
+
+    const inputPath =
+        path.join(
+            jobDir,
+            "input.mp4"
+        );
+
+    const outputPath =
+        path.join(
+            jobDir,
+            "analysis.json"
+        );
+
+    await reportProgress(
+        job.id,
+        2,
+        "downloading-reference"
+    );
+
+    await downloadInput(
+        job,
+        inputPath
+    );
+
+    await reportProgress(
+        job.id,
+        5,
+        "probing-reference"
+    );
+
+    const metadata =
+        await probeVideo(
+            inputPath
+        );
+
+    const fingerprint =
+        await analyzeReference({
+            inputPath,
+            workDir:
+                jobDir,
+            ffmpegBin:
+                FFMPEG_BIN,
+            run,
+            captureBuffer,
+            sourceMetadata:
+                metadata,
+            reportProgress:
+                async (
+                    progress,
+                    stage,
+                    checkpoint = null
+                ) =>
+                    await reportProgress(
+                        job.id,
+                        progress,
+                        stage,
+                        checkpoint
+                    ),
+            analysisFps:
+                Number(
+                    job.options?.analysisFps ||
+                    8
+                ),
+            maxDuration:
+                Number(
+                    job.options?.maxDuration ||
+                    60
+                )
+        });
+
+    fs.writeFileSync(
+        outputPath,
+        JSON.stringify(
+            fingerprint,
+            null,
+            2
+        )
+    );
+
+    await reportProgress(
+        job.id,
+        95,
+        "uploading-fingerprint"
+    );
+
+    await uploadOutput(
+        job,
+        outputPath,
+        "application/json"
+    );
+
+    console.log(
+        "[WORKER] reference analysis completed",
+        {
+            job:
+                job.id,
+            styles:
+                fingerprint.styleFamilies,
+            summary:
+                fingerprint.summary
+        }
+    );
+}
+
 async function failJob(
     job,
     err,
@@ -989,7 +1235,8 @@ async function claim() {
                         "timeline_v1",
                         "ffmpeg",
                         "native-cc",
-                        "native-animation"
+                        "native-animation",
+                        "reference-analysis"
                     ]
                 }
             }
@@ -1085,6 +1332,15 @@ async function main() {
             ) {
 
                 await processTimeline(
+                    job
+                );
+
+            } else if (
+                job.type ===
+                "reference_analyze"
+            ) {
+
+                await processReferenceAnalysis(
                     job
                 );
 
