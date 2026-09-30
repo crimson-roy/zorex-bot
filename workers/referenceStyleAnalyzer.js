@@ -294,7 +294,8 @@ async function analyzeReference({
     inputPath,
     workDir,
     ffmpegBin,
-    capture,
+    run,
+    captureBuffer,
     sourceMetadata,
     reportProgress,
     analysisFps = 8,
@@ -310,7 +311,7 @@ async function analyzeReference({
 
     await reportProgress(8, "extracting-analysis-frames");
 
-    await capture(
+    await run(
         ffmpegBin,
         [
             "-y",
@@ -323,10 +324,7 @@ async function analyzeReference({
             "-vsync",
             "0",
             path.join(framesDir, "frame-%06d.png")
-        ],
-        {
-            collectStdout: false
-        }
+        ]
     );
 
     const files = fs.readdirSync(framesDir)
@@ -403,7 +401,7 @@ async function analyzeReference({
 
     try {
         audioBuffer =
-            await capture(
+            await captureBuffer(
                 ffmpegBin,
                 [
                     "-v",
@@ -421,10 +419,7 @@ async function analyzeReference({
                     "s16le",
                     "pipe:1"
                 ],
-                {
-                    collectStdout: true,
-                    maxStdoutBytes: 8 * 1024 * 1024
-                }
+                8 * 1024 * 1024
             );
     } catch (_) {
         audioBuffer = Buffer.alloc(0);
