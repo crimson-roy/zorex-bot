@@ -313,6 +313,198 @@ async function applyNativeEffects(buffer, effects, time, width, height) {
     return current;
 }
 
+function coord(value, size) {
+    const n = num(value, 0);
+    return Math.abs(n) <= 1
+        ? n * size
+        : n;
+}
+
+function buildMaskSvg(mask, width, height) {
+    const opacity =
+        clamp(
+            num(mask.opacity, 1),
+            0,
+            1
+        );
+
+    const white =
+        "rgba(255,255,255," +
+        opacity +
+        ")";
+
+    let shape =
+        "";
+
+    if (mask.type === "rectangle") {
+        shape =
+            "<rect x=\"" +
+            coord(mask.x, width) +
+            "\" y=\"" +
+            coord(mask.y, height) +
+            "\" width=\"" +
+            Math.abs(coord(mask.width, width)) +
+            "\" height=\"" +
+            Math.abs(coord(mask.height, height)) +
+            "\" fill=\"" +
+            white +
+            "\"/>";
+    } else if (mask.type === "ellipse") {
+        shape =
+            "<ellipse cx=\"" +
+            coord(mask.cx, width) +
+            "\" cy=\"" +
+            coord(mask.cy, height) +
+            "\" rx=\"" +
+            Math.abs(coord(mask.rx, width)) +
+            "\" ry=\"" +
+            Math.abs(coord(mask.ry, height)) +
+            "\" fill=\"" +
+            white +
+            "\"/>";
+    } else if (mask.type === "polygon") {
+        const points =
+            (mask.points || [])
+                .map(
+                    point =>
+                        coord(point.x, width) +
+                        "," +
+                        coord(point.y, height)
+                )
+                .join(" ");
+
+        shape =
+            "<polygon points=\"" +
+            points +
+            "\" fill=\"" +
+            white +
+            "\"/>";
+    } else {
+        return null;
+    }
+
+    return Buffer.from(
+        "<svg width=\"" +
+        width +
+        "\" height=\"" +
+        height +
+        "\" xmlns=\"http://www.w3.org/2000/svg\">" +
+        shape +
+        "</svg>"
+    );
+}
+
+async function applyMasks(
+    buffer,
+    masks,
+    width,
+    height
+) {
+    let current =
+        buffer;
+
+    for (const mask of masks || []) {
+        if (mask.type === "subject") {
+            continue;
+        }
+
+        const svg =
+            buildMaskSvg(
+                mask,
+                width,
+                height
+            );
+
+        if (!svg) {
+            continue;
+        }
+
+        let maskBuffer =
+            svg;
+
+        if (num(mask.feather, 0) > 0) {
+            maskBuffer =
+                await sharp(svg)
+                    .blur(
+                        clamp(
+                            num(mask.feather, 0),
+                            0.3,
+                            100
+                        )
+                    )
+                    .png()
+                    .toBuffer();
+        }
+
+        const subtract =
+            mask.mode === "subtract" ||
+            mask.invert === true;
+
+        current =
+            await sharp(current)
+                .ensureAlpha()
+                .composite([
+                    {
+                        input:
+                            maskBuffer,
+                        blend:
+                            subtract
+                                ? "dest-out"
+                                : "dest-in"
+                    }
+                ])
+                .png()
+                .toBuffer();
+    }
+
+    return current;
+}
+
+async function applyOpacity(
+    buffer,
+    opacity
+) {
+    const value =
+        clamp(
+            num(opacity, 1),
+            0,
+            1
+        );
+
+    if (value >= 0.999) {
+        return buffer;
+    }
+
+    const meta =
+        await sharp(buffer)
+            .metadata();
+
+    const svg =
+        Buffer.from(
+            "<svg width=\"" +
+            meta.width +
+            "\" height=\"" +
+            meta.height +
+            "\" xmlns=\"http://www.w3.org/2000/svg\">" +
+            "<rect width=\"100%\" height=\"100%\" fill=\"rgba(255,255,255," +
+            value +
+            ")\"/></svg>"
+        );
+
+    return await sharp(buffer)
+        .ensureAlpha()
+        .composite([
+            {
+                input:
+                    svg,
+                blend:
+                    "dest-in"
+            }
+        ])
+        .png()
+        .toBuffer();
+}
+
 async function renderLayer({
     sourceFrame,
     clip,
@@ -332,6 +524,13 @@ async function renderLayer({
         buffer,
         clip.effects,
         localTime,
+        width,
+        height
+    );
+
+    buffer = await applyMasks(
+        buffer,
+        clip.masks,
         width,
         height
     );
@@ -362,6 +561,12 @@ async function renderLayer({
         })
         .png()
         .toBuffer();
+
+    buffer =
+        await applyOpacity(
+            buffer,
+            t.opacity
+        );
 
     const meta = await sharp(buffer).metadata();
 
