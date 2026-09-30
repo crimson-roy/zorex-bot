@@ -111,6 +111,7 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"video_upscale","scale":4,"quality":true}
 {"name":"video_edit_animation","animation":"bend_zoom"}
 {"name":"video_edit_style","style":"celestial_velocity","graph":"z_ease"}
+{"name":"video_study_style","label":"optional reference name"}
 {"name":"editor_queue"}
 {"name":"editor_job","job_id":"ZRX-ABC123"}
 {"name":"editor_cancel","job_id":"ZRX-ABC123"}
@@ -214,6 +215,15 @@ Rules:
   zoom_out_hold_in.
 - If the user asks for Z ease/U graph/L graph, preserve that named graph in
   the action rather than replacing it with a generic easing.
+- When the user replies to a video and asks Zorex to study, learn, analyze,
+  inspect, fingerprint, or remember the EDITING STYLE/EDITING PATTERN of that
+  reference, use video_study_style.
+- "study this edit", "learn this editing style", "analyze this as a reference",
+  or "remember how this edit is structured" => video_study_style.
+- video_study_style means extract compact measurable editing evidence and a
+  style fingerprint. It does NOT mean keep the entire source video forever.
+- Do not use video_study_style for ordinary questions about video content;
+  only use it when the request is about learning/analyzing the editing itself.
 - "show my edit queue", "show my current edits", "show my current editing jobs",
   or "what edits are running" => editor_queue.
 - "show ZRX-ABC123" or "show edit job ZRX-ABC123" => editor_job with that job_id.
