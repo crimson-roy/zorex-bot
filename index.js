@@ -249,6 +249,7 @@ const { videoUpscaleCommands } = require('./commands/videoUpscale');
 const { editorCommand } = require("./commands/editor");
 const { editCommand } = require("./commands/edit");
 const { startEditorWorkerServer } = require("./lib/editorWorkerServer");
+const { startEditorDeliverySweeper } = require("./lib/editorDelivery");
 
 startEditorWorkerServer();
 const {
@@ -534,6 +535,10 @@ async function startBot() {
                 // calls, which matters here since "open" can theoretically
                 // fire again after a reconnect).
                 try {
+
+                    startEditorDeliverySweeper(sock);
+
+                    console.log("🎬 Editor auto-delivery sweeper started.");
 
                     startTradeSweeper(sock);
 
