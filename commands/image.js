@@ -47,10 +47,14 @@ function getImageEndpoint() {
             .replace(/\/+$/, "");
     }
 
-    // Derive the Foundry Images endpoint from the existing AIServices
-    // resource endpoint:
+    // GPT Image deployments use the Azure OpenAI v1 image route.
+    // If only the broader Cognitive Services endpoint is configured, derive
+    // the matching Azure OpenAI resource host:
     // https://zorex-ai.cognitiveservices.azure.com
-    // -> https://zorex-ai.services.ai.azure.com
+    // -> https://zorex-ai.openai.azure.com
+    //
+    // AZURE_IMAGE_ENDPOINT always wins, so Foundry deployments that really
+    // use *.services.ai.azure.com can still set that explicitly.
     try {
 
         const aiEndpoint =
@@ -60,7 +64,7 @@ function getImageEndpoint() {
             aiEndpoint.hostname.split(".")[0];
 
         if (resourceName) {
-            return `https://${resourceName}.services.ai.azure.com`;
+            return `https://${resourceName}.openai.azure.com`;
         }
 
     } catch (_) {}
