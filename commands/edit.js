@@ -21,6 +21,12 @@ const {
     createJob
 } = require("../lib/editorJobs");
 
+const {
+    normalizeGraphName,
+    getGraphPreset,
+    applyGraph
+} = require("../lib/editorGraphs");
+
 const MAX_NATIVE_DURATION =
     Number(
         process.env.NATIVE_EDIT_MAX_DURATION ||
@@ -70,11 +76,104 @@ function animationHelp() {
     );
 }
 
+function applyAnimationControls(
+    clip,
+    {
+        graph = null,
+        maxZoomPercent = null
+    } = {}
+) {
+    const normalizedGraph =
+        graph
+            ? normalizeGraphName(graph)
+            : null;
+
+    if (
+        normalizedGraph &&
+        getGraphPreset(normalizedGraph)
+    ) {
+        const keyframes =
+            clip.transform?.keyframes ||
+            {};
+
+        for (const key of Object.keys(keyframes)) {
+            if (Array.isArray(keyframes[key])) {
+                keyframes[key] =
+                    applyGraph(
+                        keyframes[key],
+                        normalizedGraph
+                    );
+            }
+        }
+
+        clip.metadata = {
+            ...(clip.metadata || {}),
+            graphPreset:
+                normalizedGraph
+        };
+    }
+
+    const requestedMax =
+        Number(maxZoomPercent);
+
+    if (
+        Number.isFinite(requestedMax) &&
+        requestedMax >= 100 &&
+        requestedMax <= 400 &&
+        Array.isArray(
+            clip.transform
+                ?.keyframes
+                ?.scale
+        )
+    ) {
+        const frames =
+            clip.transform
+                .keyframes
+                .scale;
+
+        const target =
+            requestedMax / 100;
+
+        const currentMax =
+            Math.max(
+                ...frames.map(
+                    frame =>
+                        Number(frame.value || 1)
+                )
+            );
+
+        if (currentMax > 1) {
+            const factor =
+                (target - 1) /
+                (currentMax - 1);
+
+            for (const frame of frames) {
+                const value =
+                    Number(frame.value || 1);
+
+                frame.value =
+                    1 +
+                    (value - 1) *
+                    factor;
+            }
+        }
+
+        clip.metadata = {
+            ...(clip.metadata || {}),
+            maxZoomPercent:
+                requestedMax
+        };
+    }
+
+    return clip;
+}
+
 async function editCommand(
     sock,
     msg,
     text,
-    mediaOverride = null
+    mediaOverride = null,
+    editOptions = {}
 ) {
 
     const chatId =
@@ -272,6 +371,11 @@ async function editCommand(
             }
         );
 
+        applyAnimationControls(
+            clip,
+            editOptions
+        );
+
         const timeline =
             normalizeTimeline({
                 version:
@@ -316,7 +420,15 @@ async function editCommand(
                     sourceHeight:
                         source.height,
                     sourceFps:
-                        source.fps
+                        source.fps,
+                    graph:
+                        clip.metadata
+                            ?.graphPreset ||
+                        null,
+                    maxZoomPercent:
+                        clip.metadata
+                            ?.maxZoomPercent ||
+                        null
                 }
             });
 
@@ -362,6 +474,22 @@ async function editCommand(
                     "Animation: " +
                     requested +
                     "\n" +
+                    (
+                        clip.metadata
+                            ?.graphPreset
+                            ? "Graph: " +
+                              clip.metadata.graphPreset +
+                              "\n"
+                            : ""
+                    ) +
+                    (
+                        clip.metadata
+                            ?.maxZoomPercent
+                            ? "Max zoom: " +
+                              clip.metadata.maxZoomPercent +
+                              "%\n"
+                            : ""
+                    ) +
                     "Canvas: " +
                     canvas.width +
                     "×" +
