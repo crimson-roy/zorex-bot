@@ -54,15 +54,42 @@ const EDITOR_PROXY =
     )
         .trim();
 
-if (EDITOR_PROXY) {
-    process.env.HTTP_PROXY =
-        EDITOR_PROXY;
+function axiosProxyConfig() {
 
-    process.env.HTTPS_PROXY =
-        EDITOR_PROXY;
+    if (!EDITOR_PROXY) {
+        return {
+            proxy:
+                false
+        };
+    }
 
-    process.env.ALL_PROXY =
-        EDITOR_PROXY;
+    const parsed =
+        new URL(
+            EDITOR_PROXY
+        );
+
+    return {
+        proxy: {
+            protocol:
+                parsed.protocol
+                    .replace(
+                        ":",
+                        ""
+                    ),
+            host:
+                parsed.hostname,
+            port:
+                Number(
+                    parsed.port ||
+                    (
+                        parsed.protocol ===
+                        "https:"
+                            ? 443
+                            : 80
+                    )
+                )
+        }
+    };
 }
 
 const TOKEN =
@@ -166,6 +193,7 @@ async function apiJson(
 
     const response =
         await axios({
+            ...axiosProxyConfig(),
             method,
             url:
                 SERVER +
@@ -578,6 +606,7 @@ async function downloadInput(
 
     const response =
         await axios({
+            ...axiosProxyConfig(),
             method:
                 "GET",
             url:
@@ -624,6 +653,7 @@ async function uploadOutput(
 
     const response =
         await axios({
+            ...axiosProxyConfig(),
             method:
                 "PUT",
             url:
