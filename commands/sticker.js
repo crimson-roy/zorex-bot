@@ -893,52 +893,161 @@ async function stickerToImage(buffer) {
 async function stickerToVideo(buffer) {
     const input = tempPath('.webp', 'sticker-in');
     const output = tempPath('.mp4', 'video-out');
+    const framesDir =
+        path.join(
+            TEMP_DIR,
+            crypto.randomBytes(6).toString('hex') + '-sticker-frames'
+        );
 
     fs.writeFileSync(input, buffer);
 
-    let pages = 1;
+    let metadata = null;
 
     try {
-        const metadata =
-            await sharp(buffer, { animated: true }).metadata();
-
-        pages = Number(metadata.pages) || 1;
+        metadata =
+            await sharp(
+                buffer,
+                { animated: true }
+            ).metadata();
     } catch (_) {}
 
-    try {
-        const args = ['-y'];
+    const pages =
+        Math.max(
+            1,
+            Number(metadata?.pages) || 1
+        );
 
+    try {
         if (pages <= 1) {
-            args.push('-loop', '1');
+            await runFFmpeg([
+                '-y',
+                '-loop', '1',
+                '-i', input,
+                '-vf',
+                'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                '-t', '3',
+                '-c:v', 'libx264',
+                '-preset', 'veryfast',
+                '-crf', '23',
+                '-pix_fmt', 'yuv420p',
+                '-movflags', '+faststart',
+                '-an',
+                '-loglevel', 'error',
+                output
+            ]);
+
+            return fs.readFileSync(output);
         }
 
-        args.push(
-            '-i', input,
+        // WhatsApp "video stickers" are animated WebP files. Some FFmpeg
+        // builds do not preserve their animation/timing reliably when the
+        // WebP is passed straight in, so decode each page with Sharp first
+        // and feed FFmpeg a timed concat sequence.
+        fs.mkdirSync(
+            framesDir,
+            { recursive: true }
+        );
+
+        const delays =
+            Array.isArray(metadata?.delay)
+                ? metadata.delay
+                : [];
+
+        const manifest = [];
+
+        for (let i = 0; i < pages; i++) {
+            const frameName =
+                'frame-' +
+                String(i).padStart(5, '0') +
+                '.png';
+
+            const framePath =
+                path.join(
+                    framesDir,
+                    frameName
+                );
+
+            await sharp(
+                buffer,
+                {
+                    animated: true,
+                    page: i,
+                    pages: 1
+                }
+            )
+                .png()
+                .toFile(
+                    framePath
+                );
+
+            const delayMs =
+                Math.max(
+                    20,
+                    Number(delays[i]) ||
+                    100
+                );
+
+            manifest.push(
+                `file '${frameName}'`
+            );
+
+            manifest.push(
+                'duration ' +
+                (delayMs / 1000)
+                    .toFixed(6)
+            );
+        }
+
+        // The concat demuxer ignores the final duration unless the last
+        // frame is repeated once.
+        manifest.push(
+            `file 'frame-${String(pages - 1).padStart(5, '0')}.png'`
+        );
+
+        const manifestPath =
+            path.join(
+                framesDir,
+                'frames.txt'
+            );
+
+        fs.writeFileSync(
+            manifestPath,
+            manifest.join('\n') + '\n',
+            'utf8'
+        );
+
+        await runFFmpeg([
+            '-y',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', manifestPath,
             '-vf',
             'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+            '-vsync', 'vfr',
             '-c:v', 'libx264',
             '-preset', 'veryfast',
             '-crf', '23',
             '-pix_fmt', 'yuv420p',
-            '-movflags', '+faststart'
-        );
-
-        if (pages <= 1) {
-            args.push('-t', '3');
-        }
-
-        args.push(
+            '-movflags', '+faststart',
             '-an',
             '-loglevel', 'error',
             output
-        );
-
-        await runFFmpeg(args);
+        ]);
 
         return fs.readFileSync(output);
 
     } finally {
         cleanup(input, output);
+
+        try {
+            fs.rmSync(
+                framesDir,
+                {
+                    recursive: true,
+                    force: true
+                }
+            );
+        } catch (_) {}
     }
 }
 
