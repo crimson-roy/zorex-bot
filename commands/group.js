@@ -186,38 +186,57 @@ function saveMuteAll(data) {
 
 }
 
-// Convert time
+// Convert mute duration. Returns null for an explicitly-invalid duration
+// instead of silently falling back to two hours.
 function parseMuteTime(time) {
 
-    if (!time) return 2 * 60 * 60 * 1000; // default 2 hours
-
-
-    time = time.toLowerCase();
-
-
-    if (time.endsWith("mins")) {
-
-        return parseInt(time) * 60 * 1000;
-
+    if (!time) {
+        return 2 * 60 * 60 * 1000; // default 2 hours
     }
 
+    const value =
+        String(time)
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, "");
 
-    if (time.endsWith("hr")) {
+    const match =
+        value.match(
+            /^(\d+)(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days)$/
+        );
 
-        return parseInt(time) * 60 * 60 * 1000;
-
+    if (!match) {
+        return null;
     }
 
+    const amount =
+        Number(match[1]);
 
-    if (time.endsWith("d")) {
-
-        return parseInt(time) * 24 * 60 * 60 * 1000;
-
+    if (
+        !Number.isFinite(amount) ||
+        amount <= 0
+    ) {
+        return null;
     }
 
+    const unit =
+        match[2];
 
-    return 2 * 60 * 60 * 1000;
+    if (
+        ["m", "min", "mins", "minute", "minutes"]
+            .includes(unit)
+    ) {
+        return amount * 60 * 1000;
+    }
 
+    if (
+        ["h", "hr", "hrs", "hour", "hours"]
+            .includes(unit)
+    ) {
+        return amount * 60 * 60 * 1000;
+    }
+
+    return amount * 24 * 60 * 60 * 1000;
 }
 
 
@@ -1120,17 +1139,46 @@ if (!target) {
 
 }
 
-        const args =
-            text.split(" ");
+        const durationBody =
+            String(text || "")
+                .replace(/^\.mute\b/i, "")
+                .replace(/@\d+/g, "")
+                .trim();
 
-
+        // Accept both compact and spaced forms:
+        // .mute @user 365d
+        // .mute @user 365 d
+        // reply + .mute 2 hr
         const duration =
-            args[2];
+            durationBody
+                ? durationBody
+                    .replace(/\s+/g, "")
+                : "";
 
+        const muteMs =
+            parseMuteTime(
+                duration
+            );
+
+        if (
+            duration &&
+            muteMs === null
+        ) {
+            return await sock.sendMessage(
+                groupJid,
+                {
+                    text:
+                        "⚠️ Invalid mute duration.\n\nExamples:\n.mute @user 30mins\n.mute @user 2hr\n.mute @user 365d"
+                },
+                {
+                    quoted: msg
+                }
+            );
+        }
 
         const expires =
             Date.now() +
-            parseMuteTime(duration);
+            muteMs;
 
 
 
