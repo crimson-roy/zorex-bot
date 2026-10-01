@@ -109,7 +109,7 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"video_depth","mist":"mist"}
 {"name":"video_depth","mist":"heavy"}
 {"name":"video_upscale","scale":4,"quality":true}
-{"name":"video_edit_animation","animation":"bend_zoom"}
+{"name":"video_edit_animation","animation":"bend_zoom","graph":"z_ease","max_zoom_percent":125}
 {"name":"video_edit_style","style":"celestial_velocity","graph":"z_ease"}
 {"name":"video_study_style","label":"optional reference name"}
 {"name":"editor_queue"}
@@ -215,6 +215,16 @@ Rules:
   zoom_out_hold_in.
 - If the user asks for Z ease/U graph/L graph, preserve that named graph in
   the action rather than replacing it with a generic easing.
+- video_edit_animation may also include "graph" using one of straight, z_ease,
+  u_graph, l_graph, reverse_l, soft_ease, punch or float, plus an optional
+  "max_zoom_percent" from 100 to 400.
+- "smooth zoom out, max zoom 125, use z_ease" =>
+  {"name":"video_edit_animation","animation":"zoom_out","graph":"z_ease","max_zoom_percent":125}.
+- When a user gives animation parameters such as max zoom or a named graph,
+  NEVER discard them just because the base animation preset already exists.
+- If the user says "use z_ease or u_graph if smoother" without a stronger
+  preference, use z_ease because it was named first; do not silently fall
+  back to the preset's generic easing.
 - When the user replies to a video and asks Zorex to study, learn, analyze,
   inspect, fingerprint, or remember the EDITING STYLE/EDITING PATTERN of that
   reference, use video_study_style.
