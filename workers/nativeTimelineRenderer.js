@@ -629,13 +629,114 @@ async function renderLayer({
             t.opacity
         );
 
-    const meta = await sharp(buffer).metadata();
+    const meta =
+        await sharp(buffer)
+            .metadata();
+
+    const rawLeft =
+        Math.round(
+            (width - meta.width) /
+                2 +
+            t.x
+        );
+
+    const rawTop =
+        Math.round(
+            (height - meta.height) /
+                2 +
+            t.y
+        );
+
+    // sharp.composite() rejects overlays that are larger than the base
+    // image. Zooms/rotations can legitimately make a transformed layer
+    // exceed the timeline canvas, so clip the layer to the visible canvas
+    // rectangle before compositing it.
+    const cropLeft =
+        Math.max(
+            0,
+            -rawLeft
+        );
+
+    const cropTop =
+        Math.max(
+            0,
+            -rawTop
+        );
+
+    const visibleWidth =
+        Math.min(
+            meta.width -
+                cropLeft,
+            width -
+                Math.max(
+                    0,
+                    rawLeft
+                )
+        );
+
+    const visibleHeight =
+        Math.min(
+            meta.height -
+                cropTop,
+            height -
+                Math.max(
+                    0,
+                    rawTop
+                )
+        );
+
+    if (
+        visibleWidth <=
+            0 ||
+        visibleHeight <=
+            0
+    ) {
+        return null;
+    }
+
+    if (
+        cropLeft >
+            0 ||
+        cropTop >
+            0 ||
+        visibleWidth <
+            meta.width ||
+        visibleHeight <
+            meta.height
+    ) {
+        buffer =
+            await sharp(
+                buffer
+            )
+                .extract({
+                    left:
+                        cropLeft,
+                    top:
+                        cropTop,
+                    width:
+                        visibleWidth,
+                    height:
+                        visibleHeight
+                })
+                .png()
+                .toBuffer();
+    }
 
     return {
-        input: buffer,
-        left: Math.round((width - meta.width) / 2 + t.x),
-        top: Math.round((height - meta.height) / 2 + t.y),
-        blend: "over"
+        input:
+            buffer,
+        left:
+            Math.max(
+                0,
+                rawLeft
+            ),
+        top:
+            Math.max(
+                0,
+                rawTop
+            ),
+        blend:
+            "over"
     };
 }
 
@@ -713,15 +814,27 @@ async function renderNativeTimeline({
                 sourceFrames.length - 1
             );
 
-            layers.push(
+            const layer =
                 await renderLayer({
-                    sourceFrame: sourceFrames[sourceIndex],
-                    clip: active.clip,
-                    localTime: active.localTime,
-                    width: timeline.width,
-                    height: timeline.height
-                })
-            );
+                    sourceFrame:
+                        sourceFrames[
+                            sourceIndex
+                        ],
+                    clip:
+                        active.clip,
+                    localTime:
+                        active.localTime,
+                    width:
+                        timeline.width,
+                    height:
+                        timeline.height
+                });
+
+            if (layer) {
+                layers.push(
+                    layer
+                );
+            }
         }
 
         let image = sharp({
