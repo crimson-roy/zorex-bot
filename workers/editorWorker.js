@@ -37,6 +37,7 @@ require("dotenv").config({
 
 const fs = require("fs");
 const os = require("os");
+const axios = require("axios");
 const { spawn } = require("child_process");
 const { normalizeTimeline } = require("../lib/editorTimeline");
 const { renderNativeTimeline } = require("./nativeTimelineRenderer");
@@ -45,6 +46,24 @@ const { analyzeReference } = require("./referenceStyleAnalyzer");
 const SERVER =
     String(process.env.EDITOR_SERVER_URL || "")
         .replace(/\/+$/, "");
+
+const EDITOR_PROXY =
+    String(
+        process.env.EDITOR_PROXY ||
+        ""
+    )
+        .trim();
+
+if (EDITOR_PROXY) {
+    process.env.HTTP_PROXY =
+        EDITOR_PROXY;
+
+    process.env.HTTPS_PROXY =
+        EDITOR_PROXY;
+
+    process.env.ALL_PROXY =
+        EDITOR_PROXY;
+}
 
 const TOKEN =
     String(process.env.EDITOR_WORKER_TOKEN || "");
@@ -146,54 +165,46 @@ async function apiJson(
 ) {
 
     const response =
-        await fetch(
-            SERVER + pathname,
-            {
-                method,
-                headers:
-                    authHeaders(
-                        body
-                            ? {
-                                "Content-Type":
-                                    "application/json"
-                            }
-                            : {}
-                    ),
-                body:
+        await axios({
+            method,
+            url:
+                SERVER +
+                pathname,
+            headers:
+                authHeaders(
                     body
-                        ? JSON.stringify(
-                            body
-                        )
-                        : undefined
-            }
-        );
+                        ? {
+                            "Content-Type":
+                                "application/json"
+                        }
+                        : {}
+                ),
+            data:
+                body ||
+                undefined,
+            responseType:
+                "json",
+            validateStatus:
+                () =>
+                    true
+        });
 
-    const text =
-        await response.text();
-
-    let data;
-
-    try {
-        data =
-            text
-                ? JSON.parse(text)
-                : {};
-    } catch (_) {
-        data = {
-            raw:
-                text
-        };
-    }
-
-    if (!response.ok) {
+    if (
+        response.status <
+            200 ||
+        response.status >=
+            300
+    ) {
         throw new Error(
-            `Editor API ${response.status}: ${JSON.stringify(data)}`
+            `Editor API ${response.status}: ${JSON.stringify(response.data)}`
         );
     }
 
-    return data;
+    return (
+        response.data ||
+        {}
+    );
 }
-
 function run(
     command,
     args,
@@ -566,32 +577,39 @@ async function downloadInput(
 ) {
 
     const response =
-        await fetch(
-            SERVER +
-            `/api/jobs/${encodeURIComponent(job.id)}/input`,
-            {
-                headers:
-                    authHeaders()
-            }
-        );
+        await axios({
+            method:
+                "GET",
+            url:
+                SERVER +
+                `/api/jobs/${encodeURIComponent(job.id)}/input`,
+            headers:
+                authHeaders(),
+            responseType:
+                "arraybuffer",
+            validateStatus:
+                () =>
+                    true
+        });
 
-    if (!response.ok) {
+    if (
+        response.status <
+            200 ||
+        response.status >=
+            300
+    ) {
         throw new Error(
             `input download failed: HTTP ${response.status}`
         );
     }
 
-    const buffer =
-        Buffer.from(
-            await response.arrayBuffer()
-        );
-
     fs.writeFileSync(
         destination,
-        buffer
+        Buffer.from(
+            response.data
+        )
     );
 }
-
 async function uploadOutput(
     job,
     outputPath,
@@ -604,47 +622,47 @@ async function uploadOutput(
             outputPath
         );
 
-    const stream =
-        fs.createReadStream(
-            outputPath
-        );
-
     const response =
-        await fetch(
-            SERVER +
-            `/api/jobs/${encodeURIComponent(job.id)}/output`,
-            {
-                method:
-                    "PUT",
-                headers:
-                    authHeaders({
-                        "Content-Type":
-                            mimeType,
-                        "Content-Length":
-                            String(
-                                stat.size
-                            )
-                    }),
-                body:
-                    stream,
-                duplex:
-                    "half"
-            }
-        );
+        await axios({
+            method:
+                "PUT",
+            url:
+                SERVER +
+                `/api/jobs/${encodeURIComponent(job.id)}/output`,
+            headers:
+                authHeaders({
+                    "Content-Type":
+                        mimeType,
+                    "Content-Length":
+                        String(
+                            stat.size
+                        )
+                }),
+            data:
+                fs.createReadStream(
+                    outputPath
+                ),
+            maxBodyLength:
+                Infinity,
+            maxContentLength:
+                Infinity,
+            validateStatus:
+                () =>
+                    true
+        });
 
-    if (!response.ok) {
-
-        const error =
-            await response.text();
-
+    if (
+        response.status <
+            200 ||
+        response.status >=
+            300
+    ) {
         throw new Error(
-            `output upload failed: HTTP ${response.status} ${error}`
+            `output upload failed: HTTP ${response.status} ${typeof response.data === "string" ? response.data : JSON.stringify(response.data)}`
         );
-
     }
 
 }
-
 function realesrganArgs(
     input,
     output,
@@ -671,6 +689,133 @@ function realesrganArgs(
     }
 
     return args;
+}
+
+function imageExtFromMime(
+    mimeType
+) {
+
+    const mime =
+        String(
+            mimeType ||
+            ""
+        )
+            .toLowerCase();
+
+    if (
+        mime.includes(
+            "png"
+        )
+    ) {
+        return ".png";
+    }
+
+    if (
+        mime.includes(
+            "webp"
+        )
+    ) {
+        return ".webp";
+    }
+
+    return ".jpg";
+}
+
+async function processImageEnhance(
+    job
+) {
+
+    const jobDir =
+        path.join(
+            WORK_ROOT,
+            job.id
+        );
+
+    fs.mkdirSync(
+        jobDir,
+        {
+            recursive:
+                true
+        }
+    );
+
+    const inputPath =
+        path.join(
+            jobDir,
+            "input" +
+            imageExtFromMime(
+                job.mimeType
+            )
+        );
+
+    const outputPath =
+        path.join(
+            jobDir,
+            "output.png"
+        );
+
+    const scale =
+        Number(
+            job.options?.scale ||
+            2
+        );
+
+    if (
+        ![2, 4].includes(
+            scale
+        )
+    ) {
+        throw new Error(
+            "Image enhance supports only 2x or 4x."
+        );
+    }
+
+    await reportProgress(
+        job.id,
+        5,
+        "downloading-image"
+    );
+
+    await downloadInput(
+        job,
+        inputPath
+    );
+
+    await reportProgress(
+        job.id,
+        20,
+        "realesrgan-image"
+    );
+
+    await run(
+        REAL_ESRGAN_BIN,
+        realesrganArgs(
+            inputPath,
+            outputPath,
+            scale
+        )
+    );
+
+    await reportProgress(
+        job.id,
+        90,
+        "uploading-image"
+    );
+
+    await uploadOutput(
+        job,
+        outputPath,
+        "image/png"
+    );
+
+    console.log(
+        "[WORKER] image enhance completed",
+        {
+            job:
+                job.id,
+            scale
+        }
+    );
 }
 
 async function processUpscale(
@@ -1232,6 +1377,7 @@ async function claim() {
                         WORKER_PRIORITY,
                     capabilities: [
                         "realesrgan",
+                        "image-enhance",
                         "timeline_v1",
                         "ffmpeg",
                         "native-cc",
@@ -1323,6 +1469,15 @@ async function main() {
             ) {
 
                 await processUpscale(
+                    job
+                );
+
+            } else if (
+                job.type ===
+                "image_enhance"
+            ) {
+
+                await processImageEnhance(
                     job
                 );
 

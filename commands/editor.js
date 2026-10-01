@@ -230,6 +230,38 @@ ${job.error ? `Error: ${job.error}` : ""}`;
                     );
                 }
 
+            } else if (
+                String(
+                    job.outputMimeType ||
+                    ""
+                )
+                    .toLowerCase()
+                    .startsWith(
+                        "image/"
+                    )
+            ) {
+
+                await sock.sendMessage(
+                    chatId,
+                    {
+                        image: {
+                            url:
+                                outputPath
+                        },
+                        mimetype:
+                            job.outputMimeType ||
+                            "image/png",
+                        caption:
+                            "✨ *" +
+                            job.id +
+                            "* result"
+                    },
+                    {
+                        quoted:
+                            msg
+                    }
+                );
+
             } else {
 
                 await sock.sendMessage(
