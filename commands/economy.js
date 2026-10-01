@@ -529,6 +529,22 @@ Powered by Zorex AI 🤖`,
 
         }
 
+        if (
+            Number(users[sender].bank || 0) >=
+            Number(users[sender].bankLimit || 0)
+        ) {
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+                        `🏦 Your bank is already full.\n\nBank: 《${Number(users[sender].bank || 0).toLocaleString()}/${Number(users[sender].bankLimit || 0).toLocaleString()}》🌙`
+                },
+                {
+                    quoted: msg
+                }
+            );
+        }
+
         let input =
             text.replace(".dep", "").trim();
 
@@ -622,6 +638,21 @@ Possible reasons:
                 { quoted: msg }
             );
 
+        }
+
+        if (
+            Number(users[sender].bank || 0) <= 0
+        ) {
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+                        "🏦 Your bank is empty. There are no Crescents to withdraw."
+                },
+                {
+                    quoted: msg
+                }
+            );
         }
 
         let input =
