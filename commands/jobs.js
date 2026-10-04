@@ -1478,7 +1478,12 @@ You are the Managing Director, not an employee of the company, so there is no jo
             companyName: job.companyName,
             position: employee.position,
             submittedAt: now,
-            effectiveAt
+            effectiveAt,
+            aiReviewAt:
+                now +
+                MAJOR_RESIGN_AI_REVIEW_MS,
+            aiReviewStatus:
+                "pending"
         };
 
         saveUsers(users);
@@ -1495,7 +1500,7 @@ You are the Managing Director, not an employee of the company, so there is no jo
 ⏳ Notice  : 24 hours
 💰 Current payout : ❌ forfeited
 
-You will be officially relieved from your position when the notice period ends.`
+🤖 Major HR AI review: pending (about 30 seconds)\n\nIf the AI can safely release you early, your resignation will complete immediately.\nOtherwise the 24-hour notice remains in effect.`
                 )
             },
             { quoted: msg }
