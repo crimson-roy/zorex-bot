@@ -7,6 +7,11 @@ const {
     savePortfolioHistory
 } = require("../lib/portfolioHistory");
 const { tierForLevel } = require("../lib/tierStar");
+const {
+    loadMajorsState,
+    saveMajorsState
+} = require("../lib/majorsState");
+const { getMajor } = require("../lib/majors");
 
 const USERS_FILE = dataPath("users.json");
 
@@ -103,16 +108,13 @@ function resetUser(user) {
 // PRESERVE / FINALIZE PORTFOLIO HISTORY
 // --------------------------------------------------
 //
-// Economy reset deletes player-owned companies from users.json.
-// Portfolio history is career history, not spendable economy state, so
-// it must survive. Before deleting those companies we:
+// Economy reset deletes player-owned companies and now also resets Major
+// employment. Portfolio history is career history, not spendable economy
+// state, so it must survive. Before deleting live employment state we:
 //
-// 1. recover any pre-portfolio current employees from the live roster
-//    using their original hiredAt timestamp;
-// 2. close every active player-company portfolio record at reset time;
-//
-// Major-company employment lives in majors.json and survives this reset,
-// so Major portfolio records are intentionally left active.
+// 1. recover any pre-portfolio current employees from player + Major rosters
+//    using their original hiredAt timestamps;
+// 2. close every active employment record at the reset timestamp.
 //
 function finalizePlayerPortfolioForReset(
     users,
@@ -134,10 +136,7 @@ function finalizePlayerPortfolioForReset(
 
         for (const job of jobs) {
 
-            if (
-                !job.endedAt &&
-                job.companyType !== "major"
-            ) {
+            if (!job.endedAt) {
                 job.endedAt =
                     endedAt;
             }
@@ -273,6 +272,98 @@ function finalizePlayerPortfolioForReset(
 
     }
 
+    // Backfill current Major employees too. Major employment is reset
+    // alongside player-company employment, but the career record survives.
+    const majorsState =
+        loadMajorsState();
+
+    for (const majorKey of Object.keys(majorsState)) {
+
+        const bucket =
+            majorsState[majorKey];
+
+        if (!bucket?.employees) {
+            continue;
+        }
+
+        const major =
+            getMajor(majorKey);
+
+        const companyName =
+            major?.name || majorKey;
+
+        for (const employee of Object.values(bucket.employees)) {
+
+            const userId =
+                employee?.userId;
+
+            const position =
+                employee?.position;
+
+            const hiredAt =
+                Number(employee?.hiredAt) ||
+                null;
+
+            if (!userId || !position || !hiredAt) {
+                continue;
+            }
+
+            if (!history[userId]) {
+                history[userId] = {
+                    jobs: []
+                };
+            }
+
+            if (!Array.isArray(history[userId].jobs)) {
+                history[userId].jobs = [];
+            }
+
+            const jobs =
+                history[userId].jobs;
+
+            const matching =
+                jobs
+                    .filter(job =>
+                        job.companyName === companyName &&
+                        job.position === position
+                    )
+                    .sort((a, b) =>
+                        Number(b.hiredAt || 0) -
+                        Number(a.hiredAt || 0)
+                    )[0];
+
+            if (matching) {
+
+                if (
+                    !Number.isFinite(matching.hiredAt) ||
+                    hiredAt < matching.hiredAt
+                ) {
+                    matching.hiredAt =
+                        hiredAt;
+                }
+
+                matching.endedAt =
+                    endedAt;
+
+                matching.companyType =
+                    "major";
+
+                continue;
+            }
+
+            jobs.push({
+                companyName,
+                position,
+                tier: null,
+                companyType: "major",
+                hiredAt,
+                endedAt
+            });
+
+        }
+
+    }
+
     savePortfolioHistory(
         history
     );
@@ -330,6 +421,11 @@ function performEconomyReset() {
     // old offer ID to collide with; the counter just starts new offers
     // at a higher number than before, which doesn't break anything).
     saveInventory({});
+
+    // Major employment/applications are economy-cycle state too.
+    // Static Major definitions live in lib/majors.js and are untouched.
+    // Empty state is re-initialized from those definitions on next access.
+    saveMajorsState({});
 
     return totalUsers;
 }
@@ -515,6 +611,7 @@ async function resetEconomyCommand(sock, msg, text) {
 │ ❌ Losses → 0
 │ 🔥 Daily streak → 0
 │ 🏢 Companies → DELETED
+│ 🏛️ Major employment → RESET
 │ 🎒 Inventories → WIPED
 │
 │ 🃏 Collections → UNTOUCHED
