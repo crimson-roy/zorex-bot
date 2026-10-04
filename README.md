@@ -1,238 +1,427 @@
-# Zorex WhatsApp Bot
+# Zorex
 
-Zorex is a modular WhatsApp bot built with **Node.js** and **Baileys**. It combines AI features, group tools, media utilities, games, economy systems, collectibles, jobs, companies, document helpers, and an in-chat AI companion named **Chloe**.
+**Zorex is a modular WhatsApp automation platform built with Node.js and Baileys.**  
+It combines conversational AI, a persistent virtual economy, community tools, games, collectibles, media utilities, and an experimental WhatsApp-native video editing pipeline.
 
-> **Status:** Active development. The bot is already functional, while its persistence, deployment, testing and public-release structure are still being improved.
+Zorex is under active development and is designed as a real, maintainable bot platform rather than a single monolithic command script.
 
-## Highlights
+---
 
-### Chloe AI companion
+## Why Zorex exists
 
-Chloe is a stateful AI companion integrated into the normal message flow. She can:
+Most WhatsApp bots stop at simple command/reply interactions. Zorex is being developed around a broader idea:
 
-- be enabled or disabled per chat with `.chaton` and `.chatoff`
-- respond when mentioned, tagged, replied to, or explicitly summoned
-- keep short conversational context
-- track trust, affection and conversation history per user
-- move through relationship tiers over time
-- store short observations from previous conversations
-- generate `.mem` reflections grounded in stored relationship data
-- expose relationship statistics through `.relation`
+> **Use WhatsApp as an interface for intelligent automation, persistent systems, and creative workflows.**
 
-The AI layer is separated from the rest of the command system so provider logic can be changed without rewriting the bot.
+That includes ordinary bot features such as moderation, games and economy systems, but also more ambitious workflows such as asking Zorex AI to understand a natural-language request, validate it against the user's real permissions and state, then safely execute the underlying bot or editing action.
 
-### Economy and progression
+A major current focus is **editing media directly from WhatsApp**.
 
-Zorex includes a persistent virtual economy with rewards, work, shops, investments, portfolios, auctions, companies, jobs and player-to-player trading systems.
+---
 
-The bot's virtual currency is called **Crescents**.
+## Core capabilities
 
-### Cards and collectibles
+### Zorex AI
 
-The bot includes card spawning, claiming, collections, inventories, leaderboards, series search, auctions, trading and administrative card tools.
+Zorex AI is the orchestration layer for natural-language actions.
 
-### Games
+It can interpret requests and route them into supported bot capabilities instead of directly mutating data. Examples include:
 
-The project contains several interactive game modules, including Blackjack, Trivia, Mines and other group-based minigames.
+- checking account, profile, company, inventory and collection information
+- deposits, withdrawals and transfers
+- company upgrades
+- shop and card-shop purchases
+- group moderation actions
+- card and series searches
+- supported casino/game actions
+- media generation and editing jobs
+- editor queue inspection and cancellation
 
-### Group tools
+The design rule is simple:
 
-Zorex includes anti-link protection, warning controls, group open/close tools, tagging utilities, command gating, broadcasts and owner/admin permission checks.
+> **Zorex AI may automate actions the user is already allowed to perform, but it must not grant permissions, currency, upgrades or rule bypasses that the normal command system would reject.**
 
-### Media and document utilities
+For example, AI-driven company upgrades use the same validation logic as the public company command. A request such as:
 
-The project contains modules for media downloading, playback helpers, image/video upscaling, graphics tools, school slide browsing, document summarization and file-processing workflows.
+```text
+.ai max upgrade my company
+```
 
-Some media features require external tools such as `ffmpeg`.
+continues upgrading only while the normal game rules allow it, then stops at the first legitimate blocker such as the maximum level, an employee requirement or insufficient balance.
 
-### Editing inside WhatsApp
+Sensitive or high-exposure actions can require explicit confirmation and identity verification before execution.
 
-A major current development goal is to make **WhatsApp itself an editing interface** instead of forcing users to move between multiple editing apps for common workflows.
+---
 
-Zorex AI can interpret natural-language editing requests, turn them into structured editing actions and hand heavier work to persistent editor jobs. The current editing stack includes:
+## WhatsApp-native editing
 
-- a native frame-by-frame video timeline renderer
-- reusable transform/keyframe animations such as zooms, pans, shakes and cinematic pushes
-- named easing/graph presets for animation timing
-- color correction, blur, sharpen, denoise, glow, vignette, opacity and basic mask support
-- reusable velocity/edit-style presets
-- reference-video analysis that extracts compact editing fingerprints rather than storing source videos
-- Real-ESRGAN based image/video enhancement workers
-- persistent editor jobs that can survive bot restarts
-- remote worker claiming so higher-performance machines can process heavy jobs while the WhatsApp bot stays responsive
-- queue inspection/cancellation and automatic delivery of completed media back to the originating chat
+One of the most active areas of Zorex development is a native editing system designed around the idea that a user should be able to reply to media and describe the edit they want.
 
-The long-term direction is a natural-language editing layer where a user can reply to media and say things such as:
+Examples:
 
 ```text
 .ai apply a smooth zoom out with z_ease and max zoom 125
 .ai study this edit
-.upscale 4 quality
 .edit cinematic_push
+.upscale 4 quality
 ```
 
-The AI layer is intended to **orchestrate real editor tools rather than bypass them**. Editing actions are represented as explicit jobs/timeline instructions so they can be inspected, validated, queued and executed by compatible workers.
+### Current editor capabilities
 
-Planned work includes stronger transform estimation, optical-flow analysis, improved masks/rotoscoping, transition analysis, better reference-to-timeline transfer, richer audio/timeline editing, and eventually more advanced 2.5D/3D compositing.
+The editing stack currently includes:
+
+- a native frame-by-frame timeline renderer
+- transform and keyframe animation presets
+- zoom, pan, shake, bounce and cinematic push animations
+- named easing/graph presets
+- color correction
+- blur, sharpen and denoise controls
+- glow and vignette effects
+- opacity control
+- rectangle, ellipse and polygon mask support
+- reusable velocity/edit-style presets
+- reference-video analysis
+- compact editing fingerprints
+- Real-ESRGAN-based image and video enhancement
+- persistent editor jobs
+- remote worker claiming
+- queue inspection and cancellation
+- automatic delivery of completed outputs back to the originating WhatsApp chat
+
+### Editor architecture
+
+```text
+WhatsApp message / replied media
+            │
+            ▼
+       Zorex AI router
+            │
+            ▼
+ Structured action / timeline
+            │
+            ▼
+     Persistent editor job
+            │
+      ┌─────┴──────────────┐
+      │                    │
+      ▼                    ▼
+Native renderer       Remote GPU worker
+      │                    │
+      └─────────┬──────────┘
+                ▼
+         Finished output
+                │
+                ▼
+       Auto-delivery to chat
+```
+
+Heavy jobs are separated from the WhatsApp connection process so the bot can remain responsive while a compatible worker performs rendering, enhancement or analysis.
+
+See:
+
+- [Editor timeline documentation](docs/EDITOR_TIMELINE.md)
+- [Editor worker documentation](docs/EDITOR_WORKER.md)
+
+### Reference-study system
+
+Zorex can analyze a reference edit and store a compact description of useful characteristics rather than retaining the source video indefinitely.
+
+The current analyzer can extract information such as:
+
+- cut candidates
+- visual peaks
+- flashes
+- brightness, contrast and saturation statistics
+- basic beat/alignment information
+- reverse-motion candidates
+- source limitations and confidence
+
+Future work includes stronger optical-flow analysis, transform estimation, graph fitting, masks, transitions and reference-to-timeline transfer.
+
+---
+
+## AI companion
+
+Zorex also includes **Chloe**, a stateful conversational AI companion integrated into the normal message flow.
+
+Chloe can:
+
+- be enabled or disabled per chat
+- respond when mentioned, tagged, replied to or explicitly summoned
+- keep short conversational context
+- track trust and affection
+- maintain relationship tiers
+- store lightweight observations
+- generate relationship reflections and statistics
+
+The conversational AI layer is kept separate from command execution so provider logic and personality behavior can evolve without rewriting the rest of the bot.
+
+---
+
+## Economy, companies and jobs
+
+Zorex contains a persistent virtual economy built around the in-bot currency **Crescents**.
+
+Systems include:
+
+- wallets and banks
+- work and daily rewards
+- shops
+- investments
+- portfolios
+- companies
+- employees and job offers
+- Major companies
+- duty/attendance systems
+- auctions
+- player-to-player transfers
+- trading and collectibles
+
+Company progression includes level caps, employee requirements and salary/income systems. AI automation is expected to obey the same economy rules as manual commands.
+
+---
+
+## Games and collectibles
+
+Zorex includes several persistent and interactive game systems, including:
+
+- Blackjack
+- Casino
+- Slots
+- Roulette
+- Dice
+- Mines
+- Trivia
+- raffle systems
+- card spawning and claiming
+- card collections
+- card search and series search
+- card shop rotations
+- auctions and trading
+
+All wagers and rewards use **Crescents**, which are virtual in-bot currency only. Zorex does not provide real-money gambling, cash-out or conversion to real-world funds.
+
+---
+
+## Community and moderation
+
+Group-management features include:
+
+- group open/close controls
+- anti-link protection
+- warnings
+- mute and unmute controls
+- admin promotion/demotion
+- kick actions
+- command gating
+- broadcasts
+- owner/admin permission checks
+- configurable welcome and leave messages
+- AFK and tagging behavior
+
+Permission-sensitive actions are validated by the real command handlers rather than trusted solely because they originated from AI.
+
+---
+
+## Media and document tools
+
+Zorex also provides utilities for:
+
+- image and video processing
+- downloads
+- animated sticker conversion
+- video enhancement
+- depth-video workflows
+- image generation
+- video generation through configured providers
+- PDF parsing
+- DOCX generation
+- XLSX generation
+- PowerPoint generation
+- document summarization
+- school/document browsing workflows
+
+Some media workflows require external tools such as **FFmpeg**.
+
+---
 
 ## Architecture
 
 ```text
 zorex-bot/
-├── index.js          # WhatsApp connection, lifecycle and main router
-├── commands/         # Command handlers, AI routing and user-facing features
-├── lib/              # Shared helpers, persistence, AI and editor orchestration
-├── workers/          # Remote/background editor worker processes
-├── providers/        # External media/AI provider integrations
-├── bet/              # Additional media/provider helpers
-├── config.js         # Runtime configuration
-├── wcg.js            # Community game logic
-├── vv.js             # Additional feature module
-└── package.json
+├── index.js                 # WhatsApp connection, lifecycle and main router
+├── commands/                # User-facing command handlers
+├── lib/                     # Shared state, AI, editor and orchestration logic
+├── workers/                 # Background / remote editor workers
+├── providers/               # External media and AI provider integrations
+├── docs/                    # Architecture and workflow documentation
+├── bet/                     # Additional media/provider helpers
+├── config.js                # Runtime configuration
+├── package.json
+├── wcg.js
+└── vv.js
 ```
 
-`index.js` creates the Baileys socket, handles connection lifecycle events and routes incoming messages to feature modules. The project currently uses **CommonJS**, with a dynamic import for Baileys 7.x.
+Important editor/AI modules include:
+
+```text
+lib/aiCommandExecutor.js
+lib/commandRegistry.js
+lib/editorAnimations.js
+lib/editorDelivery.js
+lib/editorFingerprints.js
+lib/editorGraphs.js
+lib/editorJobs.js
+lib/editorKnowledge.js
+lib/editorPresets.js
+lib/editorStyleJobs.js
+lib/editorStyles.js
+lib/editorTimeline.js
+lib/editorWorkerServer.js
+lib/referenceAnalysisJobs.js
+
+workers/editorWorker.js
+workers/nativeTimelineRenderer.js
+workers/referenceStyleAnalyzer.js
+```
+
+The codebase currently uses **CommonJS**.
+
+---
+
+## Technology
+
+Primary technologies used by the project include:
+
+- Node.js 20
+- JavaScript
+- Baileys
+- FFmpeg
+- Sharp
+- Axios
+- Real-ESRGAN worker integration
+- Azure/OpenAI-compatible AI endpoints where configured
+- Fal and other optional media providers
+- DOCX, Excel, PDF and PowerPoint generation libraries
+
+---
 
 ## Persistence
 
-Persistent JSON state is routed through `lib/dataPath.js`.
+Persistent runtime data is routed through:
 
-Set `DATA_DIR` to a directory that survives restarts or redeploys:
-
-```env
-DATA_DIR=/path/to/zorex-data
+```text
+lib/dataPath.js
 ```
 
-For local development, if `DATA_DIR` is not set, the project falls back to the current project directory.
+Set `DATA_DIR` to a persistent directory:
 
-Baileys authentication currently uses the local `auth/` directory on the main branch. Treat that directory as sensitive and never publish it.
+```env
+DATA_DIR=/absolute/path/to/zorex-data
+```
 
-## Requirements
+This allows state such as economy data, editor jobs and other persistent bot data to survive normal process restarts or redeployments when the deployment environment provides persistent storage.
+
+---
+
+## Installation
+
+### Requirements
 
 - Node.js 20
 - npm
-- a WhatsApp account for testing
-- `ffmpeg` for media features that need it
-- API keys for whichever optional providers you enable
+- FFmpeg for media workflows that require it
+- a WhatsApp account for development/testing
+- provider credentials only for optional AI/media services being used
 
-## Installation
+### Setup
 
 ```bash
 git clone https://github.com/crimson-roy/zorex-bot.git
 cd zorex-bot
 npm install
-```
-
-Create a `.env` file for the services you use. Example:
-
-```env
-DATA_DIR=/absolute/path/to/zorex-data
-AI_API_KEY=your_api_key_here
-AI_MODEL=your_model_here
-```
-
-Never commit `.env`, API keys, WhatsApp credentials, session files or private account identifiers.
-
-Start the bot:
-
-```bash
 npm start
 ```
 
-On a new session, scan the QR code shown in the terminal.
+To run an editor worker:
 
-## Chloe Commands
-
-```text
-.chaton               Enable Chloe in the current chat
-.chatoff              Disable Chloe in the current chat
-.chloe <message>      Explicitly talk to Chloe
-.mem                  Show Chloe's in-character reflection
-.relation             Show relationship statistics
+```bash
+npm run editor-worker
 ```
 
-## Safety, Responsible Use and Community Guidelines
+Runtime secrets and provider credentials should be supplied through environment variables and should not be committed to the repository.
 
-Zorex is intended to be used in a way that respects applicable laws, WhatsApp rules, group rules, user consent and normal community standards.
+---
 
-The project includes moderation and permission systems intended to reduce misuse, including anti-link controls, warning systems, command gating, owner/admin permission checks and other safeguards. These protections are designed to discourage abuse and actions that conflict with community guidelines, but no automated safeguard can guarantee that every form of misuse will be prevented.
+## Development workflow
 
-Users and deployers should not use Zorex for:
+Zorex is developed through focused feature branches and pull requests.
 
-- spam or unsolicited mass messaging
-- scams, fraud or impersonation
-- harassment, threats or targeted abuse
-- illegal activity
-- bypassing platform restrictions or moderation systems
-- unauthorized access, surveillance or collection of private information
-- any activity that violates WhatsApp/Meta rules, local laws or the rules of the communities where the bot is deployed
+Recent work has concentrated on:
 
-The person operating a deployment is responsible for configuring the bot appropriately, controlling who receives privileged access, protecting authentication/session files and monitoring how the bot is used.
+- safe AI command orchestration
+- persistent identity/confirmation flows
+- shared economy validators
+- company and employment systems
+- portfolio history repair
+- native editing
+- persistent rendering jobs
+- remote GPU workers
+- reference-style analysis
+- media auto-delivery
+- deployment reliability
 
-## Virtual Currency and Game-of-Chance Features
+Changes that affect economy or persistent state are designed so the public command path and AI path share business rules instead of maintaining separate rule sets.
 
-Some Zorex games use mechanics that resemble gambling, such as Blackjack, Mines and other chance-based activities. These features are **simulated game mechanics only**.
+---
 
-All wagers and rewards inside Zorex use the bot's virtual currency, **Crescents**.
+## Current development direction
 
-- No real-world money is required to place a wager.
-- No external funds are deposited into Zorex for these games.
-- Crescents are an in-bot virtual currency and are not represented as real money.
-- There is no cash-out, withdrawal or conversion from Crescents into real-world money through the bot.
-- Zorex does not provide real-money gambling payouts or financial returns.
+Near-term work includes:
 
-These systems are intended for entertainment and progression inside the bot's own virtual economy.
+- expanding safe AI bulk/max actions
+- improving the WhatsApp editing UX
+- richer editor progress reporting
+- stronger reference-style analysis
+- optical-flow and transform estimation
+- improved masking and rotoscoping
+- richer transition analysis
+- reference-to-timeline transfer
+- better worker recovery and scheduling
+- dynamic Major-company vacancies and NPC staffing
+- continued cleanup of shared UI/message formatting
+- stronger tests and validation around persistent economy state
 
-## Developer Responsibility and Limitations
+Longer-term editing goals include more advanced timeline operations, audio workflows, 2.5D/3D compositing and deeper AI-assisted editing while keeping executable actions explicit and inspectable.
 
-The developer may make reasonable efforts to investigate and address bugs, service interruptions, security issues and other technical setbacks affecting the project. Because Zorex depends on third-party services, unofficial WhatsApp integration, external APIs and user-controlled deployments, uninterrupted operation cannot be guaranteed.
+---
 
-The developer is **not responsible for spam, illegal activity, harassment, abuse or other prohibited actions performed by users or third-party deployments of the bot**. Responsibility for those actions remains with the person performing them and, where applicable, the operator of the deployment that enabled them.
+## Security and responsible use
 
-Safety measures are included to reduce the risk of misuse, and the project should be configured and operated in accordance with community guidelines and applicable rules. These safeguards are not a substitute for responsible administration and human moderation.
+Zorex uses permission checks and moderation controls to reduce misuse.
 
-## Development Direction
+Operators should:
 
-Current work includes:
+- protect runtime credentials and session state
+- restrict privileged commands
+- follow WhatsApp/Meta rules
+- respect user consent and community rules
+- avoid spam, harassment, fraud, unauthorized access or privacy-invasive behavior
 
-- turning Zorex AI into a safe natural-language orchestration layer for normal bot actions
-- expanding the WhatsApp-native editing pipeline and persistent GPU/editor worker system
-- improving native timeline rendering, animation graphs, editing presets and reference analysis
-- improving Chloe's long-term persistence
-- consolidating AI calls behind dedicated provider clients
-- improving VPS deployment persistence and worker recovery
-- cleaning old credentials and session data from Git history before a public release
-- reducing hard-coded ownership assumptions
-- improving session isolation and deployment architecture
-- expanding documentation, validation and tests
+No automated safeguard can replace responsible administration and human moderation.
 
-A core design rule for AI-triggered economy/game actions is that **Zorex AI may automate actions a user is already allowed to perform, but it must not grant permissions, currency, upgrades or rule bypasses that the normal command system would reject**. Where AI provides convenience features such as bulk/max actions, the underlying validators remain the source of truth.
-
-## Security
-
-Keep the following out of Git:
-
-```text
-.env
-auth/
-session files
-API keys
-access tokens
-private account identifiers
-```
-
-If a credential has ever been committed, removing it from the latest file is not enough. Rotate it and clean the repository history before making the repository public.
+---
 
 ## Disclaimer
 
-Zorex uses **Baileys**, an unofficial WhatsApp Web library. This project is not affiliated with or endorsed by WhatsApp or Meta. Anyone deploying the bot is responsible for complying with platform terms, applicable laws and the rules of the communities where the bot is used.
+Zorex uses **Baileys**, an unofficial WhatsApp Web library.
 
-## Contributing
+This project is not affiliated with or endorsed by WhatsApp or Meta. Anyone deploying Zorex is responsible for complying with applicable platform terms, laws and community rules.
 
-Contributions that improve modularity, persistence, reliability, documentation, tests, provider abstraction, moderation or safety are welcome as the project moves toward a cleaner public release.
+---
 
-Contributors should avoid adding features whose primary purpose is spam, abuse, fraud, privacy invasion or bypassing platform safety controls.
+## Maintainer
 
-## License
+Zorex is actively developed and maintained by **crimson-roy**.
 
-A dedicated open-source license has not yet been added. Add one before treating this repository as a public open-source release.
+The project is experimental in several areas, especially AI orchestration and WhatsApp-native media editing, and is being improved continuously through active development, testing and pull-request-based iteration.
