@@ -402,6 +402,109 @@ async function processPendingResignations(sock) {
         const resignation =
             user.jobResignation;
 
+        // ====================================================
+        // MAJOR HR AI — EARLY RESIGNATION REVIEW
+        // ====================================================
+        //
+        // Current rule: if another human employee still covers the
+        // same Major position, the AI may waive the 24-hour notice.
+        // NPC coverage can be added here later without changing the
+        // resignation flow.
+        //
+        if (
+            resignation.companyType === "major" &&
+            resignation.aiReviewStatus === "pending" &&
+            Date.now() >= Number(resignation.aiReviewAt || Infinity)
+        ) {
+
+            const state =
+                loadMajorsState();
+
+            const bucket =
+                state[resignation.majorKey];
+
+            const employee =
+                bucket?.employees?.[
+                    resignation.employeeId
+                ];
+
+            let otherSamePosition = 0;
+
+            if (employee && bucket?.employees) {
+
+                otherSamePosition =
+                    Object.entries(bucket.employees)
+                        .filter(([employeeId, candidate]) =>
+                            employeeId !== resignation.employeeId &&
+                            candidate.position === employee.position
+                        )
+                        .length;
+
+            }
+
+            if (employee && otherSamePosition > 0) {
+
+                resignation.aiReviewStatus = "approved";
+                resignation.aiReviewedAt = Date.now();
+                resignation.effectiveAt = Date.now();
+                usersChanged = true;
+                saveUsers(users);
+
+                try {
+
+                    await sock.sendMessage(
+                        userId,
+                        {
+                            text: noticeBox(
+                                "🤖",
+                                "𝙈𝘼𝙅𝙊𝙍 𝙃𝙍 𝘼𝙄 — 𝘼𝙋𝙋𝙍𝙊𝙑𝙀𝘿",
+                                `Your request for an early release from *${resignation.companyName}* was approved.\n\n✅ 24-hour notice waived\n💼 Position coverage confirmed\n\nYour resignation is being completed now.`
+                            )
+                        }
+                    );
+
+                } catch (err) {
+
+                    console.error(
+                        "[major resignation AI] approval notice failed:",
+                        err.message
+                    );
+
+                }
+
+            } else {
+
+                resignation.aiReviewStatus = "deferred";
+                resignation.aiReviewedAt = Date.now();
+                usersChanged = true;
+                saveUsers(users);
+
+                try {
+
+                    await sock.sendMessage(
+                        userId,
+                        {
+                            text: noticeBox(
+                                "🤖",
+                                "𝙈𝘼𝙅𝙊𝙍 𝙃𝙍 𝘼𝙄 — 𝙍𝙀𝙑𝙄𝙀𝙒𝙀𝘿",
+                                `Your request for an early release from *${resignation.companyName}* could not be approved immediately.\n\n⏳ Your original 24-hour notice remains active.\n\nNPC staffing can be included in this review once that system is wired in.`
+                            )
+                        }
+                    );
+
+                } catch (err) {
+
+                    console.error(
+                        "[major resignation AI] review notice failed:",
+                        err.message
+                    );
+
+                }
+
+            }
+
+        }
+
         if (
             Date.now() <
             resignation.effectiveAt
