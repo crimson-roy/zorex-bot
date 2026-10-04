@@ -906,6 +906,46 @@ ${DIVIDER}`
     }
 
 
+    const diceRemaining = checkCooldown(sender, "dice", COOLDOWN_MS);
+
+    if (diceRemaining) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`⏳ Slow down! Try again in ${Math.ceil(diceRemaining / 1000)}s.`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
+    const diceLimit = checkDailyLimit(sender, "dice");
+
+    if (diceLimit) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`📅 Daily limit reached for Dice.
+
+Used: ${diceLimit.used}/${diceLimit.limit}
+
+Come back tomorrow!`
+            },
+            {
+                quoted: msg
+            }
+        );
+
+    }
+
+
     const args =
         text
         .replace(".dice", "")
@@ -1014,6 +1054,9 @@ ${users[sender].wallet.toLocaleString()} 🌙`
         sender,
         bet
     );
+
+    setCooldown(sender, "dice");
+    incrementDailyPlay(sender, "dice");
 
 
     // Roll two dice
