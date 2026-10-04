@@ -27,6 +27,11 @@ const JOB_RESIGN_NOTICE_MS =
 const JOB_RESIGN_SWEEP_MS =
     30 * 1000;
 
+// Major-company resignations can be reviewed early by an in-world HR AI.
+// The 24h notice remains the fallback if the early review cannot approve.
+const MAJOR_RESIGN_AI_REVIEW_MS =
+    30 * 1000;
+
 const {
     incomeAtLevel,
     formatDuration,
@@ -1080,20 +1085,42 @@ async function jobCommand(sock, msg, text = ".job") {
     }
 
 
+    const commandParts =
+        text
+            .trim()
+            .split(/\s+/);
+
     const subcommand =
-    text
-        .trim()
-        .split(/\s+/)[1]
-        ?.toLowerCase();
+        commandParts[1]
+            ?.toLowerCase();
 
-if (subcommand === "resign") {
+    const resignAction =
+        commandParts[2]
+            ?.toLowerCase();
 
-    return await jobResignCommand(
-        sock,
-        msg
-    );
+    if (
+        subcommand === "resign" &&
+        (
+            resignAction === "approve" ||
+            resignAction === "confirm"
+        )
+    ) {
 
-}
+        return await jobResignApproveCommand(
+            sock,
+            msg
+        );
+
+    }
+
+    if (subcommand === "resign") {
+
+        return await jobResignCommand(
+            sock,
+            msg
+        );
+
+    }
     // Check both employment systems.
     const job =
         findEmploymentAnywhere(users, sender) ||
