@@ -1,7 +1,8 @@
 const fs = require("fs");
 const dataPath = require("../lib/dataPath");
 const { isValidIndustry, getIndustry, listIndustryKeys, isValidPosition, positionRate, getMaxSlots, titleCase } = require("../lib/industries");
-const { getNextOfferId } = require("../lib/jobOffers");
+const { getNextOfferId, findEmploymentAnywhere } = require("../lib/jobOffers");
+const { findMajorEmploymentForUser } = require("../lib/majorsState");
 const { tierForLevel } = require("../lib/tierStar");
 const { loadInventory, saveInventory } = require("./inventory");
 const { ASSETS } = require("./invest");
@@ -851,6 +852,26 @@ async function companyCreateCommand(sock, msg, text) {
         return await sock.sendMessage(
             msg.key.remoteJid,
             { text: `⚠️ You already own a company — *${users[sender].company.name}*.\n\nUse .companyupgrade to grow it instead.` },
+            { quoted: msg }
+        );
+    }
+
+    const existingJob =
+        findEmploymentAnywhere(users, sender) ||
+        findMajorEmploymentForUser(sender);
+
+    if (existingJob) {
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+`⚠️ You can't create a company while you're employed.
+
+🏢 Current company: ${existingJob.companyName}
+💼 Position: ${titleCase(existingJob.position)}
+
+Use *.job resign* first. Your resignation must become effective before you can create a company.`
+            },
             { quoted: msg }
         );
     }

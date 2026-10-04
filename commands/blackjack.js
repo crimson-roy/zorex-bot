@@ -1,5 +1,6 @@
 const fs = require("fs");
 const { checkCooldown, setCooldown } = require("./cooldown");
+const { checkDailyLimit, incrementDailyPlay } = require("./dailylimit");
 
 // PERSISTENCE FIX: these used to be bare relative paths ("./users.json",
 // "./blackjack.json"), which live on the container's ephemeral disk and
@@ -151,6 +152,19 @@ async function blackjackCommand(sock, msg, text) {
         }, { quoted: msg });
     }
 
+    const dailyLimit = checkDailyLimit(sender, "bj");
+
+    if (dailyLimit) {
+        return await sock.sendMessage(msg.key.remoteJid, {
+            text:
+`📅 Daily limit reached for Blackjack.
+
+Used: ${dailyLimit.used}/${dailyLimit.limit}
+
+Come back tomorrow!`
+        }, { quoted: msg });
+    }
+
     const input = text.replace(".bj", "").trim();
 
     let bet;
@@ -178,6 +192,7 @@ async function blackjackCommand(sock, msg, text) {
     saveUsers(users);
 
     setCooldown(sender, "bj");
+    incrementDailyPlay(sender, "bj");
 
     const deck = newDeck();
 

@@ -7,6 +7,8 @@ const LIMIT_FILE = dataPath("dailylimit.json");
 
 const DEFAULT_LIMIT = 10;
 const SLOTS_LIMIT = 15;
+const DICE_LIMIT = 15;
+const BLACKJACK_LIMIT = 10;
 
 function loadLimits() {
 
@@ -34,6 +36,14 @@ function getLimit(command) {
 
     if (command === "slots") {
         return SLOTS_LIMIT;
+    }
+
+    if (command === "dice") {
+        return DICE_LIMIT;
+    }
+
+    if (command === "bj") {
+        return BLACKJACK_LIMIT;
     }
 
     return DEFAULT_LIMIT;

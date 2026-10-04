@@ -11,6 +11,7 @@ const { getIndustry, positionRate, getMaxSlots } = require("../lib/industries");
 const { getDutyFlavor } = require("../lib/dutyFlavor");
 const { tierForLevel } = require("../lib/tierStar");
 const {
+    startEmployment,
     endEmployment
 } = require("../lib/portfolioHistory");
 
@@ -24,6 +25,11 @@ const JOB_RESIGN_NOTICE_MS =
     24 * 60 * 60 * 1000;
 
 const JOB_RESIGN_SWEEP_MS =
+    30 * 1000;
+
+// Major-company resignations can be reviewed early by an in-world HR AI.
+// The 24h notice remains the fallback if the early review cannot approve.
+const MAJOR_RESIGN_AI_REVIEW_MS =
     30 * 1000;
 
 const {
@@ -160,6 +166,15 @@ async function deliverMajorResolution(sock, majorKey, userId) {
     const jid = result.jid || userId;
 
     if (result.accepted) {
+
+        startEmployment({
+            userId,
+            companyName: result.major.name,
+            position: result.positionKey,
+            tier: null,
+            hiredAt: result.hiredAt || Date.now(),
+            companyType: "major"
+        });
 
         await sock.sendMessage(jid, {
             text: noticeBox(
@@ -299,6 +314,18 @@ Is everything okay? Please run *.duty* by tomorrow to confirm you're still with 
                 continue;
             }
 
+            endEmployment({
+                userId:
+                    action.userId,
+                companyName:
+                    major.name,
+                position:
+                    removed.position ||
+                    action.position,
+                endedAt:
+                    Date.now()
+            });
+
             await sock.sendMessage(
                 action.userId,
                 {
@@ -374,6 +401,109 @@ async function processPendingResignations(sock) {
 
         const resignation =
             user.jobResignation;
+
+        // ====================================================
+        // MAJOR HR AI — EARLY RESIGNATION REVIEW
+        // ====================================================
+        //
+        // Current rule: if another human employee still covers the
+        // same Major position, the AI may waive the 24-hour notice.
+        // NPC coverage can be added here later without changing the
+        // resignation flow.
+        //
+        if (
+            resignation.companyType === "major" &&
+            resignation.aiReviewStatus === "pending" &&
+            Date.now() >= Number(resignation.aiReviewAt || Infinity)
+        ) {
+
+            const state =
+                loadMajorsState();
+
+            const bucket =
+                state[resignation.majorKey];
+
+            const employee =
+                bucket?.employees?.[
+                    resignation.employeeId
+                ];
+
+            let otherSamePosition = 0;
+
+            if (employee && bucket?.employees) {
+
+                otherSamePosition =
+                    Object.entries(bucket.employees)
+                        .filter(([employeeId, candidate]) =>
+                            employeeId !== resignation.employeeId &&
+                            candidate.position === employee.position
+                        )
+                        .length;
+
+            }
+
+            if (employee && otherSamePosition > 0) {
+
+                resignation.aiReviewStatus = "approved";
+                resignation.aiReviewedAt = Date.now();
+                resignation.effectiveAt = Date.now();
+                usersChanged = true;
+                saveUsers(users);
+
+                try {
+
+                    await sock.sendMessage(
+                        userId,
+                        {
+                            text: noticeBox(
+                                "🤖",
+                                "𝙈𝘼𝙅𝙊𝙍 𝙃𝙍 𝘼𝙄 — 𝘼𝙋𝙋𝙍𝙊𝙑𝙀𝘿",
+                                `Your request for an early release from *${resignation.companyName}* was approved.\n\n✅ 24-hour notice waived\n💼 Position coverage confirmed\n\nYour resignation is being completed now.`
+                            )
+                        }
+                    );
+
+                } catch (err) {
+
+                    console.error(
+                        "[major resignation AI] approval notice failed:",
+                        err.message
+                    );
+
+                }
+
+            } else {
+
+                resignation.aiReviewStatus = "deferred";
+                resignation.aiReviewedAt = Date.now();
+                usersChanged = true;
+                saveUsers(users);
+
+                try {
+
+                    await sock.sendMessage(
+                        userId,
+                        {
+                            text: noticeBox(
+                                "🤖",
+                                "𝙈𝘼𝙅𝙊𝙍 𝙃𝙍 𝘼𝙄 — 𝙍𝙀𝙑𝙄𝙀𝙒𝙀𝘿",
+                                `Your request for an early release from *${resignation.companyName}* could not be approved immediately.\n\n⏳ Your original 24-hour notice remains active.\n\nNPC staffing can be included in this review once that system is wired in.`
+                            )
+                        }
+                    );
+
+                } catch (err) {
+
+                    console.error(
+                        "[major resignation AI] review notice failed:",
+                        err.message
+                    );
+
+                }
+
+            }
+
+        }
 
         if (
             Date.now() <
@@ -726,6 +856,25 @@ async function jobApplyCommand(sock, msg, text) {
 
     }
 
+    if (users[sender].company) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "👑",
+                    "𝘾𝙊𝙈𝙋𝘼𝙉𝙔 𝙊𝙒𝙉𝙀𝙍",
+                    `You already own *${users[sender].company.name}*.
+
+Company owners can't take an employee job while they own a company.`
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+
     const idArg = text
         .replace(".jobapply", "")
         .trim();
@@ -909,6 +1058,9 @@ ${majorOffer.major.name} is reviewing your application — you'll hear back in a
         findEmploymentAnywhere(
             users,
             sender
+        ) ||
+        findMajorEmploymentForUser(
+            sender
         );
 
     if (existingJob) {
@@ -1036,20 +1188,42 @@ async function jobCommand(sock, msg, text = ".job") {
     }
 
 
+    const commandParts =
+        text
+            .trim()
+            .split(/\s+/);
+
     const subcommand =
-    text
-        .trim()
-        .split(/\s+/)[1]
-        ?.toLowerCase();
+        commandParts[1]
+            ?.toLowerCase();
 
-if (subcommand === "resign") {
+    const resignAction =
+        commandParts[2]
+            ?.toLowerCase();
 
-    return await jobResignCommand(
-        sock,
-        msg
-    );
+    if (
+        subcommand === "resign" &&
+        (
+            resignAction === "approve" ||
+            resignAction === "confirm"
+        )
+    ) {
 
-}
+        return await jobResignApproveCommand(
+            sock,
+            msg
+        );
+
+    }
+
+    if (subcommand === "resign") {
+
+        return await jobResignCommand(
+            sock,
+            msg
+        );
+
+    }
     // Check both employment systems.
     const job =
         findEmploymentAnywhere(users, sender) ||
@@ -1407,7 +1581,12 @@ You are the Managing Director, not an employee of the company, so there is no jo
             companyName: job.companyName,
             position: employee.position,
             submittedAt: now,
-            effectiveAt
+            effectiveAt,
+            aiReviewAt:
+                now +
+                MAJOR_RESIGN_AI_REVIEW_MS,
+            aiReviewStatus:
+                "pending"
         };
 
         saveUsers(users);
@@ -1424,7 +1603,7 @@ You are the Managing Director, not an employee of the company, so there is no jo
 ⏳ Notice  : 24 hours
 💰 Current payout : ❌ forfeited
 
-You will be officially relieved from your position when the notice period ends.`
+🤖 Major HR AI review: pending (about 30 seconds)\n\nIf the AI can safely release you early, your resignation will complete immediately.\nOtherwise the 24-hour notice remains in effect.`
                 )
             },
             { quoted: msg }
@@ -1490,6 +1669,134 @@ You will be officially relieved from your position when the notice period ends.`
         },
         { quoted: msg }
     );
+
+}
+
+// ============================================================
+// .job resign approve @user
+// ============================================================
+//
+// A player-company owner may waive the remaining 24-hour notice for an
+// employee who already submitted .job resign. Major-company resignations
+// are reviewed by the Major HR AI instead.
+//
+async function jobResignApproveCommand(sock, msg) {
+
+    const sender =
+        msg.key.participant ||
+        msg.key.remoteJid;
+
+    const users =
+        loadUsers();
+
+    if (!users[sender]?.company) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "⚠️",
+                    "𝙉𝙊 𝘾𝙊𝙈𝙋𝘼𝙉𝙔",
+                    "Only a player-company owner can approve an employee\'s early resignation."
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    const context =
+        msg.message
+            ?.extendedTextMessage
+            ?.contextInfo;
+
+    const target =
+        context?.mentionedJid?.[0] ||
+        context?.participant ||
+        null;
+
+    if (!target) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: errorBox(
+                    "𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉 𝘼𝙋𝙋𝙍𝙊𝙑𝘼𝙇",
+                    "Mention or reply to the employee whose pending resignation you want to approve.",
+                    [".job resign approve @user"]
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    const resignation =
+        users[target]
+            ?.jobResignation;
+
+    if (!resignation) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "📭",
+                    "𝙉𝙊 𝙋𝙀𝙉𝘿𝙄𝙉𝙂 𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉",
+                    "That user does not currently have a pending resignation."
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    if (
+        resignation.companyType !== "player" ||
+        resignation.companyOwnerId !== sender
+    ) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "🚫",
+                    "𝙉𝙊𝙏 𝙔𝙊𝙐𝙍 𝙀𝙈𝙋𝙇𝙊𝙔𝙀𝙀",
+                    "You can only approve an early resignation from your own company."
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    resignation.approvedEarlyBy =
+        sender;
+
+    resignation.approvedEarlyAt =
+        Date.now();
+
+    resignation.effectiveAt =
+        Date.now();
+
+    saveUsers(users);
+
+    await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text: noticeBox(
+                "✅",
+                "𝙀𝘼𝙍𝙇𝙔 𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉 𝘼𝙋𝙋𝙍𝙊𝙑𝙀𝘿",
+                `The remaining notice for @${target.split("@")[0]} has been waived.\n\n🏢 Company  : ${resignation.companyName}\n💼 Position : ${titleCase(resignation.position)}\n\nTheir resignation is being completed now.`
+            ),
+            mentions: [target]
+        },
+        { quoted: msg }
+    );
+
+    // Re-use the same processor so employee removal and portfolio closure
+    // still have a single source of truth.
+    await processPendingResignations(sock);
 
 }
 
