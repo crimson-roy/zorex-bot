@@ -2,14 +2,19 @@ const fs = require("fs");
 const dataPath = require("../lib/dataPath");
 
 const {
+    startEmployment,
     getUserHistory,
-    getCurrentEmployment,
     getTotalExperienceMonths,
     getJobExperienceMonths,
     formatExperience
 } = require("../lib/portfolioHistory");
 
 const { tierForLevel } = require("../lib/tierStar");
+const { findEmploymentAnywhere } = require("../lib/jobOffers");
+const {
+    findMajorEmploymentForUser,
+    loadMajorsState
+} = require("../lib/majorsState");
 
 const USERS_FILE = dataPath("users.json");
 
@@ -102,6 +107,138 @@ function isCompanyOwner(users, userId) {
 
 
 // ============================================================
+// LIVE EMPLOYMENT RECONCILIATION
+// ============================================================
+//
+// Portfolio history was introduced after some users were already
+// employed. The authoritative employee records already contain hiredAt,
+// so recover those older active jobs on demand instead of pretending
+// their experience started when .portfolio was added.
+//
+// This is intentionally idempotent: startEmployment() refuses duplicate
+// active records for the same company + position.
+//
+// If an old employee record has no hiredAt timestamp, we do not invent
+// one. The live job still appears as the current status, but historical
+// experience cannot be reconstructed accurately without backup data.
+//
+function syncCurrentEmploymentHistory(userId, users) {
+
+    const playerJob =
+        findEmploymentAnywhere(
+            users,
+            userId
+        );
+
+    if (playerJob) {
+
+        const company =
+            users[playerJob.ownerId]?.company;
+
+        const employee =
+            company?.employees?.[
+                playerJob.employeeId
+            ];
+
+        const hiredAt =
+            Number(employee?.hiredAt) || null;
+
+        if (hiredAt) {
+
+            startEmployment({
+                userId,
+                companyName:
+                    playerJob.companyName,
+                position:
+                    playerJob.position,
+                tier:
+                    company?.level !== undefined
+                        ? tierForLevel(
+                            company.level
+                        )
+                        : null,
+                hiredAt,
+                companyType:
+                    "player"
+            });
+
+        }
+
+        return {
+            companyName:
+                playerJob.companyName,
+            position:
+                playerJob.position,
+            tier:
+                company?.level !== undefined
+                    ? tierForLevel(
+                        company.level
+                    )
+                    : null,
+            companyType:
+                "player",
+            hiredAt
+        };
+
+    }
+
+
+    const majorJob =
+        findMajorEmploymentForUser(
+            userId
+        );
+
+    if (majorJob) {
+
+        const state =
+            loadMajorsState();
+
+        const employee =
+            state[
+                majorJob.majorKey
+            ]?.employees?.[
+                majorJob.employeeId
+            ];
+
+        const hiredAt =
+            Number(employee?.hiredAt) || null;
+
+        if (hiredAt) {
+
+            startEmployment({
+                userId,
+                companyName:
+                    majorJob.companyName,
+                position:
+                    majorJob.position,
+                tier: null,
+                hiredAt,
+                companyType:
+                    "major"
+            });
+
+        }
+
+        return {
+            companyName:
+                majorJob.companyName,
+            position:
+                majorJob.position,
+            tier: null,
+            companyType:
+                "major",
+            hiredAt
+        };
+
+    }
+
+
+    return null;
+
+}
+
+
+// ============================================================
 // BUILD PORTFOLIO
 // ============================================================
 
@@ -133,9 +270,17 @@ function buildPortfolio(userId, users) {
     // EMPLOYMENT
     // ========================================================
 
-      const currentJob =
-        getCurrentEmployment(userId);
+    // Derive current status from the live employment systems,
+    // not from portfolioHistory.json. This prevents stale or missing
+    // history from incorrectly showing someone as unemployed/employed.
+    const currentJob =
+        syncCurrentEmploymentHistory(
+            userId,
+            users
+        );
 
+    // Re-read history after reconciliation because an older live job may
+    // have just been backfilled using its original hiredAt timestamp.
     const history =
         getUserHistory(userId);
 
