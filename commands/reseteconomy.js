@@ -491,6 +491,7 @@ async function resetEconomyCommand(sock, msg, text) {
 │ 🎒 Inventories → WIPED
 │
 │ 🃏 Collections → UNTOUCHED
+│ 📂 Portfolios → PRESERVED
 │
 ╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯`
             },
