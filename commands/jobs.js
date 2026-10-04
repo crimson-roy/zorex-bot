@@ -1673,6 +1673,134 @@ You will be officially relieved from your position when the notice period ends.`
 }
 
 // ============================================================
+// .job resign approve @user
+// ============================================================
+//
+// A player-company owner may waive the remaining 24-hour notice for an
+// employee who already submitted .job resign. Major-company resignations
+// are reviewed by the Major HR AI instead.
+//
+async function jobResignApproveCommand(sock, msg) {
+
+    const sender =
+        msg.key.participant ||
+        msg.key.remoteJid;
+
+    const users =
+        loadUsers();
+
+    if (!users[sender]?.company) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "⚠️",
+                    "𝙉𝙊 𝘾𝙊𝙈𝙋𝘼𝙉𝙔",
+                    "Only a player-company owner can approve an employee\'s early resignation."
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    const context =
+        msg.message
+            ?.extendedTextMessage
+            ?.contextInfo;
+
+    const target =
+        context?.mentionedJid?.[0] ||
+        context?.participant ||
+        null;
+
+    if (!target) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: errorBox(
+                    "𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉 𝘼𝙋𝙋𝙍𝙊𝙑𝘼𝙇",
+                    "Mention or reply to the employee whose pending resignation you want to approve.",
+                    [".job resign approve @user"]
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    const resignation =
+        users[target]
+            ?.jobResignation;
+
+    if (!resignation) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "📭",
+                    "𝙉𝙊 𝙋𝙀𝙉𝘿𝙄𝙉𝙂 𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉",
+                    "That user does not currently have a pending resignation."
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    if (
+        resignation.companyType !== "player" ||
+        resignation.companyOwnerId !== sender
+    ) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "🚫",
+                    "𝙉𝙊𝙏 𝙔𝙊𝙐𝙍 𝙀𝙈𝙋𝙇𝙊𝙔𝙀𝙀",
+                    "You can only approve an early resignation from your own company."
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+    resignation.approvedEarlyBy =
+        sender;
+
+    resignation.approvedEarlyAt =
+        Date.now();
+
+    resignation.effectiveAt =
+        Date.now();
+
+    saveUsers(users);
+
+    await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+            text: noticeBox(
+                "✅",
+                "𝙀𝘼𝙍𝙇𝙔 𝙍𝙀𝙎𝙄𝙂𝙉𝘼𝙏𝙄𝙊𝙉 𝘼𝙋𝙋𝙍𝙊𝙑𝙀𝘿",
+                `The remaining notice for @${target.split("@")[0]} has been waived.\n\n🏢 Company  : ${resignation.companyName}\n💼 Position : ${titleCase(resignation.position)}\n\nTheir resignation is being completed now.`
+            ),
+            mentions: [target]
+        },
+        { quoted: msg }
+    );
+
+    // Re-use the same processor so employee removal and portfolio closure
+    // still have a single source of truth.
+    await processPendingResignations(sock);
+
+}
+
+// ============================================================
 // .duty
 // ============================================================
 
