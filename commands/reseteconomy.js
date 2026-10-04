@@ -207,20 +207,47 @@ function finalizePlayerPortfolioForReset(
                 history[userId].jobs;
 
             const matching =
-                jobs.find(job =>
-                    job.companyName ===
-                        company.name &&
-                    job.position ===
-                        position &&
-                    Number(job.hiredAt) ===
-                        hiredAt
-                );
+                jobs
+                    .filter(job =>
+                        job.companyName ===
+                            company.name &&
+                        job.position ===
+                            position
+                    )
+                    .sort(
+                        (a, b) =>
+                            Number(b.hiredAt || 0) -
+                            Number(a.hiredAt || 0)
+                    )[0];
 
             if (matching) {
 
-                if (!matching.endedAt) {
-                    matching.endedAt =
-                        endedAt;
+                if (
+                    !Number.isFinite(
+                        matching.hiredAt
+                    ) ||
+                    hiredAt <
+                    matching.hiredAt
+                ) {
+                    matching.hiredAt =
+                        hiredAt;
+                }
+
+                matching.endedAt =
+                    endedAt;
+
+                matching.companyType =
+                    matching.companyType ||
+                    "player";
+
+                if (
+                    matching.tier == null &&
+                    company.level !== undefined
+                ) {
+                    matching.tier =
+                        tierForLevel(
+                            company.level
+                        );
                 }
 
                 continue;
