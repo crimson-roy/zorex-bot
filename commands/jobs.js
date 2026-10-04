@@ -309,6 +309,18 @@ Is everything okay? Please run *.duty* by tomorrow to confirm you're still with 
                 continue;
             }
 
+            endEmployment({
+                userId:
+                    action.userId,
+                companyName:
+                    major.name,
+                position:
+                    removed.position ||
+                    action.position,
+                endedAt:
+                    Date.now()
+            });
+
             await sock.sendMessage(
                 action.userId,
                 {
