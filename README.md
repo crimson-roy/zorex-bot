@@ -45,14 +45,46 @@ The project contains modules for media downloading, playback helpers, image/vide
 
 Some media features require external tools such as `ffmpeg`.
 
+### Editing inside WhatsApp
+
+A major current development goal is to make **WhatsApp itself an editing interface** instead of forcing users to move between multiple editing apps for common workflows.
+
+Zorex AI can interpret natural-language editing requests, turn them into structured editing actions and hand heavier work to persistent editor jobs. The current editing stack includes:
+
+- a native frame-by-frame video timeline renderer
+- reusable transform/keyframe animations such as zooms, pans, shakes and cinematic pushes
+- named easing/graph presets for animation timing
+- color correction, blur, sharpen, denoise, glow, vignette, opacity and basic mask support
+- reusable velocity/edit-style presets
+- reference-video analysis that extracts compact editing fingerprints rather than storing source videos
+- Real-ESRGAN based image/video enhancement workers
+- persistent editor jobs that can survive bot restarts
+- remote worker claiming so higher-performance machines can process heavy jobs while the WhatsApp bot stays responsive
+- queue inspection/cancellation and automatic delivery of completed media back to the originating chat
+
+The long-term direction is a natural-language editing layer where a user can reply to media and say things such as:
+
+```text
+.ai apply a smooth zoom out with z_ease and max zoom 125
+.ai study this edit
+.upscale 4 quality
+.edit cinematic_push
+```
+
+The AI layer is intended to **orchestrate real editor tools rather than bypass them**. Editing actions are represented as explicit jobs/timeline instructions so they can be inspected, validated, queued and executed by compatible workers.
+
+Planned work includes stronger transform estimation, optical-flow analysis, improved masks/rotoscoping, transition analysis, better reference-to-timeline transfer, richer audio/timeline editing, and eventually more advanced 2.5D/3D compositing.
+
 ## Architecture
 
 ```text
 zorex-bot/
 ├── index.js          # WhatsApp connection, lifecycle and main router
-├── commands/         # Command handlers and feature modules
-├── lib/              # Shared helpers, persistence and AI logic
-├── bet/              # Media/provider helpers
+├── commands/         # Command handlers, AI routing and user-facing features
+├── lib/              # Shared helpers, persistence, AI and editor orchestration
+├── workers/          # Remote/background editor worker processes
+├── providers/        # External media/AI provider integrations
+├── bet/              # Additional media/provider helpers
 ├── config.js         # Runtime configuration
 ├── wcg.js            # Community game logic
 ├── vv.js             # Additional feature module
@@ -163,13 +195,18 @@ Safety measures are included to reduce the risk of misuse, and the project shoul
 
 Current work includes:
 
+- turning Zorex AI into a safe natural-language orchestration layer for normal bot actions
+- expanding the WhatsApp-native editing pipeline and persistent GPU/editor worker system
+- improving native timeline rendering, animation graphs, editing presets and reference analysis
 - improving Chloe's long-term persistence
-- consolidating Chloe's AI calls behind a dedicated provider client
-- improving VPS deployment persistence
+- consolidating AI calls behind dedicated provider clients
+- improving VPS deployment persistence and worker recovery
 - cleaning old credentials and session data from Git history before a public release
 - reducing hard-coded ownership assumptions
 - improving session isolation and deployment architecture
-- expanding documentation and tests
+- expanding documentation, validation and tests
+
+A core design rule for AI-triggered economy/game actions is that **Zorex AI may automate actions a user is already allowed to perform, but it must not grant permissions, currency, upgrades or rule bypasses that the normal command system would reject**. Where AI provides convenience features such as bulk/max actions, the underlying validators remain the source of truth.
 
 ## Security
 
