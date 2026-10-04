@@ -84,7 +84,8 @@ For execute_commands, commands may ONLY use these exact schemas:
 {"name":"withdraw","amount":"all"}
 {"name":"daily"}
 {"name":"work","tier":1}
-{"name":"company_upgrade"}
+{"name":"company_upgrade","mode":"once"}
+{"name":"company_upgrade","mode":"max"}
 {"name":"transfer","amount":250000}
 {"name":"shop_buy","item":"fishing rod","quantity":1}
 {"name":"cshop_buy","slot":6}
@@ -133,7 +134,15 @@ Rules:
 - "claim daily" or "claim my daily reward" => daily.
 - "work" => work tier 1.
 - "work tier 2" or "do work 2" => work tier 2.
-- "upgrade my company" => company_upgrade.
+- "upgrade my company" => company_upgrade mode "once".
+- "max company", "max upgrade my company", "fully upgrade my company",
+  "upgrade my company as much as possible", or "take my company as high as I
+  can currently afford" => company_upgrade mode "max".
+- For company_upgrade mode "max", MAX means perform as many LEGAL upgrades as
+  the user can currently complete. Never bypass company rules. The executor
+  must stop at the first real blocker such as Level 100, the Level 50+
+  employee requirement, insufficient wallet balance, or any future normal
+  company restriction.
 - "send 250000 to @user" or a transfer request made while replying to a
   recipient => transfer amount 250000. Do NOT invent or output a target JID;
   the executor binds the recipient from the actual WhatsApp mention/reply.

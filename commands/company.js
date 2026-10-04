@@ -969,61 +969,242 @@ Use .companyupgrade to grow your empire.`
 //      EMPLOYEE_GATE_MIN_COUNT (3) employees to upgrade further.
 // Both checks run BEFORE collectPendingIncome()/the cost check, so a
 // blocked upgrade never wastes a write settling income first.
-async function companyUpgradeCommand(sock, msg) {
+function upgradeCompanyOnce(userId) {
 
-    const sender = msg.key.participant || msg.key.remoteJid;
-    const users = loadUsers();
+    const users =
+        loadUsers();
 
-    if (!users[sender]) return await replyNotRegistered(sock, msg);
+    const user =
+        users[userId];
 
-    const company = users[sender].company;
-
-    if (!company) return await replyNoCompany(sock, msg);
-
-    if (company.level >= MAX_COMPANY_LEVEL) {
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            { text: `🏆 *${company.name}* is already at the maximum level (${MAX_COMPANY_LEVEL}) — there's nowhere higher to grow.` },
-            { quoted: msg }
-        );
+    if (!user) {
+        return {
+            ok: false,
+            code: "NOT_REGISTERED"
+        };
     }
 
-    if (company.level >= EMPLOYEE_GATE_LEVEL) {
+    const company =
+        user.company;
 
-        const employeeCount = Object.keys(company.employees || {}).length;
+    if (!company) {
+        return {
+            ok: false,
+            code: "NO_COMPANY"
+        };
+    }
 
-        if (employeeCount < EMPLOYEE_GATE_MIN_COUNT) {
-            return await sock.sendMessage(
-                msg.key.remoteJid,
-                {
-                    text: `⚠️ Companies at level ${EMPLOYEE_GATE_LEVEL}+ need at least ${EMPLOYEE_GATE_MIN_COUNT} employees to keep growing.\n\n👥 Current employees: ${employeeCount}/${EMPLOYEE_GATE_MIN_COUNT}\n\nHire more via .companyoffer before upgrading further.`
-                },
-                { quoted: msg }
-            );
+    if (
+        company.level >=
+        MAX_COMPANY_LEVEL
+    ) {
+        return {
+            ok: false,
+            code: "MAX_LEVEL",
+            companyName:
+                company.name,
+            level:
+                company.level,
+            maxLevel:
+                MAX_COMPANY_LEVEL
+        };
+    }
+
+    if (
+        company.level >=
+        EMPLOYEE_GATE_LEVEL
+    ) {
+
+        const employeeCount =
+            Object.keys(
+                company.employees || {}
+            ).length;
+
+        if (
+            employeeCount <
+            EMPLOYEE_GATE_MIN_COUNT
+        ) {
+            return {
+                ok: false,
+                code:
+                    "EMPLOYEE_REQUIREMENT",
+                companyName:
+                    company.name,
+                level:
+                    company.level,
+                employeeCount,
+                requiredEmployees:
+                    EMPLOYEE_GATE_MIN_COUNT,
+                gateLevel:
+                    EMPLOYEE_GATE_LEVEL
+            };
         }
 
     }
 
-    // Settle any income owed before spending, so nothing is lost to the upgrade
-    collectPendingIncome(users, sender);
+    // Keep the exact same economy behavior as the public command:
+    // settle anything already earned before checking whether the next
+    // upgrade is affordable.
+    collectPendingIncome(
+        users,
+        userId
+    );
 
-    const cost = upgradeCostAtLevel(company.level);
-
-    if (users[sender].wallet < cost) {
-        return await sock.sendMessage(
-            msg.key.remoteJid,
-            { text: `❌ You need ${cost.toLocaleString()} 🌙 to upgrade *${company.name}*.\n\n💰 Wallet: ${users[sender].wallet.toLocaleString()} 🌙` },
-            { quoted: msg }
+    const cost =
+        upgradeCostAtLevel(
+            company.level
         );
+
+    if (
+        Number(
+            user.wallet ||
+            0
+        ) <
+        cost
+    ) {
+        return {
+            ok: false,
+            code:
+                "INSUFFICIENT_BALANCE",
+            companyName:
+                company.name,
+            level:
+                company.level,
+            cost,
+            wallet:
+                Number(
+                    user.wallet ||
+                    0
+                )
+        };
     }
 
-    users[sender].wallet -= cost;
-    company.level += 1;
+    const previousLevel =
+        company.level;
 
-    saveUsers(users);
+    user.wallet -=
+        cost;
 
-    const newIncome = incomeAtLevel(company.level);
-    const nextCost = upgradeCostAtLevel(company.level);
+    company.level +=
+        1;
+
+    saveUsers(
+        users
+    );
+
+    return {
+        ok: true,
+        code: "UPGRADED",
+        companyName:
+            company.name,
+        previousLevel,
+        newLevel:
+            company.level,
+        cost,
+        newIncome:
+            incomeAtLevel(
+                company.level
+            ),
+        nextCost:
+            upgradeCostAtLevel(
+                company.level
+            ),
+        wallet:
+            Number(
+                user.wallet ||
+                0
+            )
+    };
+}
+
+function companyUpgradeFailureText(
+    result
+) {
+
+    if (
+        result.code ===
+        "MAX_LEVEL"
+    ) {
+        return `🏆 *${result.companyName}* is already at the maximum level (${result.maxLevel}) — there's nowhere higher to grow.`;
+    }
+
+    if (
+        result.code ===
+        "EMPLOYEE_REQUIREMENT"
+    ) {
+        return `⚠️ Companies at level ${result.gateLevel}+ need at least ${result.requiredEmployees} employees to keep growing.
+
+👥 Current employees: ${result.employeeCount}/${result.requiredEmployees}
+
+Hire more via .companyoffer before upgrading further.`;
+    }
+
+    if (
+        result.code ===
+        "INSUFFICIENT_BALANCE"
+    ) {
+        return `❌ You need ${result.cost.toLocaleString()} 🌙 to upgrade *${result.companyName}*.
+
+💰 Wallet: ${result.wallet.toLocaleString()} 🌙`;
+    }
+
+    return null;
+}
+
+async function companyUpgradeCommand(sock, msg) {
+
+    const sender =
+        msg.key.participant ||
+        msg.key.remoteJid;
+
+    const result =
+        upgradeCompanyOnce(
+            sender
+        );
+
+    if (
+        !result.ok
+    ) {
+
+        if (
+            result.code ===
+            "NOT_REGISTERED"
+        ) {
+            return await replyNotRegistered(
+                sock,
+                msg
+            );
+        }
+
+        if (
+            result.code ===
+            "NO_COMPANY"
+        ) {
+            return await replyNoCompany(
+                sock,
+                msg
+            );
+        }
+
+        const text =
+            companyUpgradeFailureText(
+                result
+            );
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+                    text ||
+                    "⚠️ The company upgrade could not be completed."
+            },
+            {
+                quoted:
+                    msg
+            }
+        );
+
+    }
 
     await sock.sendMessage(
         msg.key.remoteJid,
@@ -1031,14 +1212,17 @@ async function companyUpgradeCommand(sock, msg) {
             text: `╭━━━━━━━━━━━━━━━━━━━━━━━╮
   🏢 𝗖𝗢𝗠𝗣𝗔𝗡𝗬 𝗨𝗣𝗚𝗥𝗔𝗗𝗘𝗗 🏢
 ╰━━━━━━━━━━━━━━━━━━━━━━━╮
-» Name       : ${company.name}
-» New Level  : ${company.level}
-» New Income : ${newIncome.toLocaleString()} 🌙 every 24h
-» Wallet     : ${users[sender].wallet.toLocaleString()} 🌙
+» Name       : ${result.companyName}
+» New Level  : ${result.newLevel}
+» New Income : ${result.newIncome.toLocaleString()} 🌙 every 24h
+» Wallet     : ${result.wallet.toLocaleString()} 🌙
 ━━━━━━━━━━━━━━━━━━━━━━━━━
-Next upgrade costs ${nextCost.toLocaleString()} 🌙`
+Next upgrade costs ${result.nextCost.toLocaleString()} 🌙`
         },
-        { quoted: msg }
+        {
+            quoted:
+                msg
+        }
     );
 
 }
@@ -2038,6 +2222,11 @@ module.exports = {
     companyEmployeesCommand,
     companyOverseeCommand,
     companyPromoteCommand,
+    upgradeCompanyOnce,
+    companyUpgradeFailureText,
+    MAX_COMPANY_LEVEL,
+    EMPLOYEE_GATE_LEVEL,
+    EMPLOYEE_GATE_MIN_COUNT,
     incomeAtLevel,
     upgradeCostAtLevel,
     formatDuration,
