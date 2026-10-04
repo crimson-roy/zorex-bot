@@ -11,6 +11,7 @@ const { getIndustry, positionRate, getMaxSlots } = require("../lib/industries");
 const { getDutyFlavor } = require("../lib/dutyFlavor");
 const { tierForLevel } = require("../lib/tierStar");
 const {
+    startEmployment,
     endEmployment
 } = require("../lib/portfolioHistory");
 
@@ -160,6 +161,15 @@ async function deliverMajorResolution(sock, majorKey, userId) {
     const jid = result.jid || userId;
 
     if (result.accepted) {
+
+        startEmployment({
+            userId,
+            companyName: result.major.name,
+            position: result.positionKey,
+            tier: null,
+            hiredAt: result.hiredAt || Date.now(),
+            companyType: "major"
+        });
 
         await sock.sendMessage(jid, {
             text: noticeBox(
@@ -726,6 +736,25 @@ async function jobApplyCommand(sock, msg, text) {
 
     }
 
+    if (users[sender].company) {
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: noticeBox(
+                    "👑",
+                    "𝘾𝙊𝙈𝙋𝘼𝙉𝙔 𝙊𝙒𝙉𝙀𝙍",
+                    `You already own *${users[sender].company.name}*.
+
+Company owners can't take an employee job while they own a company.`
+                )
+            },
+            { quoted: msg }
+        );
+
+    }
+
+
     const idArg = text
         .replace(".jobapply", "")
         .trim();
@@ -908,6 +937,9 @@ ${majorOffer.major.name} is reviewing your application — you'll hear back in a
     const existingJob =
         findEmploymentAnywhere(
             users,
+            sender
+        ) ||
+        findMajorEmploymentForUser(
             sender
         );
 
