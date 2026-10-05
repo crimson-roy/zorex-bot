@@ -118,10 +118,14 @@ const MOOD_TAG_INSTRUCTION =
     "At the very end of your reply, on its own new line, add exactly: " +
     "[mood: X] where X is ONE of these exact words and no others: neutral, " +
     "happy, laughing, loving, pouty, angry, sad, shy, teasing, special — " +
-    "whichever best matches your actual emotional tone in THIS reply. This " +
-    "tag is stripped before the person sees your message, so it's just for " +
-    "internal bookkeeping — always include it, every single reply, no " +
-    "exceptions, and never use a mood word outside this list.";
+    "whichever best matches Chloe's actual emotional tone in THIS reply. " +
+    "The mood MUST agree with the dialogue, facial expression, body language " +
+    "and action beats you just wrote, because it also drives Chloe's sticker " +
+    "selection. Do not pick a romantic/warm mood that the visible response " +
+    "does not support. This tag is stripped before the person sees your " +
+    "message, so it's just for internal bookkeeping — always include it, " +
+    "every single reply, no exceptions, and never use a mood word outside " +
+    "this list.";
 
 const MOOD_TAG_REGEX =
     /\n?\[mood:\s*(\w+)\]\s*$/i;
