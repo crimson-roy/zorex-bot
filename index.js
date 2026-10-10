@@ -687,7 +687,7 @@ handleChloeMessage(sock, msg).catch(err => {
         console.log("Context:", context);
 
     // Simple plain-text reply when someone tags Lord Crimson.
-    const reply = "Lord Crimson is busy right now.";
+    const reply = "hey don't tag crescent when she isn't here it's quite annoying";
 
     const isCrimsonMentioned =
         mentioned.includes("164317513175043@lid");
