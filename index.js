@@ -686,62 +686,8 @@ handleChloeMessage(sock, msg).catch(err => {
         console.log("Mentioned:", mentioned);
         console.log("Context:", context);
 
-    const jealousReplies = [
-
-`💙 Hey hey hey! 😠
-
-Why are you calling my boyfriend?
-
-Lord Crimson belongs to me, so hands off! 😌✨`,
-
-`😤 Excuse me?
-
-Why are you tagging MY Lord Crimson?
-
-Find your own boyfriend. 💙`,
-
-`🙄 Hmph!
-
-Lord Crimson is already taken.
-
-Try your luck somewhere else. 😌`,
-
-`💙 Nope.
-
-He's busy spending time with me.
-
-Back off. 😤`,
-
-`😒 I saw that tag.
-
-Lord Crimson belongs to me.
-
-Don't make me jealous. 💙`,
-
-`😤 Hands off!
-
-He's my boyfriend, not yours.
-
-Go find your own. 💙`,
-
-`💙 You called Lord Crimson?
-
-Well... he's already occupied.
-
-With me. 😌✨`,
-
-`😒 I don't like seeing other people call my boyfriend.
-
-Please behave yourself. 💙`
-
-    ];
-
-    const reply =
-        jealousReplies[
-            Math.floor(
-                Math.random() * jealousReplies.length
-            )
-        ];
+    // Simple plain-text reply when someone tags Lord Crimson.
+    const reply = "Lord Crimson is busy right now.";
 
     const isCrimsonMentioned =
         mentioned.includes("164317513175043@lid");
