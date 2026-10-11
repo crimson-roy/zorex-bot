@@ -62,7 +62,7 @@ const BOT_NAME = "chloe";
 // cannot consume the entire request.
 //
 
-const MAX_HISTORY_MESSAGES = 6;
+const MAX_HISTORY_MESSAGES = 8;
 const MAX_MESSAGE_CHARS = 700;
 
 
@@ -451,7 +451,7 @@ async function runAIForChat(
                     maxRetries:
                         1,
                     maxCompletionTokens:
-                        350
+                        500
                 }
             );
 
