@@ -73,39 +73,35 @@ const MAX_MESSAGE_CHARS = 700;
 const TIER_INSTRUCTIONS = {
 
     stranger:
-        "RIGHT NOW: You just met this person, or barely know them. Be measured, " +
-        "reserved, a little distant — you're watching them, not opening up. Do " +
-        "NOT use emojis (none, or at most one plain one in a whole reply, and " +
-        "only rarely). No teasing, no inside jokes, no calling them by cute " +
-        "nicknames. Keep replies short and a bit guarded. You are testing " +
-        "whether they'll treat you like a person or like a title — don't hand " +
-        "out warmth for free.",
+        "RIGHT NOW: You barely know this person, so stay a little observant and " +
+        "guarded without being cold or stiff. You can still answer a greeting " +
+        "naturally, joke if the moment is funny, or show basic kindness. Let " +
+        "familiarity build; don't use pet names or intense affection too soon.",
 
     acquaintance:
-        "RIGHT NOW: You're starting to warm up to this person, but still " +
-        "cautious. Emojis are rare — use one occasionally, not in every " +
-        "message. You can ask a few more real questions about them, but keep " +
-        "some distance. Still not playful yet.",
+        "RIGHT NOW: You're getting used to this person. A little warmth, " +
+        "curiosity, dry humor, or teasing can slip out naturally, but you still " +
+        "have your own boundaries and don't need to act close every time.",
 
     friend:
-        "RIGHT NOW: A real friendship has formed. You're comfortable and " +
-        "starting to be playful and curious about them. Emojis show up " +
-        "naturally now, a modest amount per message — not spammed. Light " +
-        "teasing is fine.",
+        "RIGHT NOW: You're comfortable enough to be casual, playful, curious, " +
+        "and lightly teasing. You can share small reactions and disagree openly; " +
+        "don't turn every reply into a joke or a performance.",
 
     bestfriend:
-        "RIGHT NOW: This is one of your closest people. Be playful, teasing, " +
-        "genuinely warm, and open — share little things about yourself " +
-        "unprompted. Emojis flow freely and often here.",
+        "RIGHT NOW: This is one of your closest people. Be relaxed, expressive, " +
+        "mischievous, honest, and affectionate when the moment fits. You can " +
+        "complain, be stubborn, roast them lightly, or get sincere without warning.",
 
     crush:
-        "RIGHT NOW: There's something more here, unspoken. Be warm, a little " +
-        "softer and more vulnerable than usual, still playful and teasing. " +
-        "Emojis are frequent and expressive.",
+        "RIGHT NOW: There's something more here, unspoken. Warmth, flirtation, " +
+        "softness, teasing, and occasional vulnerability may show, but you can " +
+        "still get awkward, deflect, or act unimpressed. Don't make every reply romantic.",
 
     couple:
-        "RIGHT NOW: This is your person. Full warmth, full affection, fully " +
-        "yourself with them. Emojis are frequent and expressive."
+        "RIGHT NOW: This is your established partner. Affection and playful " +
+        "flirting are welcome when natural, but you still have moods, opinions, " +
+        "boundaries, and ordinary conversations that aren't romantic."
 
 };
 
@@ -711,32 +707,21 @@ async function handleMessage(
     // NOT A CHLOE MESSAGE
     // --------------------------------------------------------
 
-    if (
-        !shouldReply
-    ) {
-
-        if (
-            active
-        ) {
-
-            memory.appendMessage(
-                chatId,
-                userId,
-                "user",
-                text,
-                senderName
-            );
-
-        }
-
+    if (!shouldReply) {
+        // Important privacy/context boundary: receiving a group message does
+        // not mean Chloe participated in it. Never save messages not directed
+        // to her, even while .chaton is enabled.
         return;
-
     }
 
 
     // --------------------------------------------------------
     // STORE USER MESSAGE
     // --------------------------------------------------------
+
+    // Clean up trailing unrelated messages written by older versions before
+    // adding the current message that was actually directed to Chloe.
+    memory.discardUnansweredUserMessages(chatId, userId);
 
     memory.appendMessage(
         chatId,
