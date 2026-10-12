@@ -11,7 +11,7 @@ process.env.DATA_DIR = testDir;
 const characters = require("../lib/characterRegistry");
 const subscriptions = require("../lib/subscriptionStore");
 const worlds = require("../lib/sharedWorldStore");
-const { handleSharedWorldMessage } = require("../commands/sharedWorld");
+const { handleSharedWorldMessage, buildWorldSystemPrompt } = require("../commands/sharedWorld");
 const dataPath = require("../lib/dataPath");
 
 const GROUP = "test-room@g.us";
@@ -21,6 +21,24 @@ const FRIEND_PN = "222222@s.whatsapp.net";
 const FRIEND_LID = "friend-test@lid";
 const OBSERVER_PN = "333333@s.whatsapp.net";
 const OBSERVER_LID = "observer-test@lid";
+
+const usersFile = dataPath("users.json");
+fs.writeFileSync(usersFile, JSON.stringify({
+    [OWNER_PN]: { name: "Owner Registered" },
+    [FRIEND_PN]: { name: "Friend Registered" }
+}, null, 2));
+
+const relationshipsFile = dataPath("relationships.json");
+fs.writeFileSync(relationshipsFile, JSON.stringify({
+    [OWNER_PN]: {
+        trust: 10,
+        affection: 9,
+        conversations: 40,
+        firstMet: Date.now() - 86400000,
+        lastInteraction: Date.now(),
+        observations: []
+    }
+}, null, 2));
 
 const sent = [];
 const sock = {
@@ -124,7 +142,13 @@ async function main() {
         const active = worlds.activeWorldForGroup(GROUP);
         assert.equal(active.status, "active");
         assert.equal(active.members.length, 2);
+        assert.equal(active.members[0].name, "Owner Registered", "world should use host's registered Zorex name");
+        assert.equal(active.members[1].name, "Friend Registered", "world should use guest's registered Zorex name");
         assert.equal(active.members[1].characterId, "crescent");
+
+        const worldPrompt = buildWorldSystemPrompt(active);
+        assert.match(worldPrompt, /"tier":\s*"couple"/, "existing Chloe relationship tier should enter world context");
+        assert.match(worldPrompt, /never write a human user's dialogue/i, "human agency rules should be included in the prompt");
 
         const summaryUpdated = worlds.updateWorldMemorySummary(
             GROUP,
