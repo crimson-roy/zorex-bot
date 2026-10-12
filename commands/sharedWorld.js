@@ -91,6 +91,12 @@ function sameIdentity(left, right) {
     return characters.normalizeAliases(left).some(id => set.has(id));
 }
 
+function isWorldCreator(world, aliases) {
+    const creator = (world?.members || []).find(member => member.role === "creator") ||
+        world?.members?.[0];
+    return sameIdentity(creator?.ids || world?.creatorId, aliases);
+}
+
 function findWorldMember(world, aliases) {
     return (world?.members || []).find(member => sameIdentity(member.ids, aliases)) || null;
 }
@@ -389,15 +395,16 @@ async function handleChatCommand(sock, msg, text) {
     const privateSeedCommand = args.match(/^seed\s+private(?:\s+(confirm|cancel))?$/i);
     if (privateSeedCommand) {
         const mode = String(privateSeedCommand[1] || "preview").toLowerCase();
-        const key = groupId + "|" + characters.primaryIdentity(aliases);
         const world = worlds.getWorldForGroup(groupId);
+        const key = groupId + "|" + String(world?.id || "none") + "|" +
+            String(world?.creatorId || characters.primaryIdentity(aliases));
 
         if (!world) {
             clearPrivateSeedConfirmation(key);
             await sendText(sock, msg, "Create a shared world first with .chat join @user.");
             return { handledCommand: true, consumeMessage: true };
         }
-        if (!sameIdentity(world.creatorId, aliases)) {
+        if (!isWorldCreator(world, aliases)) {
             await sendText(sock, msg, "Only this world's creator can share their private Chloe story with the group.");
             return { handledCommand: true, consumeMessage: true };
         }
@@ -590,7 +597,7 @@ async function handleChatCommand(sock, msg, text) {
     const addMatch = args.match(/^add\b/i);
     if (addMatch) {
         const world = worlds.getWorldForGroup(groupId);
-        const creatorWorld = world && sameIdentity(world.creatorId, aliases);
+        const creatorWorld = world && isWorldCreator(world, aliases);
 
         if (!world || world.status !== "active") {
             await sendText(sock, msg, commandErrorText({ code: "no_active_world" }));
