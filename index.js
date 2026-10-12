@@ -1829,7 +1829,9 @@ ${board}
     text.startsWith(".removeowner") ||
     text.startsWith(".resetcd") ||
     text.startsWith(".resetdl") ||
-    text.startsWith(".resetbal")
+    text.startsWith(".resetbal") ||
+    text === ".sus" ||
+    text.startsWith(".sus ")
 ) {
 
     await startOwner(sock, msg, text);
