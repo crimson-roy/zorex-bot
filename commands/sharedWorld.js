@@ -771,7 +771,10 @@ function worldConversationMessages(world) {
 
     return events.slice(start).map(event => {
         if (event.type === "npc") {
-            return { role: "assistant", content: event.content };
+            return {
+                role: "assistant",
+                content: String(event.content || "").slice(0, 1200)
+            };
         }
         if (event.type === "system") {
             return {
@@ -789,6 +792,50 @@ function worldConversationMessages(world) {
                 "] Message: " + String(event.content || "").slice(0, 1200)
         };
     });
+}
+
+function validateWorldReply(reply, world) {
+    const text = String(reply || "").trim();
+    if (!text || text.length > 10000) {
+        return { valid: false, reason: "empty or oversized response" };
+    }
+
+    const allowedNames = new Set(
+        (world.members || [])
+            .map(member => characters.getCharacter(member.characterId)?.name)
+            .filter(Boolean)
+            .map(name => name.toLocaleLowerCase())
+    );
+
+    const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    if (!paragraphs.length) {
+        return { valid: false, reason: "no roleplay paragraphs" };
+    }
+
+    for (const paragraph of paragraphs) {
+        const firstLine = paragraph.split(/\r?\n/, 1)[0].trim();
+        const label = firstLine.match(/^\*\*([^*\n]{1,60}):\*\*/ ) ||
+            firstLine.match(/^([A-Za-z][A-Za-z0-9 _.'-]{0,50}):\s+/);
+
+        if (!label) {
+            return { valid: false, reason: "paragraph without an NPC speaker label" };
+        }
+
+        const speaker = String(label[1] || "").trim().toLocaleLowerCase();
+        if (!allowedNames.has(speaker)) {
+            return { valid: false, reason: "unassigned or human speaker label" };
+        }
+    }
+
+    // Check every bold speaker tag in the body, not only paragraph headings.
+    const boldLabels = text.matchAll(/\*\*([^*\n]{1,60}):\*\*/g);
+    for (const match of boldLabels) {
+        if (!allowedNames.has(String(match[1]).trim().toLocaleLowerCase())) {
+            return { valid: false, reason: "unassigned NPC label" };
+        }
+    }
+
+    return { valid: true, text };
 }
 
 async function processWorldTurn(sock, msg, text, aliases) {
@@ -829,18 +876,60 @@ async function processWorldTurn(sock, msg, text, aliases) {
     const started = Date.now();
 
     try {
-        const reply = await callAI(systemPrompt, messages, {
+        let reply = await callAI(systemPrompt, messages, {
             timeoutMs: 45000,
             maxRetries: 0,
             maxCompletionTokens: 1000
         });
 
-        if (!reply || reply === "...") {
-            throw new Error("The scene model returned an empty response.");
+        let validation = validateWorldReply(reply, world);
+        if (!validation.valid) {
+            console.warn(
+                "[shared-world] Response failed format/character validation; attempting one correction:",
+                validation.reason
+            );
+
+            const correctionPrompt = systemPrompt +
+                "\n\nFINAL OUTPUT CHECK:\n" +
+                "- Every non-empty paragraph must begin with exactly one assigned NPC label in the form **Character Name:**.\n" +
+                "- Allowed labels are the companion NPCs listed in WORLD MEMBERS AND ASSIGNED NPCS only.\n" +
+                "- Never label a paragraph with a human participant's name or narrate their actions, thoughts, emotions, or speech.\n" +
+                "- Return only the corrected roleplay paragraphs in one message.";
+
+            const correctedMessages = messages.concat([
+                { role: "assistant", content: String(reply || "").slice(0, 6000) },
+                {
+                    role: "user",
+                    content: "Rewrite the prior response to comply with the FINAL OUTPUT CHECK. Preserve established events but remove unassigned speakers, human actions, and any unlabeled narration."
+                }
+            ]);
+
+            reply = await callAI(correctionPrompt, correctedMessages, {
+                timeoutMs: 30000,
+                maxRetries: 0,
+                maxCompletionTokens: 1000
+            });
+
+            validation = validateWorldReply(reply, world);
         }
 
+        if (!validation.valid) {
+            throw new Error(
+                "The scene response failed character-label validation: " +
+                validation.reason
+            );
+        }
+
+        reply = validation.text;
+
         const latest = worlds.activeWorldForGroup(groupId);
-        if (!latest || !findWorldMember(latest, aliases)) return;
+        if (
+            !latest ||
+            latest.id !== currentWorld.id ||
+            !findWorldMember(latest, aliases)
+        ) {
+            return;
+        }
 
         worlds.updateNpcReply(groupId, reply);
 
@@ -1042,5 +1131,6 @@ async function handleSharedWorldTurn(sock, msg, route) {
 module.exports = {
     handleSharedWorldMessage,
     handleSharedWorldTurn,
-    buildWorldSystemPrompt
+    buildWorldSystemPrompt,
+    validateWorldReply
 };
