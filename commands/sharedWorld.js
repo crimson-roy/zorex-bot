@@ -7,6 +7,9 @@ const characters = require("../lib/characterRegistry");
 const worlds = require("../lib/sharedWorldStore");
 const subscriptions = require("../lib/subscriptionStore");
 const { getRelationshipForAliases } = require("../lib/relationshipStore");
+const fs = require("fs");
+const dataPath = require("../lib/dataPath");
+const USERS_PATH = dataPath("users.json");
 
 const WORLD_QUEUES = new Map();
 
@@ -42,6 +45,23 @@ function getMentionedJids(msg) {
 
 function isGroupChat(chatId) {
     return typeof chatId === "string" && chatId.endsWith("@g.us");
+}
+
+function getRegisteredName(aliases, fallback = "Guest") {
+    try {
+        if (!fs.existsSync(USERS_PATH)) return fallback;
+        const users = JSON.parse(fs.readFileSync(USERS_PATH, "utf8"));
+        for (const id of characters.normalizeAliases(aliases)) {
+            const registeredName = users?.[id]?.name;
+            if (typeof registeredName === "string" && registeredName.trim()) {
+                return registeredName.trim().slice(0, 80);
+            }
+        }
+    } catch (err) {
+        console.warn("[shared-world] Registered name lookup failed:", err.message);
+    }
+
+    return String(fallback || "Guest").trim().slice(0, 80) || "Guest";
 }
 
 function sameIdentity(left, right) {
@@ -154,15 +174,17 @@ async function resolveTaggedGroupUser(sock, groupId, msg) {
         });
     }
 
+    const whatsappName = String(
+        participant?.notify ||
+        participant?.name ||
+        participant?.verifiedName ||
+        "Guest"
+    );
+
     return {
         ids,
         mentionJid: mentions[0],
-        name: String(
-            participant?.notify ||
-            participant?.name ||
-            participant?.verifiedName ||
-            "Guest"
-        )
+        name: getRegisteredName(ids, whatsappName)
     };
 }
 
@@ -329,7 +351,7 @@ async function handleChatCommand(sock, msg, text) {
             const result = worlds.acceptInvitation({
                 groupId,
                 inviteeIds: aliases,
-                inviteeName: msg.pushName || "Guest",
+                inviteeName: getRegisteredName(aliases, msg.pushName || "Guest"),
                 characterId: selected.id,
                 characterName: selected.name,
                 memberLimit
@@ -406,7 +428,7 @@ async function handleChatCommand(sock, msg, text) {
                 groupId,
                 creator: {
                     ids: aliases,
-                    name: msg.pushName || "World creator",
+                    name: getRegisteredName(aliases, msg.pushName || "World creator"),
                     characterId: creatorCharacter.id
                 },
                 invitee: {
@@ -425,7 +447,7 @@ async function handleChatCommand(sock, msg, text) {
                     text:
                         "🌍 Shared-world invitation\n\n" +
                         "@" + String(target.mentionJid).split("@")[0] +
-                        ", " + (msg.pushName || "A group member") +
+                        ", " + getRegisteredName(aliases, msg.pushName || "A group member") +
                         " invited you to join their shared world.\n" +
                         "Creator's companion: " + creatorCharacter.name + "\n" +
                         "Your companion: " + inviteeCharacter.name + "\n\n" +
@@ -477,7 +499,7 @@ async function handleChatCommand(sock, msg, text) {
             worlds.createInvitation({
                 groupId,
                 inviterIds: aliases,
-                inviterName: msg.pushName || world.creatorName,
+                inviterName: getRegisteredName(aliases, msg.pushName || world.creatorName),
                 invitee: {
                     ids: target.ids,
                     name: target.name,
@@ -492,7 +514,7 @@ async function handleChatCommand(sock, msg, text) {
                     text:
                         "🌍 Shared-world invitation\n\n" +
                         "@" + String(target.mentionJid).split("@")[0] +
-                        ", " + (msg.pushName || world.creatorName) +
+                        ", " + getRegisteredName(aliases, msg.pushName || world.creatorName) +
                         " invited you to join the existing world.\n" +
                         "Your companion: " + targetCharacter.name + "\n\n" +
                         "Reply with .chat join accept within 10 minutes.",
