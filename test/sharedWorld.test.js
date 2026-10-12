@@ -157,7 +157,7 @@ async function main() {
         ));
         assert.equal((worlds.getWorldForGroup(GROUP).creatorPrivateStorySeed || []).length, 0);
         await handleSharedWorldMessage(sock, groupMessage(
-            "Owner", OWNER_PN, OWNER_LID, ".chat seed private confirm"
+            "Owner", OWNER_PN, null, ".chat seed private confirm"
         ));
         const seededWorld = worlds.getWorldForGroup(GROUP);
         assert.equal(seededWorld.creatorPrivateStorySeed.length, 2);
@@ -194,6 +194,14 @@ async function main() {
         assert.match(worldPrompt, /never write a human user's dialogue/i, "human agency rules should be included in the prompt");
         assert.match(worldPrompt, /CREATOR-APPROVED PRIVATE CHLOE STORY SEED/i);
         assert.match(worldPrompt, /promise we made at the old library/i, "explicitly approved private seed should enter world context");
+
+        const ownerSeenBeforePhoneAliasTouch = worlds.getWorldForGroup(GROUP).ownerLastSeenAt;
+        await new Promise(resolve => setTimeout(resolve, 5));
+        worlds.touchMember({ groupId: GROUP, memberIds: [OWNER_PN] });
+        assert.ok(
+            worlds.getWorldForGroup(GROUP).ownerLastSeenAt > ownerSeenBeforePhoneAliasTouch,
+            "phone-only identity should refresh the creator inactivity timer"
+        );
 
         assert.equal(
             validateWorldReply(
@@ -249,7 +257,7 @@ async function main() {
         );
 
         const ownerExit = groupMessage(
-            "Owner", OWNER_PN, OWNER_LID, ".chat exit"
+            "Owner", OWNER_PN, null, ".chat exit"
         );
         await handleSharedWorldMessage(sock, ownerExit);
         assert.equal(worlds.activeWorldForGroup(GROUP).members.length, 2, "creator cannot exit");
@@ -269,7 +277,7 @@ async function main() {
         // Recreate and accept a world, then prove creator inactivity expires it
         // even if the shared group had activity more recently.
         const secondFriend = groupMessage(
-            "Owner", OWNER_PN, OWNER_LID, ".chat add @friend", [FRIEND_PN]
+            "Owner", OWNER_PN, null, ".chat add @friend", [FRIEND_PN]
         );
         // The existing world now has only the creator, so adding is still permitted.
         await handleSharedWorldMessage(sock, secondFriend);
