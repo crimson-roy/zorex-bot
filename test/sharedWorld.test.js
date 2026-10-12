@@ -126,6 +126,14 @@ async function main() {
         assert.equal(active.members.length, 2);
         assert.equal(active.members[1].characterId, "crescent");
 
+        const summaryUpdated = worlds.updateWorldMemorySummary(
+            GROUP,
+            "The creator hosts the world at home. Chloe is the creator's assigned companion; Crescent belongs to the visiting friend.",
+            1
+        );
+        assert.equal(summaryUpdated.summaryEventCount, 1);
+        assert.match(worlds.getWorldForGroup(GROUP).memorySummary, /creator hosts the world at home/i);
+
         const memberLine = groupMessage(
             "Friend", FRIEND_PN, FRIEND_LID, "Good evening."
         );
