@@ -9,6 +9,7 @@ const testDir = fs.mkdtempSync(path.join(os.tmpdir(), "zorex-shared-world-test-"
 process.env.DATA_DIR = testDir;
 
 const characters = require("../lib/characterRegistry");
+const chloeMemory = require("../lib/chloeMemory");
 const subscriptions = require("../lib/subscriptionStore");
 const worlds = require("../lib/sharedWorldStore");
 const {
@@ -113,6 +114,11 @@ async function main() {
         assert.equal(worlds.getWorldForGroup(GROUP), null, "duplicate companion must not create a world");
 
         characters.setSelectedCharacter(friendIds, "crescent");
+        // This DM thread must remain private unless the creator explicitly
+        // previews and confirms sharing it in the group.
+        chloeMemory.appendMessage(OWNER_PN, OWNER_PN, "user", "Chloe, remember our promise at the old library.", "Owner Registered");
+        chloeMemory.appendMessage(OWNER_PN, OWNER_PN, "assistant", "I remember the promise we made at the old library.", "Chloe");
+
         const createInvite = groupMessage(
             "Owner", OWNER_PN, OWNER_LID, ".chat join @friend", [FRIEND_PN]
         );
@@ -123,6 +129,29 @@ async function main() {
         assert.equal(pending.members.length, 1);
         assert.equal(pending.creatorCharacterId, "chloe");
         assert.equal(worlds.getWorldForUser(ownerIds).world.id, pending.id);
+        assert.equal((pending.creatorStorySeed || []).length, 0, "private DM history is not auto-imported");
+        assert.equal((pending.creatorPrivateStorySeed || []).length, 0, "private story seed requires explicit consent");
+
+        // Non-creator attempts cannot stage a private seed for the world.
+        await handleSharedWorldMessage(sock, groupMessage(
+            "Friend", FRIEND_PN, FRIEND_LID, ".chat seed private"
+        ));
+        assert.equal((worlds.getWorldForGroup(GROUP).creatorPrivateStorySeed || []).length, 0);
+
+        // Preview reveals only a count, and does not save the private contents.
+        await handleSharedWorldMessage(sock, groupMessage(
+            "Owner", OWNER_PN, OWNER_LID, ".chat seed private"
+        ));
+        assert.equal((worlds.getWorldForGroup(GROUP).creatorPrivateStorySeed || []).length, 0,
+            "preview must not copy private content");
+
+        // The explicit confirmation imports one bounded snapshot.
+        await handleSharedWorldMessage(sock, groupMessage(
+            "Owner", OWNER_PN, OWNER_LID, ".chat seed private confirm"
+        ));
+        const seededWorld = worlds.getWorldForGroup(GROUP);
+        assert.equal(seededWorld.creatorPrivateStorySeed.length, 2);
+        assert.match(seededWorld.creatorPrivateStorySeed[0].content, /old library/i);
 
         assert.throws(() => worlds.createInitialInvitation({
             groupId: "second-room@g.us",
@@ -153,6 +182,8 @@ async function main() {
         const worldPrompt = buildWorldSystemPrompt(active);
         assert.match(worldPrompt, /"tier":\s*"couple"/, "existing Chloe relationship tier should enter world context");
         assert.match(worldPrompt, /never write a human user's dialogue/i, "human agency rules should be included in the prompt");
+        assert.match(worldPrompt, /CREATOR-APPROVED PRIVATE CHLOE STORY SEED/i);
+        assert.match(worldPrompt, /promise we made at the old library/i, "explicitly approved private seed should enter world context");
 
         assert.equal(
             validateWorldReply(
@@ -267,6 +298,7 @@ async function main() {
         console.log("PASS: ordinary member can exit");
         console.log("PASS: creator inactivity disbands after 30 days");
         console.log("PASS: free and paid world size limits");
+        console.log("PASS: private Chloe history remains private until creator confirms sharing");
     } finally {
         fs.rmSync(testDir, { recursive: true, force: true });
     }
