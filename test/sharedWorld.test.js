@@ -77,6 +77,13 @@ async function main() {
         assert.equal(characters.getSelectedCharacter(ownerIds).id, "chloe", "existing users default to Chloe");
 
         characters.setSelectedCharacter(friendIds, "chloe");
+
+        const outsideInvite = groupMessage(
+            "Owner", OWNER_PN, OWNER_LID, ".chat join @outsider", ["999999@s.whatsapp.net"]
+        );
+        await handleSharedWorldMessage(sock, outsideInvite);
+        assert.equal(worlds.getWorldForGroup(GROUP), null, "non-group user must not be invited");
+
         const duplicateInvite = groupMessage(
             "Owner", OWNER_PN, OWNER_LID, ".chat join @friend", [FRIEND_PN]
         );
@@ -94,6 +101,14 @@ async function main() {
         assert.equal(pending.members.length, 1);
         assert.equal(pending.creatorCharacterId, "chloe");
         assert.equal(worlds.getWorldForUser(ownerIds).world.id, pending.id);
+
+        assert.throws(() => worlds.createInitialInvitation({
+            groupId: "second-room@g.us",
+            creator: { ids: friendIds, name: "Friend", characterId: "crescent" },
+            invitee: { ids: ["observer-test@lid"], name: "Observer", characterId: "chloe" },
+            memberLimit: 2
+        }), err => err.code === "creator_pending_invite",
+        "a pending invitee cannot simultaneously create another world");
 
         // The creator's character is locked as soon as their world is pending.
         const selectionWhilePending = groupMessage(
@@ -121,10 +136,16 @@ async function main() {
         const observerLine = groupMessage(
             "Observer", OBSERVER_PN, OBSERVER_LID, "Good evening."
         );
+        const eventsBeforeObserver = worlds.getWorldEvents(GROUP).length;
         const observerRoute = await handleSharedWorldMessage(sock, observerLine);
         assert.equal(observerRoute.observerMessage, true);
         assert.equal(observerRoute.suppressChloe, true);
         assert.notEqual(observerRoute.deferWorldTurn, true);
+        assert.equal(
+            worlds.getWorldEvents(GROUP).length,
+            eventsBeforeObserver,
+            "observer messages must not enter the shared-world memory"
+        );
 
         const ownerExit = groupMessage(
             "Owner", OWNER_PN, OWNER_LID, ".chat exit"
