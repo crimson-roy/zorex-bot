@@ -15,6 +15,9 @@ A shared world exists inside one WhatsApp group. Human participants speak as the
 - .chat members / .chat status — membership and status.
 - .chat exit — a non-owner member leaves.
 - .chat disband — creator-only world deletion.
+- .chat seed private — preview the most recent messages in the creator's own private Chloe thread.
+- .chat seed private confirm — explicitly share the previewed snapshot with the world's model context.
+- .chat seed private cancel — cancel a pending preview.
 
 Invitations expire after 10 minutes. A user can belong to only one world at a time. A character choice is locked while the user is a member; the creator is also locked while their initial invitation is pending. The creator cannot exit their own world. A world is removed when the creator has been inactive for 30 days; expiry is enforced when shared-world state is next accessed.
 
@@ -31,12 +34,12 @@ lib/subscriptionStore.js provides lookup and explicit set/revoke helpers, but do
 - The AI selects which present NPCs are relevant and emits one WhatsApp message with separately labelled NPC actions/dialogue.
 - The prompt prohibits generating human users' actions, speech, thoughts, or emotions; NPCs control only themselves. An NPC not assigned to a world member does not appear automatically.
 - A world reply is serialized per world. The full event history remains stored until the world is disbanded; only recent events are fed to the model per turn to bound prompt size.
-- For privacy, v1 seeds the world from the creator's recent Chloe memory in the same group only. It does not import creator or guest DMs, and it never imports a guest's private history. If the creator's established story currently exists only in a private chat, it is not automatically carried into the world in v1 and needs an explicit, privacy-safe story-seed flow before public release.
+- For privacy, the creator's private Chloe DMs are never imported automatically. The creator can use a two-step flow in the world group: preview with .chat seed private, then explicitly confirm with .chat seed private confirm within two minutes. The preview exposes only a message count; it does not display or copy message contents. Confirmation snapshots at most the eight latest messages from the creator's own DM thread into a separate creator-approved story-seed field. Guest DMs and unrelated group messages are never included. This is a one-time snapshot, so later DMs remain private unless the creator repeats the flow.
 - Random illustration generation, home/family scene rendering, and subscription-based image quotas are later stages, not implemented in this branch.
 
 ## Validation
 
-The automated test test/sharedWorld.test.js checks identity alias ordering, default character, duplicate-companion rejection, invitation/acceptance, character locking, observer isolation, owner-only disband, member exit, creator inactivity expiry, and free/paid member-limit lookup. .github/workflows/shared-world-tests.yml runs Node 20 syntax checks and this test without installing dependencies; this project currently has a pre-existing mismatch between package.json and package-lock.json.
+The automated test test/sharedWorld.test.js checks identity alias ordering, default character, duplicate-companion rejection, invitation/acceptance, character locking, observer isolation, owner-only disband, member exit, creator inactivity expiry, free/paid member-limit lookup, and explicit creator-only private-story import. .github/workflows/shared-world-tests.yml runs Node 20 syntax checks and this test without installing dependencies; this project currently has a pre-existing mismatch between package.json and package-lock.json.
 
 ## Pre-public-launch checklist
 
