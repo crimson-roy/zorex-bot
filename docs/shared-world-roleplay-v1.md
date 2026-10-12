@@ -19,7 +19,7 @@ A shared world exists inside one WhatsApp group. Human participants speak as the
 - .chat seed private confirm — explicitly share the previewed snapshot with the world's model context.
 - .chat seed private cancel — cancel a pending preview.
 
-Invitations expire after 10 minutes. A user can belong to only one world at a time. A character choice is locked while the user is a member; the creator is also locked while their initial invitation is pending. The creator cannot exit their own world. A world is removed when the creator has been inactive for 30 days; expiry is enforced when shared-world state is next accessed.
+Invitations expire after 10 minutes. A user can belong to only one world at a time. A character choice is locked while the user is a member; the creator is also locked while their initial invitation is pending. The creator cannot exit their own world. A world is removed when the creator has been inactive for 30 days; expiry is enforced when shared-world state is next accessed and by an hourly background sweep.
 
 ## Access and character rules
 
