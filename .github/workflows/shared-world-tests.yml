@@ -1,0 +1,37 @@
+name: Shared-world roleplay tests
+
+on:
+  push:
+    branches:
+      - feature/shared-world-roleplay-v1
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  shared-world-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check changed runtime files
+        run: |
+          node --check index.js
+          node --check commands/sharedWorld.js
+          node --check lib/characterRegistry.js
+          node --check lib/subscriptionStore.js
+          node --check lib/companionMemory.js
+          node --check lib/sharedWorldStore.js
+
+      - name: Test shared-world lifecycle and isolation
+        run: node test/sharedWorld.test.js
