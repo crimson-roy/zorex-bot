@@ -25,7 +25,7 @@ Invitations expire after 10 minutes. A user can belong to only one world at a ti
 
 Free creators get a two-human-member capacity. A creator with an active Standard, Pro, or Ultra subscription gets capacity up to five. The current registry contains Chloe and a provisional Crescent starter profile only. Because each world requires unique companion assignments, only two distinct-companion members can join until more approved companion profiles are added.
 
-lib/subscriptionStore.js provides lookup and explicit set/revoke helpers, but does not implement .sus, payment verification, or owner activation yet. All users default to Free until an active subscription record is added by a later, trusted activation workflow.
+lib/subscriptionStore.js provides lookup and set/revoke helpers. The .sus command supports status checks plus MAIN_OWNER-only manual activation/revocation using .sus activate @user standard 30 PAYMENT-REF and .sus revoke @user. A manual activation records a payment reference but does not verify payments with a provider; the owner must independently confirm payment. All users default to Free until a trusted activation record exists.
 
 ## Message and memory rules
 
