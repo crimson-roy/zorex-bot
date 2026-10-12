@@ -145,7 +145,17 @@ async function main() {
         assert.equal((worlds.getWorldForGroup(GROUP).creatorPrivateStorySeed || []).length, 0,
             "preview must not copy private content");
 
-        // The explicit confirmation imports one bounded snapshot.
+        await handleSharedWorldMessage(sock, groupMessage(
+            "Owner", OWNER_PN, OWNER_LID, ".chat seed private cancel"
+        ));
+        assert.equal((worlds.getWorldForGroup(GROUP).creatorPrivateStorySeed || []).length, 0,
+            "cancelling a preview must not import it");
+
+        // Preview again; explicit confirmation imports one bounded snapshot.
+        await handleSharedWorldMessage(sock, groupMessage(
+            "Owner", OWNER_PN, OWNER_LID, ".chat seed private"
+        ));
+        assert.equal((worlds.getWorldForGroup(GROUP).creatorPrivateStorySeed || []).length, 0);
         await handleSharedWorldMessage(sock, groupMessage(
             "Owner", OWNER_PN, OWNER_LID, ".chat seed private confirm"
         ));
