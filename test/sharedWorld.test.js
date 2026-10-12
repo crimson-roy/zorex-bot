@@ -307,6 +307,7 @@ async function main() {
         // All messages sent in tests are mock-only. No API calls or real WhatsApp
         // sends happen because shared-world turns are only queued by the entrypoint.
         console.log("PASS: LID-first sender identity");
+        console.log("PASS: creator phone-JID/LID alias switching preserves ownership and inactivity checks");
         console.log("PASS: existing users default to Chloe");
         console.log("PASS: duplicate companion invitations are rejected");
         console.log("PASS: invite/accept creates an active world");
