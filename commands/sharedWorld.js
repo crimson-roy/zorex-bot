@@ -15,6 +15,26 @@ const WORLD_QUEUES = new Map();
 const PRIVATE_SEED_CONFIRMATIONS = new Map();
 const PRIVATE_SEED_CONFIRMATION_TTL_MS = 2 * 60 * 1000;
 
+function clearPrivateSeedConfirmation(key) {
+    const pending = PRIVATE_SEED_CONFIRMATIONS.get(key);
+    if (pending?.timer) clearTimeout(pending.timer);
+    PRIVATE_SEED_CONFIRMATIONS.delete(key);
+}
+
+function stagePrivateSeedConfirmation(key, value) {
+    clearPrivateSeedConfirmation(key);
+    const pending = {
+        ...value,
+        timer: setTimeout(() => {
+            if (PRIVATE_SEED_CONFIRMATIONS.get(key) === pending) {
+                PRIVATE_SEED_CONFIRMATIONS.delete(key);
+            }
+        }, PRIVATE_SEED_CONFIRMATION_TTL_MS)
+    };
+    if (typeof pending.timer.unref === "function") pending.timer.unref();
+    PRIVATE_SEED_CONFIRMATIONS.set(key, pending);
+}
+
 function extractText(msg) {
     const message = msg?.message || {};
     return String(
@@ -373,7 +393,7 @@ async function handleChatCommand(sock, msg, text) {
         const world = worlds.getWorldForGroup(groupId);
 
         if (!world) {
-            PRIVATE_SEED_CONFIRMATIONS.delete(key);
+            clearPrivateSeedConfirmation(key);
             await sendText(sock, msg, "Create a shared world first with .chat join @user.");
             return { handledCommand: true, consumeMessage: true };
         }
@@ -383,7 +403,7 @@ async function handleChatCommand(sock, msg, text) {
         }
 
         if (mode === "cancel") {
-            PRIVATE_SEED_CONFIRMATIONS.delete(key);
+            clearPrivateSeedConfirmation(key);
             await sendText(sock, msg, "Cancelled. No private messages were copied into the shared world.");
             return { handledCommand: true, consumeMessage: true };
         }
@@ -391,7 +411,7 @@ async function handleChatCommand(sock, msg, text) {
         if (mode === "confirm") {
             const pending = PRIVATE_SEED_CONFIRMATIONS.get(key);
             if (!pending || pending.worldId !== world.id || pending.expiresAt <= Date.now()) {
-                PRIVATE_SEED_CONFIRMATIONS.delete(key);
+                clearPrivateSeedConfirmation(key);
                 await sendText(sock, msg, "There is no current preview to confirm. Use .chat seed private first; previews expire after 2 minutes.");
                 return { handledCommand: true, consumeMessage: true };
             }
@@ -402,7 +422,7 @@ async function handleChatCommand(sock, msg, text) {
                     creatorIds: aliases,
                     storySeed: pending.storySeed
                 });
-                PRIVATE_SEED_CONFIRMATIONS.delete(key);
+                clearPrivateSeedConfirmation(key);
                 await sendText(
                     sock,
                     msg,
@@ -410,7 +430,7 @@ async function handleChatCommand(sock, msg, text) {
                     " recent messages from your private Chloe thread into this world's story context. The group roleplay model can now use them for continuity. This was an explicit one-time snapshot; future private messages stay private unless you repeat the preview and confirmation."
                 );
             } catch (err) {
-                PRIVATE_SEED_CONFIRMATIONS.delete(key);
+                clearPrivateSeedConfirmation(key);
                 await sendText(sock, msg, commandErrorText(err));
             }
             return { handledCommand: true, consumeMessage: true };
@@ -418,12 +438,12 @@ async function handleChatCommand(sock, msg, text) {
 
         const storySeed = getCreatorPrivateStorySeed(aliases);
         if (!storySeed.length) {
-            PRIVATE_SEED_CONFIRMATIONS.delete(key);
+            clearPrivateSeedConfirmation(key);
             await sendText(sock, msg, "I couldn't find recent private Chloe messages for your WhatsApp identity. Nothing was shared. Chat with Chloe privately first, then try again.");
             return { handledCommand: true, consumeMessage: true };
         }
 
-        PRIVATE_SEED_CONFIRMATIONS.set(key, {
+        stagePrivateSeedConfirmation(key, {
             worldId: world.id,
             storySeed,
             expiresAt: Date.now() + PRIVATE_SEED_CONFIRMATION_TTL_MS
