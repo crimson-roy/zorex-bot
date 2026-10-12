@@ -11,7 +11,11 @@ process.env.DATA_DIR = testDir;
 const characters = require("../lib/characterRegistry");
 const subscriptions = require("../lib/subscriptionStore");
 const worlds = require("../lib/sharedWorldStore");
-const { handleSharedWorldMessage, buildWorldSystemPrompt } = require("../commands/sharedWorld");
+const {
+    handleSharedWorldMessage,
+    buildWorldSystemPrompt,
+    validateWorldReply
+} = require("../commands/sharedWorld");
 const dataPath = require("../lib/dataPath");
 
 const GROUP = "test-room@g.us";
@@ -149,6 +153,30 @@ async function main() {
         const worldPrompt = buildWorldSystemPrompt(active);
         assert.match(worldPrompt, /"tier":\s*"couple"/, "existing Chloe relationship tier should enter world context");
         assert.match(worldPrompt, /never write a human user's dialogue/i, "human agency rules should be included in the prompt");
+
+        assert.equal(
+            validateWorldReply(
+                "**Chloe:** Chloe glances toward the visitor. \"Good evening.\"\n\n**Crescent:** Crescent nods politely.",
+                active
+            ).valid,
+            true,
+            "properly labelled assigned NPC dialogue should be accepted"
+        );
+        assert.equal(
+            validateWorldReply("**Unknown NPC:** A stranger walks into the room.", active).valid,
+            false,
+            "unassigned NPCs must not be introduced as speakers"
+        );
+        assert.equal(
+            validateWorldReply("**Owner Registered:** I bow politely.", active).valid,
+            false,
+            "human users must not be generated as speakers"
+        );
+        assert.equal(
+            validateWorldReply("Chloe looks toward the visitor without a speaker label.", active).valid,
+            false,
+            "unlabelled narration should fail closed and be corrected"
+        );
 
         const summaryUpdated = worlds.updateWorldMemorySummary(
             GROUP,
