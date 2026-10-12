@@ -64,6 +64,7 @@ function commandErrorText(err) {
         duplicate_character: "You and the other user must bring different companions. Try .character select crescent before accepting.",
         world_exists: "This group already has a world. The creator should use .chat add @user to invite another member.",
         creator_in_world: "You already belong to a shared world. Use .chat status to check it.",
+        creator_pending_invite: "You already have a pending invitation to another shared world. Accept it or let it expire first.",
         invitee_in_world: "That user already belongs to another shared world.",
         invite_pending: "That user already has a pending world invitation.",
         no_active_world: "There isn't an active shared world in this group yet.",
