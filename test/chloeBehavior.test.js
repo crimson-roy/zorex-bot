@@ -62,6 +62,11 @@ async function main() {
             "> *She sighs and looks away.*\nFine.",
             "standalone parenthetical actions should be converted to blockquotes"
         );
+        assert.equal(
+            formatActionBeats("She folds her arms and looks away."),
+            "> *She folds her arms and looks away.*",
+            "plain standalone action sentences should be converted to blockquotes"
+        );
 
         const existingRelationshipPath = path.join(testDir, "relationships.json");
         fs.writeFileSync(existingRelationshipPath, JSON.stringify({
