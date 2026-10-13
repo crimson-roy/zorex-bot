@@ -70,7 +70,7 @@ async function main() {
 
         const existingRelationshipPath = path.join(testDir, "relationships.json");
         fs.writeFileSync(existingRelationshipPath, JSON.stringify({
-            "person-phone@s.whatsapp.net": {
+            "person-phone:17@s.whatsapp.net": {
                 trust: 0,
                 affection: 0,
                 conversations: 3,
@@ -91,8 +91,10 @@ async function main() {
             "person-phone@s.whatsapp.net"
         ], { trustDelta: 0.1, affectionDelta: 0.02 });
         const stored = JSON.parse(fs.readFileSync(existingRelationshipPath, "utf8"));
-        assert.equal(stored["person-phone@s.whatsapp.net"].conversations, 4);
-        assert.ok(stored["person-phone@s.whatsapp.net"].trust > 0);
+        assert.equal(stored["person-phone:17@s.whatsapp.net"].conversations, 4);
+        assert.ok(stored["person-phone:17@s.whatsapp.net"].trust > 0);
+        assert.equal(stored["person-phone@s.whatsapp.net"], undefined,
+            "device suffix normalization should reuse the stored relationship record");
         assert.equal(stored["person-lid@lid"], undefined,
             "alias-based updates must not create a duplicate relationship record");
 
