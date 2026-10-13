@@ -127,7 +127,7 @@ function commandErrorText(err) {
         character_locked: "Your companion is locked while you belong to a shared world. Exit or disband the world before changing characters."
     };
 
-    return known[err?.code] || err?.message || "That action couldn't be completed.";
+    return known[err?.code] || "That action couldn't be completed. Check the command and try again.";
 }
 
 async function sendText(sock, msg, text, extra = {}) {
@@ -355,20 +355,25 @@ function getCreatorPrivateStorySeed(aliases) {
 
 function helpText() {
     return [
-        "🌍 Shared-world commands",
+        "╭── 🌍 *SHARED WORLD* ──╮",
         "",
-        ".chat join @user — invite one tagged group member",
-        ".chat join accept — accept an invitation",
-        ".chat add @user — creator invites another member",
-        ".chat members — list world members and companions",
-        ".chat status — show the world status",
-        ".chat exit — leave (not available to the creator)",
-        ".chat disband — creator closes the world",
-        ".chat seed private — preview sharing your private Chloe thread",
-        ".chat seed private confirm — share the previewed thread with the world",
-        ".chat seed private cancel — cancel a pending preview",
+        "👥 *.chat join @user* — invite a group member",
+        "✅ *.chat join accept* — accept an invitation",
+        "➕ *.chat add @user* — invite another member (creator)",
+        "👤 *.chat members* — view the world members",
+        "📊 *.chat status* — view world status",
+        "🚪 *.chat exit* — leave the world",
+        "🛑 *.chat disband* — close the world (creator)",
         "",
-        "Private story history is never imported automatically. A creator must preview and explicitly confirm it in the group. Both users must have different current companions. Free worlds allow 2 human members; active Standard/Pro/Ultra subscriptions allow up to 5. Invitations expire after 10 minutes."
+        "🔒 *Private story sharing*",
+        ".chat seed private — preview what may be shared",
+        ".chat seed private confirm — confirm sharing",
+        ".chat seed private cancel — cancel sharing",
+        "",
+        "Private story context is added only after you preview and confirm it.",
+        "Members must choose different companions. Free worlds support 2 people; active paid plans support up to 5. Invitations expire after 10 minutes.",
+        "",
+        "╰────────────────────╯"
     ].join("\n");
 }
 
