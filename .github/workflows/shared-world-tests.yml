@@ -33,6 +33,7 @@ jobs:
           node --check lib/chloePersona.js
           node --check lib/chloeStyle.js
           node --check lib/chloeStickers.js
+          node --check lib/relationshipEngine.js
           node --check lib/chloePriorityStore.js
           node --check lib/characterRegistry.js
           node --check lib/subscriptionStore.js
