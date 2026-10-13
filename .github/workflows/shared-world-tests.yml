@@ -28,6 +28,8 @@ jobs:
           node --check commands/sharedWorld.js
           node --check commands/owner.js
           node --check commands/cshop.js
+          node --check commands/image.js
+          node --check commands/video.js
           node --check lib/chloePersona.js
           node --check lib/chloeStyle.js
           node --check lib/chloeStickers.js
