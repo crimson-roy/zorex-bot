@@ -861,9 +861,8 @@ async function handleMessage(
         try {
 
             const rel =
-                getRelationship(
-                    userId
-                );
+                getRelationshipForAliases(getIdentityAliases(msg)) ||
+                getRelationship(userId);
 
             const tier =
                 getTier(
