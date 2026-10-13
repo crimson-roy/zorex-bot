@@ -23,18 +23,19 @@ async function main() {
             tier: "stranger"
         });
         assert.match(zeroTrust, /Trust: 0\.00\/10/);
-        assert.match(zeroTrust, /guarded, reserved, observant/i);
-        assert.match(zeroTrust, /Do not be automatically sweet/i);
+        assert.match(zeroTrust, /cold, brief, observant and guarded/i);
+        assert.match(zeroTrust, /Do not reward a basic compliment/i);
         assert.match(zeroTrust, /No pet names, flirting/i);
-        assert.match(zeroTrust, /not a command to be cruel/i);
+        assert.match(zeroTrust, /ACTION OWNERSHIP/i);
 
         const acquaintance = buildRelationshipInstructions({
             trust: 2.5,
             affection: 1,
             tier: "acquaintance"
         });
-        assert.match(acquaintance, /EARLY-FAMILIARITY BEHAVIOR/i);
-        assert.match(acquaintance, /LOW-AFFECTION BOUNDARY/i);
+        assert.match(acquaintance, /ACQUAINTANCE — RESERVED/i);
+        assert.match(acquaintance, /LOW AFFECTION SCORE/i);
+        assert.match(acquaintance, /A compliment can receive a dry deflection/i);
 
         const trusted = buildRelationshipInstructions({
             trust: 8,
@@ -42,11 +43,13 @@ async function main() {
             tier: "crush"
         });
         assert.doesNotMatch(trusted, /LOW-TRUST BEHAVIOR/i);
-        assert.match(trusted, /PALACE-RAISED COMPOSURE/i);
-        assert.match(trusted, /TRUSTED BUT STILL NONCHALANT/i);
-        assert.match(CHLOE_SYSTEM_PROMPT, /composed, nonchalant, proud, observant/i);
+        assert.match(trusted, /COLD, COMPOSED BASELINE — ALL TIERS/i);
+        assert.match(trusted, /CLOSE RELATIONSHIP — WARMTH IS STILL EARNED/i);
+        assert.match(CHLOE_SYSTEM_PROMPT, /default is cold, reserved, nonchalant/i);
         assert.match(CHLOE_SYSTEM_PROMPT, /DENY IT in/i);
         assert.match(CHLOE_SYSTEM_PROMPT, /commoners do tend to be such attention seekers/i);
+        assert.match(CHLOE_SYSTEM_PROMPT, /user does not control Chloe's actions/i);
+        assert.match(CHLOE_SYSTEM_PROMPT, /attempted narration, NOT an established event/i);
 
         assert.equal(
             formatActionBeats("*She folds her arms, looking away.*\nI didn't say I trusted you."),
@@ -106,7 +109,8 @@ async function main() {
 
         console.log("PASS: zero-trust Chloe receives explicit guarded behavior");
         console.log("PASS: trust and affection boundaries are independent");
-        console.log("PASS: Chloe's nonchalant composure persists at high trust");
+        console.log("PASS: Chloe's cold baseline persists across trust tiers");
+        console.log("PASS: users cannot narrate Chloe's actions as established facts");
         console.log("PASS: in-character bot challenges trigger a composed denial style");
         console.log("PASS: physical action beats retain the > blockquote format");
         console.log("PASS: ordinary italics and existing blockquotes are preserved");
