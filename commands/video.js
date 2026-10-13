@@ -465,7 +465,7 @@ async function generateVideoFromPrompt(
                             "THROTTLED"
                         ) {
                             await progress.update(
-                                "⏳ Video provider is busy — waiting for a generation slot..."
+                                "⏳ Video generation is busy — waiting for a slot..."
                             );
                         } else if (
                             status ===
@@ -496,7 +496,7 @@ async function generateVideoFromPrompt(
                 mimetype:
                     "video/mp4",
                 caption:
-                    `🎬 *Generated Video*\n\n📝 ${cleanPrompt}\n⏱️ ${result.duration || request.duration}s\n⚙️ ${String(result.provider || "video").toUpperCase()}`
+                    `🎬 *Generated Video*\n\n📝 ${cleanPrompt}\n⏱️ ${result.duration || request.duration}s`
             },
             {
                 quoted:
@@ -537,7 +537,7 @@ async function generateVideoFromPrompt(
                 {
                     text:
                         missingProvider
-                            ? "⚠️ Video generation is not configured yet. Add FAL_KEY or RUNWAYML_API_SECRET to Zorex's .env."
+                            ? "⚠️ Video generation isn't available right now. Please try again later."
                             : "⚠️ I couldn't generate that video right now."
                 },
                 {
