@@ -51,6 +51,9 @@ jobs:
       - name: Test Chloe relationship boundaries and action formatting
         run: node test/chloeBehavior.test.js
 
+      - name: Test earned Chloe relationship progression
+        run: node test/relationshipEngine.test.js
+
       - name: Test Chloe persistent priority memory
         run: node test/chloePriorityStore.test.js
 
