@@ -25,6 +25,7 @@ cardShopHistory.json
 groupGreetings.json
 afk.json
 raffles.json
+chloePriorities.json
 
 # Baileys/session runtime
 auth/
