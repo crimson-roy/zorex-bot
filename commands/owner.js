@@ -625,10 +625,7 @@ ${role}`,
 
 
 
-    /*
-        SHARED-WORLD SUBSCRIPTIONS
-        Manual owner activation only; payment is not verified by this command.
-    */
+    // Shared-world subscriptions. Confirm payment outside the bot before activating a paid plan.
 
 else if (text === ".sus" || text.startsWith(".sus ")) {
     const args = text.replace(/^\.sus\b/i, "").trim();
@@ -640,12 +637,12 @@ else if (text === ".sus" || text.startsWith(".sus ")) {
             msg.key.remoteJid,
             {
                 text:
-                    "🧾 Shared-world subscriptions\n\n" +
-                    ".sus status — check your own plan\n" +
-                    ".sus status @user — main-owner only\n" +
-                    ".sus activate @user <standard|pro|ultra> <days> <payment-reference> — MAIN_OWNER only\n" +
-                    ".sus revoke @user — MAIN_OWNER only\n\n" +
-                    "Activation is manual. Use it only after independently confirming payment; this command does not verify payments with a provider. Standard/Pro/Ultra raise the shared-world member limit to 5."
+                    "╭ *SHARED-WORLD SUBSCRIPTIONS* 🧾 ╮\n\n" +
+                    ".sus status — view your plan\n" +
+                    ".sus status @user — inspect a member's plan (Lord Crimson only)\n" +
+                    ".sus activate @user <standard|pro|ultra> <days> <payment-reference> — activate a plan (Lord Crimson only)\n" +
+                    ".sus revoke @user — cancel a plan (Lord Crimson only)\n\n" +
+                    "Standard, Pro and Ultra plans support up to 5 human members in a shared world."
             },
             { quoted: msg }
         );
@@ -732,11 +729,10 @@ else if (text === ".sus" || text.startsWith(".sus ")) {
                 msg.key.remoteJid,
                 {
                     text:
-                        "✅ Manual subscription activation recorded for @" + target.mentionJid.split("@")[0] +
+                        "✅ Subscription activated for @" + target.mentionJid.split("@")[0] +
                         ".\nPlan: " + plan.toUpperCase() +
                         "\nDuration: " + days + " days" +
-                        "\nExpires: " + expiresAt.toISOString() +
-                        "\n\nPayment was not automatically verified by this command.",
+                        "\nExpires: " + expiresAt.toISOString(),
                     mentions: [target.mentionJid]
                 },
                 { quoted: msg }
