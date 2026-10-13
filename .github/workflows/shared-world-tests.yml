@@ -23,8 +23,11 @@ jobs:
       - name: Syntax check changed runtime files
         run: |
           node --check index.js
+          node --check commands/chloe.js
           node --check commands/sharedWorld.js
           node --check commands/owner.js
+          node --check lib/chloePersona.js
+          node --check lib/chloeStyle.js
           node --check lib/characterRegistry.js
           node --check lib/subscriptionStore.js
           node --check lib/companionMemory.js
@@ -37,3 +40,6 @@ jobs:
 
       - name: Test manual subscription commands and access control
         run: node test/subscriptionCommand.test.js
+
+      - name: Test Chloe relationship boundaries and action formatting
+        run: node test/chloeBehavior.test.js
