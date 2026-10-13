@@ -91,7 +91,7 @@ async function main() {
             "one user's family memories must never leak to another user");
 
         priorities.applyUpdate(
-            ["123456@s.whatsapp.net"],
+            ["family-test@lid", "123456@s.whatsapp.net"],
             {
                 upserts: [{
                     key: "relationship.status",
