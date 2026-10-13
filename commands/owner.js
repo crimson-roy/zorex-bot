@@ -641,12 +641,13 @@ else if (text === ".sus" || text.startsWith(".sus ")) {
             msg.key.remoteJid,
             {
                 text:
-                    "🧾 Shared-world subscriptions\n\n" +
-                    ".sus status — check your own plan\n" +
-                    ".sus status @user — Lord Crimson only\n" +
-                    ".sus activate @user <standard|pro|ultra> <days> <payment-reference> — Lord Crimson only\n" +
-                    ".sus revoke @user — Lord Crimson only\n\n" +
-                    "Standard, Pro and Ultra plans allow up to 5 people in a shared world."
+                    "╭── 🧾 *SHARED-WORLD SUBSCRIPTIONS* ──╮\n\n" +
+                    "📋 *.sus status* — check your plan\n" +
+                    "🔎 *.sus status @user* — Lord Crimson only\n" +
+                    "✅ *.sus activate @user <standard|pro|ultra> <days> <payment-reference>* — Lord Crimson only\n" +
+                    "🛑 *.sus revoke @user* — Lord Crimson only\n\n" +
+                    "💎 Standard, Pro and Ultra plans allow up to 5 people in a shared world.\n\n" +
+                    "╰──────────────────────────────────╯"
             },
             { quoted: msg }
         );
@@ -677,7 +678,7 @@ else if (text === ".sus" || text.startsWith(".sus ")) {
 
         return await sock.sendMessage(
             msg.key.remoteJid,
-            { text: "🧾 Subscription status\n\n" + statusText },
+            { text: "╭── 🧾 *SUBSCRIPTION STATUS* ──╮\n\n" + statusText + "\n\n╰────────────────────────╯" },
             { quoted: msg }
         );
     }
@@ -732,10 +733,12 @@ else if (text === ".sus" || text.startsWith(".sus ")) {
                 msg.key.remoteJid,
                 {
                     text:
-                        "✅ Subscription activated for @" + target.mentionJid.split("@")[0] +
+                        "╭── ✅ *SUBSCRIPTION ACTIVATED* ──╮\n\n" +
+                        "Subscription activated for @" + target.mentionJid.split("@")[0] +
                         ".\nPlan: " + plan.toUpperCase() +
                         "\nDuration: " + days + " days" +
-                        "\nExpires: " + expiresAt.toISOString(),
+                        "\nExpires: " + expiresAt.toISOString() +
+                        "\n\n╰──────────────────────────────╯",
                     mentions: [target.mentionJid]
                 },
                 { quoted: msg }
