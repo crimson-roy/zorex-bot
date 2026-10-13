@@ -99,6 +99,16 @@ async function main() {
         assert.equal(friendIds[0], FRIEND_LID, "friend LID should be primary");
         assert.equal(characters.getSelectedCharacter(ownerIds).id, "chloe", "existing users default to Chloe");
 
+        await handleSharedWorldMessage(sock, groupMessage(
+            "Owner", OWNER_PN, OWNER_LID, ".chat help"
+        ));
+        const chatHelp = sent[sent.length - 1][1].text;
+        assert.match(chatHelp, /SHARED WORLD/);
+        assert.match(chatHelp, /preview and confirm/i);
+        assert.doesNotMatch(chatHelp, /manual|provider|implementation details/i,
+            ".chat help should be user-facing, not expose internal implementation notes");
+        sent.length = 0;
+
         characters.setSelectedCharacter(friendIds, "chloe");
 
         const outsideInvite = groupMessage(
