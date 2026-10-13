@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/shared-world-roleplay-v1
+      - chloe-command-ui-polish
   pull_request:
     branches:
       - main
