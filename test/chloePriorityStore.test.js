@@ -90,6 +90,41 @@ async function main() {
         assert.deepEqual(priorities.getPriorities(["different-user@lid"]), [],
             "one user's family memories must never leak to another user");
 
+        priorities.applyUpdate(
+            ["123456@s.whatsapp.net"],
+            {
+                upserts: [{
+                    key: "relationship.status",
+                    category: "relationship",
+                    title: "Group roleplay relationship",
+                    details: "In this group story, Chloe and this sender are only acquaintances.",
+                    priority: "normal"
+                }],
+                complete: [],
+                remove: []
+            },
+            150000,
+            "story-group@g.us"
+        );
+        const groupContext = priorities.buildPriorityContext(
+            ["family-test@lid"],
+            "story-group@g.us"
+        );
+        assert.match(groupContext, /only acquaintances/);
+        assert.doesNotMatch(groupContext, /married in their roleplay/,
+            "group-story facts must not pull in the private relationship state");
+        const otherGroupContext = priorities.buildPriorityContext(
+            ["123456@s.whatsapp.net"],
+            "other-story@g.us"
+        );
+        assert.equal(otherGroupContext, "",
+            "one group's priorities must not leak into a different group");
+        assert.match(
+            priorities.buildPriorityContext(["123456@s.whatsapp.net"]),
+            /married in their roleplay/,
+            "private priorities should remain intact when group-specific memories exist"
+        );
+
         const corrected = priorities.applyUpdate(
             ["123456@s.whatsapp.net"],
             {
