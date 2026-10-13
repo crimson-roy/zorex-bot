@@ -26,8 +26,10 @@ jobs:
           node --check commands/chloe.js
           node --check commands/sharedWorld.js
           node --check commands/owner.js
+          node --check commands/cshop.js
           node --check lib/chloePersona.js
           node --check lib/chloeStyle.js
+          node --check lib/chloeStickers.js
           node --check lib/chloePriorityStore.js
           node --check lib/characterRegistry.js
           node --check lib/subscriptionStore.js
@@ -47,3 +49,12 @@ jobs:
 
       - name: Test Chloe persistent priority memory
         run: node test/chloePriorityStore.test.js
+
+      - name: Test Chloe sticker relationship gating
+        run: node test/chloeStickers.test.js
+
+      - name: Test CShop public message formatting
+        run: node test/cshopFormat.test.js
+
+      - name: Test public command-help copy
+        run: node test/commandHelp.test.js
