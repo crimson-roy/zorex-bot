@@ -10,9 +10,11 @@ process.env.DATA_DIR = testDir;
 
 const {
     buildRelationshipInstructions,
+    buildAgencyInstructions,
     formatActionBeats
 } = require("../lib/chloeStyle");
 const { CHLOE_SYSTEM_PROMPT } = require("../lib/chloePersona");
+const { resolveMoodForTier } = require("../lib/chloeStickers");
 const relationships = require("../lib/relationshipStore");
 
 async function main() {
@@ -47,6 +49,19 @@ async function main() {
         assert.match(CHLOE_SYSTEM_PROMPT, /composed, nonchalant, proud, observant/i);
         assert.match(CHLOE_SYSTEM_PROMPT, /DENY IT in/i);
         assert.match(CHLOE_SYSTEM_PROMPT, /commoners do tend to be such attention seekers/i);
+        assert.match(CHLOE_SYSTEM_PROMPT, /Never accept a user's invented narration of Chloe's actions/i);
+        assert.match(buildAgencyInstructions(), /The user controls themselves, not Chloe/i);
+        assert.match(buildAgencyInstructions(), /do not accept that narration as canon/i);
+
+        assert.equal(resolveMoodForTier("stranger", "happy"), "neutral");
+        assert.equal(resolveMoodForTier("stranger", "shy"), "neutral");
+        assert.equal(resolveMoodForTier("stranger", "loving"), "neutral");
+        assert.equal(resolveMoodForTier("acquaintance", "happy"), "neutral");
+        assert.equal(resolveMoodForTier("friend", "happy"), "neutral");
+        assert.equal(resolveMoodForTier("friend", "laughing"), "laughing");
+        assert.equal(resolveMoodForTier("bestfriend", "happy"), "happy");
+        assert.equal(resolveMoodForTier("crush", "loving"), "loving");
+        assert.equal(resolveMoodForTier("couple", "special"), "special");
 
         assert.equal(
             formatActionBeats("*She folds her arms, looking away.*\nI didn't say I trusted you."),
@@ -108,6 +123,8 @@ async function main() {
         console.log("PASS: trust and affection boundaries are independent");
         console.log("PASS: Chloe's nonchalant composure persists at high trust");
         console.log("PASS: in-character bot challenges trigger a composed denial style");
+        console.log("PASS: Chloe keeps control over her own actions and feelings");
+        console.log("PASS: warm sticker moods require earned closeness");
         console.log("PASS: physical action beats retain the > blockquote format");
         console.log("PASS: ordinary italics and existing blockquotes are preserved");
         console.log("PASS: phone/LID aliases reuse one relationship record");
