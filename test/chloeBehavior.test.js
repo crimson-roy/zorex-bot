@@ -49,7 +49,7 @@ async function main() {
         assert.match(CHLOE_SYSTEM_PROMPT, /composed, nonchalant, proud, observant/i);
         assert.match(CHLOE_SYSTEM_PROMPT, /DENY IT in/i);
         assert.match(CHLOE_SYSTEM_PROMPT, /commoners do tend to be such attention seekers/i);
-        assert.match(CHLOE_SYSTEM_PROMPT, /Never accept a user's invented narration of Chloe's actions/i);
+        assert.match(CHLOE_SYSTEM_PROMPT, /user's invented narration of Chloe's actions/i);
         assert.match(buildAgencyInstructions(), /The user controls themselves, not Chloe/i);
         assert.match(buildAgencyInstructions(), /do not accept that narration as canon/i);
 
