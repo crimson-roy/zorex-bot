@@ -222,7 +222,12 @@ const AI_IN_FLIGHT = new Set();
 // SYSTEM PROMPT
 // ============================================================
 
-function buildSystemPrompt(userId, relationshipAliases) {
+function getPriorityScope(chatId) {
+    const normalized = String(chatId || "").trim().toLowerCase();
+    return normalized.endsWith("@g.us") ? normalized : "private";
+}
+
+function buildSystemPrompt(userId, relationshipAliases, chatId = "private") {
 
     const aliases =
         Array.isArray(relationshipAliases) && relationshipAliases.length
@@ -250,7 +255,10 @@ function buildSystemPrompt(userId, relationshipAliases) {
         });
 
     const priorityContext =
-        chloePriorityStore.buildPriorityContext(aliases);
+        chloePriorityStore.buildPriorityContext(
+            aliases,
+            getPriorityScope(chatId)
+        );
 
     return (
         `${CHLOE_SYSTEM_PROMPT}\n\n` +
@@ -829,7 +837,8 @@ async function handleMessage(
         const systemPrompt =
             buildSystemPrompt(
                 userId,
-                relationshipAliases
+                relationshipAliases,
+                chatId
             );
 
 
@@ -859,7 +868,9 @@ async function handleMessage(
             try {
                 const savedCounts = chloePriorityStore.applyUpdate(
                     relationshipAliases,
-                    extractedPriorityMemory.update
+                    extractedPriorityMemory.update,
+                    Date.now(),
+                    getPriorityScope(chatId)
                 );
                 if (savedCounts.changed) {
                     console.log("[CHLOE PRIORITIES] Persistent continuity updated.", {
