@@ -29,7 +29,6 @@ const { judgeExchange } =
     require("../lib/relationshipEngine");
 
 const {
-    recordExchange,
     recordExchangeForAliases,
     getRelationship,
     getRelationshipForAliases,
