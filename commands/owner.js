@@ -625,11 +625,9 @@ ${role}`,
 
 
 
-    /*
-        SHARED-WORLD SUBSCRIPTIONS
-        The authorised operator checks payment outside this handler before activating a plan.
-        This command records the plan and its reference; it does not process payments.
-    */
+    // SHARED-WORLD SUBSCRIPTIONS
+    // The authorised operator checks payment outside this handler before activating a plan.
+    // This command records the plan and its reference; it does not process payments.
 
 else if (text === ".sus" || text.startsWith(".sus ")) {
     const args = text.replace(/^\.sus\b/i, "").trim();
