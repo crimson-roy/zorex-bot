@@ -30,7 +30,9 @@ const { judgeExchange } =
 
 const {
     recordExchange,
+    recordExchangeForAliases,
     getRelationship,
+    getRelationshipForAliases,
     getTier
 } = require("../lib/relationshipStore");
 
@@ -39,6 +41,12 @@ const { pickSticker } =
 
 const { MAIN_OWNER } =
     require("../config");
+
+const { getIdentityAliases } = require("../lib/characterRegistry");
+const {
+    buildRelationshipInstructions,
+    formatActionBeats
+} = require("../lib/chloeStyle");
 
 // PERSISTENCE
 const dataPath =
@@ -73,10 +81,10 @@ const MAX_MESSAGE_CHARS = 700;
 const TIER_INSTRUCTIONS = {
 
     stranger:
-        "RIGHT NOW: You barely know this person, so stay a little observant and " +
-        "guarded without being cold or stiff. You can still answer a greeting " +
-        "naturally, joke if the moment is funny, or show basic kindness. Let " +
-        "familiarity build; don't use pet names or intense affection too soon.",
+        "RIGHT NOW: Trust is low. Stay reserved, observant and guarded rather than automatically warm. " +
+        "You can be civil, but avoid eager reassurance, excessive praise, pet names, flirtation or affectionate behavior. " +
+        "Be brief, dry, skeptical or unimpressed when the conversation calls for it. Do not become cruel for no reason; " +
+        "make warmth something earned rather than the default.",
 
     acquaintance:
         "RIGHT NOW: You're getting used to this person. A little warmth, " +
@@ -159,9 +167,17 @@ const AI_IN_FLIGHT = new Set();
 // SYSTEM PROMPT
 // ============================================================
 
-function buildSystemPrompt(userId) {
+function buildSystemPrompt(userId, relationshipAliases) {
 
+    const aliases =
+        Array.isArray(relationshipAliases) && relationshipAliases.length
+            ? relationshipAliases
+            : [userId];
+
+    // Prefer any already-saved phone/LID relationship record before creating
+    // a fresh zero-trust record for a newly surfaced alias.
     const rel =
+        getRelationshipForAliases(aliases) ||
         getRelationship(userId);
 
     const tier =
@@ -171,9 +187,17 @@ function buildSystemPrompt(userId) {
         TIER_INSTRUCTIONS[tier.key] ||
         TIER_INSTRUCTIONS.stranger;
 
+    const relationshipInstructions =
+        buildRelationshipInstructions({
+            trust: rel.trust,
+            affection: rel.affection,
+            tier: tier.key
+        });
+
     return (
         `${CHLOE_SYSTEM_PROMPT}\n\n` +
         `${tierInstructions}\n\n` +
+        `${relationshipInstructions}\n\n` +
         `${MOOD_TAG_INSTRUCTION}`
     );
 
@@ -738,9 +762,13 @@ async function handleMessage(
 
     try {
 
+        const relationshipAliases =
+            getIdentityAliases(msg);
+
         const systemPrompt =
             buildSystemPrompt(
-                userId
+                userId,
+                relationshipAliases
             );
 
 
@@ -783,12 +811,11 @@ async function handleMessage(
 
 
         const reply =
-            String(rawReply)
-                .replace(
-                    MOOD_TAG_REGEX,
-                    ""
-                )
-                .trim();
+            formatActionBeats(
+                String(rawReply)
+                    .replace(MOOD_TAG_REGEX, "")
+                    .trim()
+            );
 
 
         if (
@@ -945,8 +972,8 @@ async function handleMessage(
         )
             .then(
                 delta =>
-                    recordExchange(
-                        userId,
+                    recordExchangeForAliases(
+                        relationshipAliases,
                         delta
                     )
             )
