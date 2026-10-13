@@ -12,6 +12,7 @@ const {
     buildRelationshipInstructions,
     formatActionBeats
 } = require("../lib/chloeStyle");
+const { CHLOE_SYSTEM_PROMPT } = require("../lib/chloePersona");
 const relationships = require("../lib/relationshipStore");
 
 async function main() {
@@ -41,6 +42,11 @@ async function main() {
             tier: "crush"
         });
         assert.doesNotMatch(trusted, /LOW-TRUST BEHAVIOR/i);
+        assert.match(trusted, /PALACE-RAISED COMPOSURE/i);
+        assert.match(trusted, /TRUSTED BUT STILL NONCHALANT/i);
+        assert.match(CHLOE_SYSTEM_PROMPT, /composed, nonchalant, proud, observant/i);
+        assert.match(CHLOE_SYSTEM_PROMPT, /DENY IT in/i);
+        assert.match(CHLOE_SYSTEM_PROMPT, /commoners do tend to be such attention seekers/i);
 
         assert.equal(
             formatActionBeats("*She folds her arms, looking away.*\nI didn't say I trusted you."),
@@ -100,6 +106,8 @@ async function main() {
 
         console.log("PASS: zero-trust Chloe receives explicit guarded behavior");
         console.log("PASS: trust and affection boundaries are independent");
+        console.log("PASS: Chloe's nonchalant composure persists at high trust");
+        console.log("PASS: in-character bot challenges trigger a composed denial style");
         console.log("PASS: physical action beats retain the > blockquote format");
         console.log("PASS: ordinary italics and existing blockquotes are preserved");
         console.log("PASS: phone/LID aliases reuse one relationship record");
