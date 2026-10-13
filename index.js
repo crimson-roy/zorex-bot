@@ -154,6 +154,7 @@ const {
 // setBotJid lets us hand her the bot's real WhatsApp id once Baileys connects,
 // since there is no reliable env var for it.
 const { handleMessage: handleChloeMessage, setBotJid } = require("./commands/chloe");
+const { handleSharedWorldMessage, handleSharedWorldTurn } = require("./commands/sharedWorld");
 const { memCommand } = require("./commands/mem");
 const { relationCommand } = require("./commands/relation");
 
@@ -671,9 +672,19 @@ startJobResignationProcessor(sock);
         // should actually reply (chaton/chatoff state, name mention, tag, reply,
         // or explicit ".chloe <msg>"), so this is always safe to call.
         // Chloe should never block command processing.
-handleChloeMessage(sock, msg).catch(err => {
-    console.error("⚠️ Chloe error:", err.message);
+const sharedWorldRoute = await handleSharedWorldMessage(sock, msg).catch(err => {
+    console.error("⚠️ Shared-world router error:", err.message);
+    // Fail closed in groups if shared-world routing cannot read its state.
+    return { suppressChloe: String(msg.key?.remoteJid || "").endsWith("@g.us") };
 });
+
+if (sharedWorldRoute?.consumeMessage || sharedWorldRoute?.handledCommand) return;
+
+if (!sharedWorldRoute?.suppressChloe) {
+    handleChloeMessage(sock, msg).catch(err => {
+        console.error("⚠️ Chloe error:", err.message);
+    });
+}
 
         await trackActivityAndMaybeSpawn(sock, msg);   // add this line
 
@@ -690,6 +701,7 @@ handleChloeMessage(sock, msg).catch(err => {
     const reply = "hey don't tag crescent when she isn't here it's quite annoying";
 
     const isCrimsonMentioned =
+        !sharedWorldRoute?.observerMessage &&
         mentioned.includes("164317513175043@lid");
 
    const rawText =
@@ -731,6 +743,13 @@ handleChloeMessage(sock, msg).catch(err => {
     // If it DID handle the message (a real turn attempt), stop here so the
     // word doesn't fall through into command routing below.
     if (await handleWCGMessage(sock, msg, text)) return;
+
+    // Shared-world turns run after trivia/World Chain Game have had first priority,
+    // so game answers are not accidentally interpreted as roleplay dialogue.
+    if (sharedWorldRoute?.deferWorldTurn) {
+        await handleSharedWorldTurn(sock, msg, sharedWorldRoute);
+        return;
+    }
 
     const chatId = msg.key.remoteJid;
 
@@ -1810,7 +1829,9 @@ ${board}
     text.startsWith(".removeowner") ||
     text.startsWith(".resetcd") ||
     text.startsWith(".resetdl") ||
-    text.startsWith(".resetbal")
+    text.startsWith(".resetbal") ||
+    text === ".sus" ||
+    text.startsWith(".sus ")
 ) {
 
     await startOwner(sock, msg, text);

@@ -1,6 +1,8 @@
 const fs = require("fs");
 
 const { MAIN_OWNER, MAIN_OWNER_PHONE } = require("../config");
+const subscriptions = require("../lib/subscriptionStore");
+const { normalizeAliases } = require("../lib/characterRegistry");
 const { resetUserCooldown, resetAllCooldowns } = require("./cooldown");
 const { resetUserDailyLimit, resetAllDailyLimits } = require("./dailylimit");
 
@@ -142,6 +144,53 @@ function isMainOwnerMessage(msg) {
             )
         );
 
+}
+
+async function resolveSubscriptionTarget(sock, msg) {
+    const mentions = msg?.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+    if (mentions.length !== 1) {
+        return { error: "Tag exactly one current group member, for example .sus activate @user standard 30 PAYMENT-REF." };
+    }
+
+    const groupId = String(msg?.key?.remoteJid || "");
+    if (!groupId.endsWith("@g.us")) {
+        return { error: "For security, target-user subscription changes must be issued from a WhatsApp group containing that user." };
+    }
+
+    const mention = normalizeJid(mentions[0]);
+    let metadata;
+    try {
+        metadata = await sock.groupMetadata(groupId);
+    } catch (err) {
+        console.warn("[subscription] Could not verify target group membership:", err.message);
+        return { error: "I couldn't verify that user's group membership right now. Please try again." };
+    }
+
+    const values = participant => [
+        participant?.id,
+        participant?.lid,
+        participant?.phoneNumber,
+        participant?.jid,
+        participant?.pn
+    ].filter(value => typeof value === "string").map(normalizeJid);
+
+    const participant = (metadata?.participants || []).find(item =>
+        values(item).includes(mention)
+    );
+
+    if (!participant) {
+        return { error: "Tag a real member of this WhatsApp group; users outside the group cannot be changed." };
+    }
+
+    const ids = normalizeAliases([mentions[0], ...values(participant)]);
+    if (!ids.length) return { error: "I couldn't identify that WhatsApp account." };
+
+    return {
+        ids,
+        mentionJid: mentions[0],
+        name: String(participant.notify || participant.name || participant.verifiedName || "Member")
+            .trim().slice(0, 80)
+    };
 }
 
 // Save owners
@@ -574,6 +623,164 @@ ${role}`,
 } // closes .setrole
 
 
+
+
+    /*
+        SHARED-WORLD SUBSCRIPTIONS
+        Manual owner activation only; payment is not verified by this command.
+    */
+
+else if (text === ".sus" || text.startsWith(".sus ")) {
+    const args = text.replace(/^\.sus\b/i, "").trim();
+    const action = (args.split(/\s+/, 1)[0] || "help").toLowerCase();
+    const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+
+    if (action === "help") {
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text:
+                    "🧾 Shared-world subscriptions\n\n" +
+                    ".sus status — check your own plan\n" +
+                    ".sus status @user — main-owner only\n" +
+                    ".sus activate @user <standard|pro|ultra> <days> <payment-reference> — MAIN_OWNER only\n" +
+                    ".sus revoke @user — MAIN_OWNER only\n\n" +
+                    "Activation is manual. Use it only after independently confirming payment; this command does not verify payments with a provider. Standard/Pro/Ultra raise the shared-world member limit to 5."
+            },
+            { quoted: msg }
+        );
+    }
+
+    if (action === "status") {
+        let ids = normalizeAliases(senderAliases(msg));
+        if (mentions.length) {
+            if (!isMainOwnerMessage(msg)) {
+                return await sock.sendMessage(
+                    msg.key.remoteJid,
+                    { text: "❌ Only Lord Crimson can inspect another user's subscription." },
+                    { quoted: msg }
+                );
+            }
+            const target = await resolveSubscriptionTarget(sock, msg);
+            if (target.error) {
+                return await sock.sendMessage(msg.key.remoteJid, { text: target.error }, { quoted: msg });
+            }
+            ids = target.ids;
+        }
+
+        const subscription = subscriptions.getSubscription(ids);
+        const statusText = !subscription.active
+            ? "Subscription: Free\nStatus: No active paid plan."
+            : "Subscription: " + subscription.plan.toUpperCase() +
+                "\nStatus: Active\nExpires: " + String(subscription.expiresAt || "Not recorded") +
+                "\nPayment reference: " + String(subscription.orderId || "Not recorded");
+
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            { text: "🧾 Subscription status\n\n" + statusText },
+            { quoted: msg }
+        );
+    }
+
+    if (action === "activate") {
+        if (!isMainOwnerMessage(msg)) {
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "❌ Only Lord Crimson can activate a paid shared-world plan." },
+                { quoted: msg }
+            );
+        }
+
+        const cleaned = text.replace(/^\.sus\b/i, "").replace(/@\d+/g, " ").trim();
+        const match = cleaned.match(/^activate\s+(standard|pro|ultra)\s+(\d{1,3})\s+(\S{3,80})$/i);
+        if (!match) {
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text: "Usage: .sus activate @user <standard|pro|ultra> <days 1-365> <payment-reference>\nExample: .sus activate @user standard 30 ORDER-123"
+                },
+                { quoted: msg }
+            );
+        }
+
+        const plan = match[1].toLowerCase();
+        const days = Number(match[2]);
+        const paymentReference = match[3];
+        if (!Number.isInteger(days) || days < 1 || days > 365) {
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "Subscription duration must be a whole number from 1 to 365 days." },
+                { quoted: msg }
+            );
+        }
+
+        const target = await resolveSubscriptionTarget(sock, msg);
+        if (target.error) {
+            return await sock.sendMessage(msg.key.remoteJid, { text: target.error }, { quoted: msg });
+        }
+
+        const startedAt = new Date();
+        const expiresAt = new Date(startedAt.getTime() + days * 24 * 60 * 60 * 1000);
+        try {
+            subscriptions.setSubscription(target.ids, {
+                plan,
+                startedAt: startedAt.toISOString(),
+                expiresAt: expiresAt.toISOString(),
+                orderId: paymentReference
+            });
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                {
+                    text:
+                        "✅ Manual subscription activation recorded for @" + target.mentionJid.split("@")[0] +
+                        ".\nPlan: " + plan.toUpperCase() +
+                        "\nDuration: " + days + " days" +
+                        "\nExpires: " + expiresAt.toISOString() +
+                        "\n\nPayment was not automatically verified by this command.",
+                    mentions: [target.mentionJid]
+                },
+                { quoted: msg }
+            );
+        } catch (err) {
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "❌ Subscription could not be recorded: " + err.message },
+                { quoted: msg }
+            );
+        }
+    }
+
+    if (action === "revoke") {
+        if (!isMainOwnerMessage(msg)) {
+            return await sock.sendMessage(
+                msg.key.remoteJid,
+                { text: "❌ Only Lord Crimson can revoke a paid shared-world plan." },
+                { quoted: msg }
+            );
+        }
+
+        const target = await resolveSubscriptionTarget(sock, msg);
+        if (target.error) {
+            return await sock.sendMessage(msg.key.remoteJid, { text: target.error }, { quoted: msg });
+        }
+
+        subscriptions.revokeSubscription(target.ids);
+        return await sock.sendMessage(
+            msg.key.remoteJid,
+            {
+                text: "🛑 Subscription revoked for @" + target.mentionJid.split("@")[0] + ".",
+                mentions: [target.mentionJid]
+            },
+            { quoted: msg }
+        );
+    }
+
+    return await sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "Unknown .sus command. Use .sus help." },
+        { quoted: msg }
+    );
+}
 
 
     /*
