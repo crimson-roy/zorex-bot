@@ -14,6 +14,11 @@ const {
 const USERS_FILE = dataPath("users.json");
 const CSHOP_FILE = dataPath("cardShop.json");
 const CSHOP_HISTORY_FILE = dataPath("cardShopHistory.json");
+const {
+    getLagosDateKey,
+    getNextLagosMidnight,
+    buildCshopMessage
+} = require("../lib/cshopMessage");
 
 const SLOT_COUNT = 6;
 
@@ -77,46 +82,6 @@ function saveShopState(state) {
     fs.writeFileSync(
         CSHOP_FILE,
         JSON.stringify(state, null, 4)
-    );
-}
-
-
-function getLagosDateKey(now = Date.now()) {
-
-    // Nigeria is UTC+1 and does not use DST.
-    const d = new Date(
-        now + (60 * 60 * 1000)
-    );
-
-    const year = d.getUTCFullYear();
-    const month =
-        String(d.getUTCMonth() + 1)
-            .padStart(2, "0");
-    const day =
-        String(d.getUTCDate())
-            .padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-}
-
-
-function getNextLagosMidnight(now = Date.now()) {
-
-    const d = new Date(
-        now + (60 * 60 * 1000)
-    );
-
-    // Midnight Lagos = 23:00 UTC.
-    return (
-        Date.UTC(
-            d.getUTCFullYear(),
-            d.getUTCMonth(),
-            d.getUTCDate() + 1,
-            0,
-            0,
-            0
-        ) -
-        (60 * 60 * 1000)
     );
 }
 
@@ -440,92 +405,6 @@ function getCurrentRotation() {
 }
 
 
-function remainingTime(expiresAt) {
-    const left =
-        Math.max(
-            0,
-            expiresAt - Date.now()
-        );
-
-    const hours =
-        Math.floor(
-            left / (60 * 60 * 1000)
-        );
-
-    const minutes =
-        Math.floor(
-            (left % (60 * 60 * 1000)) /
-            (60 * 1000)
-        );
-
-    return `${hours}h ${minutes}m`;
-}
-
-function buildShopText(state) {
-
-    const cards =
-        loadCards();
-
-    const lines = [
-        "╭── 🎴 *ZOREX CARD SHOP* ──╮",
-        "",
-        "🌙 New cards every day at 12:00 AM.",
-        ""
-    ];
-
-    if (!state.slots.length) {
-
-        lines.push(
-            "🚫 All cards for today have been sold."
-        );
-
-        lines.push("");
-
-    }
-
-    for (const slot of state.slots) {
-
-        const card =
-            cards[slot.cardId];
-
-        if (!card) continue;
-
-        const icon =
-            TIER_ICONS[slot.tier] ||
-            "⚪";
-
-        lines.push(
-`${icon} *[${slot.slot}] ${card.name}*
-├─ 🏷️ ${slot.tier}
-├─ 📚 ${card.series || "Unknown"}
-├─ 🆔 #${slot.cardId}
-└─ 💰 ${slot.price.toLocaleString()} 🌙`
-        );
-
-        lines.push("");
-
-    }
-
-    lines.push(
-        `⏳ Next reset: ${remainingTime(state.expiresAt)}`
-    );
-
-    lines.push(
-        "",
-        "🛒 Buy with:",
-        ".cshop buy <slot>",
-        "Example: .cshop buy 3",
-        "",
-        "⚠️ Each card has only one shop copy.",
-        "A purchased card won't return for 120 hours.",
-        "",
-        "╰── 🤖 Powered by Zorex ──╯"
-    );
-
-    return lines.join("\n");
-}
-
-
 async function cshopCommands(sock, msg, text) {
     const sender =
         msg.key.participant ||
@@ -542,8 +421,10 @@ async function cshopCommands(sock, msg, text) {
             chatJid,
             {
                 text:
-                    buildShopText(
-                        state
+                    buildCshopMessage(
+                        state,
+                        loadCards(),
+                        TIER_ICONS
                     )
             },
             { quoted: msg }
