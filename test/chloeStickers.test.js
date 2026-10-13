@@ -42,6 +42,15 @@ async function main() {
         assert.equal(lowTrustCompliment, neutralSticker,
             "a compliment at zero trust/affection should not produce a happy sticker");
 
+        const ordinaryPraise = pickSticker("stranger", "happy", {
+            trust: 0,
+            affection: 0,
+            userMessage: "You're so nice",
+            roots
+        });
+        assert.equal(ordinaryPraise, neutralSticker,
+            "ordinary praise at zero trust/affection must not earn a happy sticker");
+
         const lowAffectionFriend = pickSticker("friend", "happy", {
             trust: 4,
             affection: 0,
