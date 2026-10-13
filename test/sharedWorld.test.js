@@ -87,7 +87,7 @@ async function main() {
         const sharedWorldHelp = sent[sent.length - 1][1].text;
         assert.match(sharedWorldHelp, /SHARED WORLD/);
         assert.match(sharedWorldHelp, /\.chat seed private confirm/);
-        assert.match(sharedWorldHelp, /preview and confirms/);
+        assert.match(sharedWorldHelp, /previews and confirms/);
         assert.doesNotMatch(
             sharedWorldHelp,
             /developer instructions|internal implementation|developer-only/i,
