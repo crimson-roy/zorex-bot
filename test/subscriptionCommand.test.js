@@ -65,6 +65,17 @@ async function main() {
             "non-main-owner activation must not grant a plan"
         );
 
+        const helpText = ".sus help";
+        await startOwner(
+            sock,
+            message(MAIN_OWNER_PHONE, MAIN_OWNER, helpText),
+            helpText
+        );
+        const displayedHelp = sent[sent.length - 1][1].text;
+        assert.match(displayedHelp, /SHARED-WORLD SUBSCRIPTIONS/);
+        assert.doesNotMatch(displayedHelp, /activation is manual|payment is not verified|does not verify payments/i,
+            "public help should show usage, not internal payment-handling notes");
+
         const activationText = ".sus activate @2349000000001 standard 30 ORDER-123";
         await startOwner(
             sock,
@@ -99,17 +110,18 @@ async function main() {
             "main owner should be able to revoke a subscription"
         );
 
-        assert.match(
-            sent.find(item => String(item[1].text || "").includes("Manual subscription activation"))[1].text,
-            /not automatically verified/i,
-            "activation response must be transparent that payment isn't verified automatically"
-        );
+        const activationMessage = sent.find(item =>
+            String(item[1].text || "").includes("Subscription activated for")
+        )[1].text;
+        assert.match(activationMessage, /Plan: STANDARD/);
+        assert.doesNotMatch(activationMessage, /manual|not automatically verified|does not verify payments/i,
+            "success output should not expose internal command-operation notes");
 
         console.log("PASS: .sus activation is restricted to MAIN_OWNER");
         console.log("PASS: target membership and LID/phone aliases are resolved");
-        console.log("PASS: manual activation records plan, expiry and payment reference");
+        console.log("PASS: activation records plan, expiry and payment reference");
         console.log("PASS: subscription status and revocation work");
-        console.log("PASS: command does not claim to verify payment automatically");
+        console.log("PASS: public .sus output contains no internal payment-handling notes");
     } finally {
         fs.rmSync(testDir, { recursive: true, force: true });
     }

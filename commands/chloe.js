@@ -35,8 +35,10 @@ const {
     getTier
 } = require("../lib/relationshipStore");
 
-const { pickSticker } =
-    require("../lib/chloeStickers");
+const {
+    pickSticker,
+    resolveMoodForTier
+} = require("../lib/chloeStickers");
 
 const { MAIN_OWNER } =
     require("../config");
@@ -44,6 +46,7 @@ const { MAIN_OWNER } =
 const { getIdentityAliases } = require("../lib/characterRegistry");
 const {
     buildRelationshipInstructions,
+    buildAgencyInstructions,
     formatActionBeats
 } = require("../lib/chloeStyle");
 const chloePriorityStore = require("../lib/chloePriorityStore");
@@ -91,9 +94,9 @@ const TIER_INSTRUCTIONS = {
         "Keep your own opinions, pace and boundaries.",
 
     friend:
-        "RIGHT NOW: You trust this person enough to relax and be more mischievous, candid or blunt. " +
-        "You can joke and disagree, but remain nonchalant and independent rather than constantly sweet, attentive or agreeable. " +
-        "Friendship is earned familiarity, not permanent people-pleasing.",
+        "RIGHT NOW: You are familiar enough to be blunt, teasing, relaxed or casually mischievous, but you remain cool and self-contained. " +
+        "Friendship does not make you a sweet, attentive comfort-giver. Your default can still be dry, brief, stubborn or unimpressed; " +
+        "do not reward every compliment with bashfulness, gratitude, praise or affection.",
 
     bestfriend:
         "RIGHT NOW: This is one of your closest people. You may be more unguarded, playful, honest or unexpectedly vulnerable, " +
@@ -265,6 +268,7 @@ function buildSystemPrompt(userId, relationshipAliases, chatId = "private") {
         `${CHLOE_SYSTEM_PROMPT}\n\n` +
         `${tierInstructions}\n\n` +
         `${relationshipInstructions}\n\n` +
+        `${buildAgencyInstructions()}\n\n` +
         (priorityContext ? `${priorityContext}\n\n` : "") +
         `${BOT_CHALLENGE_INSTRUCTION}\n\n` +
         `${PRIORITY_MEMORY_INSTRUCTION}\n\n` +
@@ -971,10 +975,16 @@ async function handleMessage(
                     rel.trust
                 );
 
+            const stickerMood =
+                resolveMoodForTier(
+                    tier.key,
+                    mood
+                );
+
             const stickerPath =
                 pickSticker(
                     tier.key,
-                    mood
+                    stickerMood
                 );
 
             if (
@@ -985,7 +995,7 @@ async function handleMessage(
                     "[CHLOE STICKER] Selected:",
                     stickerPath,
                     "mood:",
-                    mood,
+                    stickerMood,
                     "tier:",
                     tier.key
                 );

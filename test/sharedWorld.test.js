@@ -80,6 +80,20 @@ function groupMessage(name, pn, lid, text, mentions = []) {
 
 async function main() {
     try {
+        await handleSharedWorldMessage(
+            sock,
+            groupMessage("Owner", OWNER_PN, OWNER_LID, ".chat help")
+        );
+        const sharedWorldHelp = sent[sent.length - 1][1].text;
+        assert.match(sharedWorldHelp, /SHARED WORLD/);
+        assert.match(sharedWorldHelp, /\.chat seed private confirm/);
+        assert.match(sharedWorldHelp, /previews and confirms/);
+        assert.doesNotMatch(
+            sharedWorldHelp,
+            /developer instructions|internal implementation|developer-only/i,
+            "public .chat help should not reveal developer-only notes"
+        );
+
         const ownerIds = characters.getIdentityAliases({
             key: {
                 remoteJid: GROUP,
