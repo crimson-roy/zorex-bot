@@ -625,10 +625,9 @@ ${role}`,
 
 
 
-    /*
-        SHARED-WORLD SUBSCRIPTIONS
-        Manual owner activation only; payment is not verified by this command.
-    */
+    // SHARED-WORLD SUBSCRIPTIONS
+    // The authorised operator checks payment outside this handler before activating a plan.
+    // This command records the plan and its reference; it does not process payments.
 
 else if (text === ".sus" || text.startsWith(".sus ")) {
     const args = text.replace(/^\.sus\b/i, "").trim();
@@ -640,12 +639,13 @@ else if (text === ".sus" || text.startsWith(".sus ")) {
             msg.key.remoteJid,
             {
                 text:
-                    "🧾 Shared-world subscriptions\n\n" +
-                    ".sus status — check your own plan\n" +
-                    ".sus status @user — main-owner only\n" +
-                    ".sus activate @user <standard|pro|ultra> <days> <payment-reference> — MAIN_OWNER only\n" +
-                    ".sus revoke @user — MAIN_OWNER only\n\n" +
-                    "Activation is manual. Use it only after independently confirming payment; this command does not verify payments with a provider. Standard/Pro/Ultra raise the shared-world member limit to 5."
+                    "╭── 🧾 *SHARED-WORLD SUBSCRIPTIONS* ──╮\n\n" +
+                    "📋 *.sus status* — check your plan\n" +
+                    "🔎 *.sus status @user* — Lord Crimson only\n" +
+                    "✅ *.sus activate @user <standard|pro|ultra> <days> <payment-reference>* — Lord Crimson only\n" +
+                    "🛑 *.sus revoke @user* — Lord Crimson only\n\n" +
+                    "💎 Standard, Pro and Ultra plans allow up to 5 people in a shared world.\n\n" +
+                    "╰──────────────────────────────────╯"
             },
             { quoted: msg }
         );
@@ -672,12 +672,11 @@ else if (text === ".sus" || text.startsWith(".sus ")) {
         const statusText = !subscription.active
             ? "Subscription: Free\nStatus: No active paid plan."
             : "Subscription: " + subscription.plan.toUpperCase() +
-                "\nStatus: Active\nExpires: " + String(subscription.expiresAt || "Not recorded") +
-                "\nPayment reference: " + String(subscription.orderId || "Not recorded");
+                "\nStatus: Active\nExpires: " + String(subscription.expiresAt || "Not recorded");
 
         return await sock.sendMessage(
             msg.key.remoteJid,
-            { text: "🧾 Subscription status\n\n" + statusText },
+            { text: "╭── 🧾 *SUBSCRIPTION STATUS* ──╮\n\n" + statusText + "\n\n╰────────────────────────╯" },
             { quoted: msg }
         );
     }
@@ -732,19 +731,21 @@ else if (text === ".sus" || text.startsWith(".sus ")) {
                 msg.key.remoteJid,
                 {
                     text:
-                        "✅ Manual subscription activation recorded for @" + target.mentionJid.split("@")[0] +
+                        "╭── ✅ *SUBSCRIPTION ACTIVATED* ──╮\n\n" +
+                        "Subscription activated for @" + target.mentionJid.split("@")[0] +
                         ".\nPlan: " + plan.toUpperCase() +
                         "\nDuration: " + days + " days" +
                         "\nExpires: " + expiresAt.toISOString() +
-                        "\n\nPayment was not automatically verified by this command.",
+                        "\n\n╰──────────────────────────────╯",
                     mentions: [target.mentionJid]
                 },
                 { quoted: msg }
             );
         } catch (err) {
+            console.error("[subscription] Could not record subscription:", err.message);
             return await sock.sendMessage(
                 msg.key.remoteJid,
-                { text: "❌ Subscription could not be recorded: " + err.message },
+                { text: "❌ The subscription could not be updated. Please try again." },
                 { quoted: msg }
             );
         }

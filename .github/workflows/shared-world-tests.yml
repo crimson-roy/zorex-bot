@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/shared-world-roleplay-v1
+      - chloe-command-ui-polish
   pull_request:
     branches:
       - main
@@ -26,8 +27,13 @@ jobs:
           node --check commands/chloe.js
           node --check commands/sharedWorld.js
           node --check commands/owner.js
+          node --check commands/cshop.js
+          node --check commands/image.js
+          node --check commands/video.js
           node --check lib/chloePersona.js
           node --check lib/chloeStyle.js
+          node --check lib/chloeStickers.js
+          node --check lib/relationshipEngine.js
           node --check lib/chloePriorityStore.js
           node --check lib/characterRegistry.js
           node --check lib/subscriptionStore.js
@@ -45,5 +51,17 @@ jobs:
       - name: Test Chloe relationship boundaries and action formatting
         run: node test/chloeBehavior.test.js
 
+      - name: Test earned Chloe relationship progression
+        run: node test/relationshipEngine.test.js
+
       - name: Test Chloe persistent priority memory
         run: node test/chloePriorityStore.test.js
+
+      - name: Test Chloe sticker relationship gating
+        run: node test/chloeStickers.test.js
+
+      - name: Test CShop public message formatting
+        run: node test/cshopFormat.test.js
+
+      - name: Test public command-help copy
+        run: node test/commandHelp.test.js

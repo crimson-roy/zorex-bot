@@ -461,70 +461,46 @@ function remainingTime(expiresAt) {
     return `${hours}h ${minutes}m`;
 }
 
-function buildShopText(state) {
-
-    const cards =
-        loadCards();
-
+function buildShopText(state, cards = loadCards()) {
     const lines = [
-        "╭── 🎴 *ZOREX CARD SHOP* ──╮",
+        "╭ *WELCOME TO ZOREX CARD SHOP* 🎴 ╮",
+        "🌙 New cards every day at 12:00 AM (Lagos time).",
         "",
-        "🌙 New cards every day at 12:00 AM.",
-        ""
+        "🎴 ━━━━━━━ *TODAY’S CARDS* ━━━━━━━ 🎴"
     ];
 
     if (!state.slots.length) {
-
-        lines.push(
-            "🚫 All cards for today have been sold."
-        );
-
-        lines.push("");
-
+        lines.push("", "🚫 Today’s cards are sold out.");
     }
 
     for (const slot of state.slots) {
-
-        const card =
-            cards[slot.cardId];
-
+        const card = cards[slot.cardId];
         if (!card) continue;
 
-        const icon =
-            TIER_ICONS[slot.tier] ||
-            "⚪";
-
+        const icon = TIER_ICONS[slot.tier] || "⚪";
         lines.push(
-`${icon} *[${slot.slot}] ${card.name}*
-├─ 🏷️ ${slot.tier}
-├─ 📚 ${card.series || "Unknown"}
-├─ 🆔 #${slot.cardId}
-└─ 💰 ${slot.price.toLocaleString()} 🌙`
+            "",
+            `${icon} *[ ${slot.slot} ] ${card.name}*`,
+            `├─ 🏷️ Tier: ${slot.tier}`,
+            `├─ 📚 Series: ${card.series || "Unknown"}`,
+            `├─ 🆔 Card ID: #${slot.cardId}`,
+            `└─ 💰 Price: ${slot.price.toLocaleString()} 🌙`
         );
-
-        lines.push("");
-
     }
 
     lines.push(
-        `⏳ Next reset: ${remainingTime(state.expiresAt)}`
-    );
-
-    lines.push(
         "",
-        "🛒 Buy with:",
+        `⏳ Next reset: ${remainingTime(state.expiresAt)}`,
+        "",
+        "🛒 ━━━━━━━ *HOW TO BUY* ━━━━━━━ 🛒",
         ".cshop buy <slot>",
-        "Example: .cshop buy 3",
+        "👉 Example: .cshop buy 3",
         "",
-        "⚠️ Each card has only one shop copy.",
-        "A purchased card won't return for 120 hours.",
-        "",
-        "╰── 🤖 Powered by Zorex ──╯"
+        "╰──── 🤖 Powered by Zorex AI ────╯"
     );
 
     return lines.join("\n");
 }
-
 
 async function cshopCommands(sock, msg, text) {
     const sender =
@@ -636,7 +612,7 @@ async function cshopCommands(sock, msg, text) {
             chatJid,
             {
                 text:
-                    "❌ That card no longer exists in card.json."
+                    "❌ That card is no longer available. Refresh .cshop and choose another slot."
             },
             { quoted: msg }
         );
@@ -706,5 +682,7 @@ ${icon} ${card.name}
 
 module.exports = {
     cshopCommands,
-    getCurrentRotation
+    getCurrentRotation,
+    getNextLagosMidnight,
+    buildShopText
 };

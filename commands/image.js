@@ -365,7 +365,7 @@ async function generateImageFromPrompt(
                     );
 
                 await progress.update(
-                    `⏳ Azure is temporarily unavailable — retrying in ${waitSeconds}s...`
+                    `⏳ Image generation is temporarily unavailable — retrying in ${waitSeconds}s...`
                 );
 
                 await sleep(
@@ -437,19 +437,11 @@ async function generateImageFromPrompt(
 
         if (ownsProgress || options.source === "ai") {
 
-            const configHint =
-                /Azure image API error 404/i.test(err.message)
-                    ? "\n\nThe image endpoint or deployment name may be incorrect."
-                    : /Azure image API error 401|Azure image API error 403/i.test(err.message)
-                        ? "\n\nThe image API credentials or deployment access may be invalid."
-                        : "";
-
             await sock.sendMessage(
                 chatId,
                 {
                     text:
-                        "⚠️ I couldn't generate that image right now." +
-                        configHint
+                        "⚠️ I couldn't generate that image right now. Please try again in a moment."
                 },
                 {
                     quoted: msg
