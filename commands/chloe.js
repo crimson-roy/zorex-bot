@@ -46,6 +46,7 @@ const { MAIN_OWNER } =
 const { getIdentityAliases } = require("../lib/characterRegistry");
 const {
     buildRelationshipInstructions,
+    buildAgencyInstructions,
     formatActionBeats
 } = require("../lib/chloeStyle");
 const chloePriorityStore = require("../lib/chloePriorityStore");
@@ -267,6 +268,7 @@ function buildSystemPrompt(userId, relationshipAliases, chatId = "private") {
         `${CHLOE_SYSTEM_PROMPT}\n\n` +
         `${tierInstructions}\n\n` +
         `${relationshipInstructions}\n\n` +
+        `${buildAgencyInstructions()}\n\n` +
         (priorityContext ? `${priorityContext}\n\n` : "") +
         `${BOT_CHALLENGE_INSTRUCTION}\n\n` +
         `${PRIORITY_MEMORY_INSTRUCTION}\n\n` +
