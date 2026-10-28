@@ -2101,6 +2101,31 @@ async function aiCommand(sock, msg, text) {
             routing?.action ===
             "execute_commands"
         ) {
+            const requestedActions = Array.isArray(routing.commands)
+                ? routing.commands
+                : [];
+
+            // Do not execute wagering-related actions through Ari's AI router.
+            // Authentication/resume must not turn into a shortcut for those actions.
+            if (requestedActions.some(action =>
+                ["casino", "slots"].includes(
+                    String(action?.name || "").toLowerCase()
+                )
+            )) {
+                await progress.fail(
+                    "Ari can't execute betting or casino actions."
+                );
+                return await sock.sendMessage(
+                    chatId,
+                    {
+                        text: "Ari can't execute betting or casino actions. You can still ask about your account or other supported Zorex features."
+                    },
+                    {
+                        quoted: msg
+                    }
+                );
+            }
+
             const commands =
                 bindCommandContext(
                     normalizeCommandPlan(
