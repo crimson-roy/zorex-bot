@@ -1737,6 +1737,20 @@ async function aiCommand(sock, msg, text) {
         );
 
     if (!auth.allowed) {
+        if (
+            auth.resumeRequest?.msg &&
+            auth.resumeRequest?.text
+        ) {
+            // PIN setup/verification succeeded. Resume the exact original
+            // request and original message context instead of asking the user
+            // to type the prompt again in the chat where it began.
+            return await aiCommand(
+                sock,
+                auth.resumeRequest.msg,
+                auth.resumeRequest.text
+            );
+        }
+
         return;
     }
 
