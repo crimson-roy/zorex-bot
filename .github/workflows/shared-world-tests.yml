@@ -23,6 +23,9 @@ jobs:
       - name: Syntax check changed runtime files
         run: |
           node --check index.js
+          node --check commands/ai.js
+          node --check lib/aiAuth.js
+          node --check lib/aiUserStore.js
           node --check commands/chloe.js
           node --check commands/sharedWorld.js
           node --check commands/owner.js
@@ -37,6 +40,9 @@ jobs:
           node --check lib/sharedWorldStore.js
           node --check lib/relationshipStore.js
           node --check lib/commandRegistry.js
+
+      - name: Test AI PIN persistence and auth request resumption
+        run: node test/aiAuth.test.js
 
       - name: Test shared-world lifecycle and isolation
         run: node test/sharedWorld.test.js
