@@ -122,3 +122,76 @@ Generation remains a qualitative check; loss and generated samples should be con
 - OASST1 is an existing dataset with its own licence; using it does not make the dataset our original work.
 - This experiment does not reproduce the capabilities of a modern 2B/7B+ model. It is connected to the browser playground for early local generation tests, but its replies are not expected to be reliable yet.
 - Future work can improve subword segmentation, expand properly licensed corpora, test longer training schedules, add instruction tuning and evaluation, improve generation stopping and context management, and connect the same bridge to richer chat memory.
+
+
+## Ari-0 v3: broader pretraining and assistant fine-tuning
+
+V3 is deliberately separate from the v2 checkpoint and playground. It keeps v2's 104K checkpoint untouched. V3 uses a byte-level BPE tokenizer, a 4-layer/128-wide decoder (about 1.9M parameters at an 8,192-token vocabulary), a 256-token context, memory-mapped int16 token files, warmup/cosine learning-rate decay, gradient clipping, atomic checkpoints and fixed evaluation windows. It is still a small experimental model; greater capacity and better data do not guarantee coherent chat.
+
+### Install v3 preparation dependencies
+
+Install the CPU PyTorch build separately, then the data libraries:
+
+~~~cmd
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install pyarrow tokenizers
+~~~
+
+The packages are also listed in `training/ari0/requirements.txt`. Do not pass the PyTorch index URL when installing all requirements, because PyArrow and Tokenizers are hosted on the normal Python package index.
+
+### Prepare WikiText-103
+
+Place the four downloaded Parquet files in `data/datasets/wikitext103/`. Convert them to three isolated text splits:
+
+~~~cmd
+python training\ari0\prepare_v3.py prepare-wikitext
+~~~
+
+Train the byte-level BPE tokenizer using **training text only**, then encode each split to memory-mappable binary tokens:
+
+~~~cmd
+python training\ari0\prepare_v3.py train-tokenizer --vocab-size 8192
+python training\ari0\prepare_v3.py encode-text --text data\processed\wikitext103\train.txt --output data\processed\wikitext103\train.bin
+python training\ari0\prepare_v3.py encode-text --text data\processed\wikitext103\validation.txt --output data\processed\wikitext103\validation.bin
+python training\ari0\prepare_v3.py encode-text --text data\processed\wikitext103\test.txt --output data\processed\wikitext103\test.bin
+~~~
+
+The binary token files use 16-bit IDs and can be memory-mapped by the trainer. The test split is not used by training or validation.
+
+### Run a short pretraining pilot
+
+First run a small pilot and check temperatures, speed and loss before deciding on a longer session:
+
+~~~cmd
+python training\ari0\train_v3.py --mode pretrain --steps 500 --eval-interval 100 --eval-batches 16 --batch-size 2 --threads 2
+~~~
+
+V3 writes to `models/ari/ari0-v3/checkpoint-pretrain.pt`, not the v2 checkpoint. It refuses to overwrite an existing v3 checkpoint unless `--resume` is supplied. Continue from a saved v3 pretraining checkpoint with:
+
+~~~cmd
+python training\ari0\train_v3.py --mode pretrain --resume --steps 1000 --eval-interval 250 --eval-batches 32 --batch-size 2 --threads 2
+~~~
+
+### Prepare and fine-tune on OASST1
+
+After pretraining, encode the already prepared role-marked OASST1 text. The parallel mask marks assistant response tokens as targets while leaving user-message tokens as context only:
+
+~~~cmd
+python training\ari0\prepare_v3.py encode-conversations --text data\processed\ari0\train.txt --output data\processed\ari0-v3\oasst1-train.bin --mask data\processed\ari0-v3\oasst1-train.mask.bin
+python training\ari0\prepare_v3.py encode-conversations --text data\processed\ari0\validation.txt --output data\processed\ari0-v3\oasst1-validation.bin --mask data\processed\ari0-v3\oasst1-validation.mask.bin
+python training\ari0\train_v3.py --mode finetune --init-from models\ari\ari0-v3\checkpoint-pretrain.pt --steps 500 --eval-interval 100 --eval-batches 16 --batch-size 2 --threads 2 --learning-rate 0.0001
+~~~
+
+Fine-tuning writes a separate `checkpoint-finetune.pt`. Resume it with `--mode finetune --resume` and omit `--init-from`. The v3 model is not yet connected to the HTML playground; the existing playground continues to use Ari-0 v2 until a separate v3 inference adapter is implemented and tested.
+
+### V3 tests and safety notes
+
+~~~cmd
+python -m unittest discover -s training/ari0 -p test_v3.py -v
+~~~
+
+- The WikiText validation and test splits must never be appended to the training text or used to train the tokenizer.
+- Pretraining loss covers all next-token targets. Conversation fine-tuning masks loss to assistant turns only.
+- V3 uses CPU training by default. Start with a short pilot, inspect temperatures and throughput, and only then consider longer runs. A cooling fan does not replace temperature monitoring.
+- Dataset files, encoded token streams, tokenizers and checkpoints remain local and are ignored by Git.
+- WikiText-103 and OASST1 are third-party datasets; retain their licence and attribution when redistributing data.
