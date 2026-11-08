@@ -1,0 +1,40 @@
+name: Ari-0 foundation tests
+
+on:
+  push:
+    branches:
+      - feature/ari-local-math-v1
+    paths:
+      - "training/ari0/**"
+      - "scripts/prepare-ari0-corpus.js"
+      - "test/ari0Corpus.test.js"
+      - "package.json"
+      - ".github/workflows/ari0-foundation-tests.yml"
+  pull_request:
+    paths:
+      - "training/ari0/**"
+      - "scripts/prepare-ari0-corpus.js"
+      - "test/ari0Corpus.test.js"
+      - "package.json"
+      - ".github/workflows/ari0-foundation-tests.yml"
+
+jobs:
+  tokenizer-and-corpus:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Test hybrid tokenizer
+        run: python -m unittest discover -s training/ari0 -p test_tokenizer.py -v
+      - name: Check Python syntax
+        run: python -m py_compile training/ari0/tokenizer.py training/ari0/train.py training/ari0/generate.py training/ari0/model.py
+      - name: Test conversation corpus formatting
+        run: node test/ari0Corpus.test.js
