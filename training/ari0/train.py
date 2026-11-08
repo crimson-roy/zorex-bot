@@ -1,4 +1,4 @@
-"""Train Ari-0's small hybrid-token Transformer from random weights."""
+"""Train or continue Ari-0's small hybrid-token Transformer."""
 
 import argparse
 import random
@@ -13,6 +13,7 @@ from tokenizer import HybridTokenizer
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CORPUS_DIR = ROOT / "data" / "processed" / "ari0"
 DEFAULT_CHECKPOINT = ROOT / "models" / "ari" / "ari0" / "checkpoint-hybrid-v2.pt"
+CHECKPOINT_FORMAT = "ari0-hybrid-transformer-v2"
 
 
 def read_text(path: Path) -> str:
@@ -44,7 +45,7 @@ def estimate_loss(model, train_data, validation_data, args, device):
     for name, data in (("train", train_data), ("validation", validation_data)):
         losses = []
         for _ in range(args.eval_batches):
-            inputs, targets = make_batch(data, args.batch_size, args.block_size, device)
+            inputs, targets = make_batch(data, args.batch_size, model.config.block_size, device)
             _, loss = model(inputs, targets)
             losses.append(float(loss.item()))
         results[name] = sum(losses) / len(losses)
@@ -52,16 +53,17 @@ def estimate_loss(model, train_data, validation_data, args, device):
     return results
 
 
-def save_checkpoint(path: Path, model, config, tokenizer, step, losses):
+def save_checkpoint(path, model, tokenizer, optimizer, step, losses):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_suffix(path.suffix + ".tmp")
     torch.save(
         {
-            "format": "ari0-hybrid-transformer-v2",
+            "format": CHECKPOINT_FORMAT,
             "step": step,
-            "config": config.__dict__,
+            "config": model.config.__dict__,
             "tokenizer": tokenizer.to_dict(),
             "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
             "losses": losses,
         },
         temporary_path,
@@ -70,10 +72,17 @@ def save_checkpoint(path: Path, model, config, tokenizer, step, losses):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train Ari-0 from random initial weights.")
+    parser = argparse.ArgumentParser(description="Train Ari-0 from random weights or resume a saved checkpoint.")
     parser.add_argument("--corpus-dir", type=Path, default=DEFAULT_CORPUS_DIR)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
-    parser.add_argument("--steps", type=int, default=200)
+    parser.add_argument(
+        "--steps", type=int, default=200,
+        help="Number of additional optimizer updates to perform (default: 200).",
+    )
+    parser.add_argument(
+        "--resume", action="store_true",
+        help="Continue from the checkpoint instead of starting with random weights.",
+    )
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--block-size", type=int, default=128)
     parser.add_argument("--embedding-size", type=int, default=64)
@@ -102,9 +111,6 @@ def main():
 
     train_text = read_text(args.corpus_dir / "train.txt")
     validation_text = read_text(args.corpus_dir / "validation.txt")
-    tokenizer = HybridTokenizer.train(train_text, vocab_size=args.vocab_size)
-    train_data = encode_text(train_text, tokenizer)
-    validation_data = encode_text(validation_text, tokenizer)
 
     if args.device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but no CUDA-enabled GPU is available.")
@@ -113,43 +119,86 @@ def main():
         else "cpu"
     )
 
-    config = ModelConfig(
-        vocab_size=len(tokenizer.tokens),
-        block_size=args.block_size,
-        n_embd=args.embedding_size,
-        n_head=args.heads,
-        n_layer=args.layers,
-        dropout=0.1,
-    )
-    config.validate()
-    model = Ari0LanguageModel(config).to(device)
+    start_step = 0
+    if args.resume:
+        if not args.checkpoint.is_file():
+            raise FileNotFoundError(
+                f"Cannot resume: checkpoint not found at {args.checkpoint}. "
+                "Run training without --resume first."
+            )
+        checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=True)
+        if checkpoint.get("format") != CHECKPOINT_FORMAT:
+            raise ValueError("Resume requires an Ari-0 hybrid-token v2 checkpoint.")
+        tokenizer = HybridTokenizer.from_dict(checkpoint["tokenizer"])
+        config = ModelConfig(**checkpoint["config"])
+        config.validate()
+        model = Ari0LanguageModel(config).to(device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        start_step = int(checkpoint.get("step", 0))
+        print(f"[Ari-0] Resuming hybrid model from step {start_step}.")
+    else:
+        tokenizer = HybridTokenizer.train(train_text, vocab_size=args.vocab_size)
+        config = ModelConfig(
+            vocab_size=len(tokenizer.tokens),
+            block_size=args.block_size,
+            n_embd=args.embedding_size,
+            n_head=args.heads,
+            n_layer=args.layers,
+            dropout=0.1,
+        )
+        config.validate()
+        model = Ari0LanguageModel(config).to(device)
+        print("[Ari-0] Training a new hybrid-token model from random initial weights.")
+
+    train_data = encode_text(train_text, tokenizer)
+    validation_data = encode_text(validation_text, tokenizer)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
 
-    print("[Ari-0] Training a new hybrid-token model from random initial weights.")
+    if args.resume:
+        optimizer_state = checkpoint.get("optimizer_state_dict")
+        if optimizer_state:
+            optimizer.load_state_dict(optimizer_state)
+            # The CLI learning-rate value is the explicit rate for this continuation.
+            for group in optimizer.param_groups:
+                group["lr"] = args.learning_rate
+            print("[Ari-0] Optimizer state restored.")
+        else:
+            print(
+                "[Ari-0] This checkpoint predates optimizer-state saving. "
+                "Model weights are restored; AdamW starts with fresh optimizer state."
+            )
+
+    target_step = start_step + args.steps
     print(f"[Ari-0] Device: {device}; parameters: {parameter_count(model):,}")
     print(f"[Ari-0] Vocabulary: {len(tokenizer.tokens):,} tokens")
     print(f"[Ari-0] Encoded tokens: training {train_data.numel():,}; validation {validation_data.numel():,}")
-    print(f"[Ari-0] Context window: {args.block_size} tokens; frequent words are single tokens.")
+    print(f"[Ari-0] Context window: {model.config.block_size} tokens; frequent words are single tokens.")
+    print(f"[Ari-0] Planned updates: {start_step + 1} through {target_step}.")
     print("[Ari-0] This is still a small language-model experiment, not a capable assistant yet.")
 
-    latest_losses = {}
-    for step in range(1, args.steps + 1):
+    latest_losses = checkpoint.get("losses", {}) if args.resume else {}
+    for update in range(1, args.steps + 1):
+        global_step = start_step + update
         model.train()
-        inputs, targets = make_batch(train_data, args.batch_size, args.block_size, device)
+        inputs, targets = make_batch(
+            train_data, args.batch_size, model.config.block_size, device
+        )
         _, loss = model(inputs, targets)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
 
-        if step == 1 or step % args.eval_interval == 0 or step == args.steps:
+        if global_step % args.eval_interval == 0 or update == args.steps:
             latest_losses = estimate_loss(model, train_data, validation_data, args, device)
             print(
-                f"step {step:>5}/{args.steps} | "
+                f"step {global_step:>5}/{target_step} | "
                 f"train loss {latest_losses['train']:.4f} | "
                 f"validation loss {latest_losses['validation']:.4f}"
             )
-            save_checkpoint(args.checkpoint, model, config, tokenizer, step, latest_losses)
+            save_checkpoint(
+                args.checkpoint, model, tokenizer, optimizer, global_step, latest_losses
+            )
 
     print(f"[Ari-0] Checkpoint saved to: {args.checkpoint}")
 
