@@ -26,12 +26,21 @@ try {
     assert.equal(extractDefinitionTerm("Hi Ari, define persistence"), "persistence");
     assert.equal(extractDefinitionTerm("Explain the word persistence"), "persistence");
     assert.equal(extractDefinitionTerm("Explain photosynthesis"), null);
+    assert.equal(
+        require("../lib/localLanguage").extractTextAnalysisRequest("How many letters are in banana?"),
+        "banana"
+    );
 
     assert.equal(respondToLocalLanguage("Explain photosynthesis."), null);
 
     const greeting = respondToLocalLanguage("Hi Ari");
     assert.match(greeting.reply, /Hi!/);
     assert.match(greeting.mode, /no AI API/);
+
+    const letterAnalysis = respondToLocalLanguage("Hi Ari, count letters in banana");
+    assert.match(letterAnalysis.reply, /6 letters/);
+    assert.match(letterAnalysis.reply, /a × 3/);
+    assert.match(letterAnalysis.mode, /no AI API/);
 
     const smallTalk = respondToLocalLanguage("Hi Ari, how are you?");
     assert.match(smallTalk.reply, /ready to help/);
