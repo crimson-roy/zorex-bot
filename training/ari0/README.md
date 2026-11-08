@@ -21,12 +21,12 @@ Use Python 3.14 or another Python version currently supported by PyTorch on Wind
 
 ~~~powershell
 py -m venv .venv-ari0
-.\\.venv-ari0\\Scripts\\Activate.ps1
+.\.venv-ari0\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -r training\\ari0\\requirements.txt --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r training\ari0\requirements.txt --index-url https://download.pytorch.org/whl/cpu
 ~~~
 
-Install the small tokenizer test dependency-free; it uses only Python's standard library.
+Install the small tokenizer test dependency-free; the tokenizer tests use Python's standard library.
 
 ## Prepare the corpus
 
@@ -39,18 +39,31 @@ npm run ari:prepare-ari0-corpus
 
 This writes local-only files to \`data/processed/ari0/train.txt\` and \`validation.txt\`. If the filtered OASST1 JSONL files already exist, rerun only \`npm run ari:prepare-ari0-corpus\` to rebuild the role-marked Ari-0 text.
 
-## Run tokenizer tests
+## Run tests
 
 ~~~cmd
 npm run ari:test-tokenizer
+npm run ari:test-training
 ~~~
 
-This checks exact text round-tripping, common-word tokens, character fallback, special conversation markers, checkpoint serialization and unknown-character handling.
+These test round-tripping, common-word tokens, character fallback, special conversation markers, checkpoint tokenizer serialization, fixed evaluation samples, repeatable loss calculation and local CSV history writing.
+
+## Evaluation benchmark
+
+The trainer now uses fixed training and validation samples. The same samples are reused every time, so loss comparisons are not distorted by drawing a different random set of validation batches at each evaluation. The default is 32 fixed batches per split, with a stable evaluation seed.
+
+Evaluate the existing checkpoint without changing its weights:
+
+~~~cmd
+python training\ari0\train.py --resume --evaluate-only --eval-batches 32 --batch-size 4 --threads 2
+~~~
+
+This prints a fixed benchmark for the saved checkpoint and writes the result to \`models/ari/ari0/training-history.csv\`. The checkpoint itself is not modified.
 
 ## Train from random weights
 
 ~~~cmd
-python training\\ari0\\train.py --steps 20 --eval-interval 10 --batch-size 4 --threads 2
+python training\ari0\train.py --steps 20 --eval-interval 100 --batch-size 4 --threads 2
 ~~~
 
 The default settings are intentionally small: two Transformer blocks, two attention heads, 64 hidden dimensions, a 128-token context, a vocabulary target of 4,096 tokens and a modest batch size. The default run performs 200 optimizer updates.
@@ -62,18 +75,23 @@ The hybrid model saves to \`models/ari/ari0/checkpoint-hybrid-v2.pt\`. This is a
 The trainer starts from random weights unless \`--resume\` is supplied. The \`--steps\` value means **additional optimizer updates**, not a new total target.
 
 ~~~cmd
-python training\\ari0\\train.py --resume --steps 200 --eval-interval 50 --batch-size 4 --threads 2
+python training\ari0\train.py --resume --steps 1000 --eval-interval 100 --eval-batches 32 --batch-size 4 --threads 2
 ~~~
+
+The trainer records fixed-sample training and validation loss to \`models/ari/ari0/training-history.csv\` at the initial checkpoint and each evaluation interval. This file is local-only and is not committed to Git.
 
 The current first v2 checkpoint was created before optimizer-state saving was added. The first resumed run restores its model weights and starts a fresh AdamW optimizer. New checkpoints save both model and optimizer state, allowing later resume runs to continue with the saved optimizer state. Do not omit \`--resume\` when intending to continue; without it, a new random model is created and the hybrid checkpoint is replaced.
 
-## Generate a sample
+## Repeatable generation checks
+
+Generation defaults to a fixed seed of 42. Use the same prompt, seed, token count and temperature when comparing checkpoints:
 
 ~~~cmd
-python training\\ari0\\generate.py
+python training\ari0\generate.py --prompt "<|user|> Hello Ari <|assistant|>" --new-tokens 100 --temperature 0.7 --seed 42
+python training\ari0\generate.py --prompt "<|user|> What can you help me with? <|assistant|>" --new-tokens 100 --temperature 0.7 --seed 42
 ~~~
 
-The default prompt supplies a user message followed by the assistant marker. Generation stops at the assistant end-of-turn marker if the model produces one. Output may still be repetitive or incoherent after a short run: this is a tiny randomly initialized experiment, not a pretrained large language model.
+Generation remains a qualitative check; loss and generated samples should be considered together. Output may still be repetitive or incoherent after a short run: this is a tiny randomly initialized experiment, not a pretrained large language model.
 
 ## Important distinctions
 
