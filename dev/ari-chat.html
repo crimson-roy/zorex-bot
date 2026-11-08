@@ -295,7 +295,7 @@
 
       input.value = "";
       sendButton.disabled = true;
-      const waiting = addMessage("Ari is thinking...", "ari");
+      const waiting = addMessage("Thinking...", "ari");
 
       try {
         const response = await fetch("/api/chat", {
