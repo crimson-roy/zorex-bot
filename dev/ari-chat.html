@@ -7,55 +7,172 @@
   <style>
     * { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; }
-    body { font: 16px system-ui, sans-serif; color: #171717; background: #fff; }
-    .app { display: flex; flex-direction: column; height: 100%; max-width: 900px; margin: 0 auto; }
-    header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #ddd; }
-    header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    body { font: 15px system-ui, sans-serif; color: #171717; background: #fff; }
     button, input { font: inherit; }
     button { cursor: pointer; }
-    #new-chat { padding: 6px 10px; border: 1px solid #aaa; border-radius: 6px; background: #fff; }
-    #conversation { position: relative; flex: 1; overflow-y: auto; padding: 20px 16px; }
+    .app { display: flex; height: 100%; width: 100%; }
+    .sidebar {
+      display: flex; flex-direction: column; flex: 0 0 250px; min-width: 0;
+      border-right: 1px solid #e5e5e5; background: #fafafa;
+    }
+    .sidebar-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 12px; border-bottom: 1px solid #e5e5e5;
+    }
+    .sidebar-header strong { font-size: 15px; font-weight: 600; }
+    .new-chat {
+      padding: 7px 10px; border: 1px solid #bbb; border-radius: 7px;
+      background: #fff; color: #222;
+    }
+    .history-label { padding: 14px 12px 7px; color: #777; font-size: 12px; }
+    #chat-list { display: flex; flex: 1; flex-direction: column; gap: 4px; overflow-y: auto; padding: 4px 8px 12px; }
+    .history-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .history-select {
+      flex: 1; min-width: 0; overflow: hidden; padding: 9px 10px; border: 0;
+      border-radius: 7px; background: transparent; color: #333; text-align: left;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .history-select:hover, .history-select.active { background: #ededed; }
+    .history-delete {
+      flex: 0 0 auto; width: 30px; height: 30px; border: 0; border-radius: 6px;
+      background: transparent; color: #888;
+    }
+    .history-delete:hover { background: #eee; color: #222; }
+    .history-empty { padding: 8px 10px; color: #888; font-size: 13px; }
+    .main { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+    .topbar {
+      display: flex; align-items: center; gap: 10px; min-height: 54px;
+      padding: 10px 16px; border-bottom: 1px solid #e5e5e5;
+    }
+    .topbar h1 { margin: 0; font-size: 17px; font-weight: 600; }
+    #sidebar-toggle {
+      display: none; padding: 5px 8px; border: 1px solid #ccc; border-radius: 6px;
+      background: #fff;
+    }
+    #conversation { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 22px 16px; }
     #empty-state { position: absolute; inset: 0; display: grid; place-items: center; color: #888; pointer-events: none; }
-    #messages { display: flex; flex-direction: column; gap: 14px; max-width: 760px; margin: 0 auto; }
-    .message { max-width: 85%; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; padding: 10px 12px; border: 1px solid #ddd; border-radius: 10px; }
+    #empty-state[hidden] { display: none; }
+    #messages { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 760px; margin: 0 auto; }
+    .message {
+      max-width: 85%; padding: 10px 12px; border: 1px solid #e0e0e0;
+      border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5;
+    }
     .message.user { align-self: flex-end; background: #f4f4f4; }
     .message.ari { align-self: flex-start; }
     .message small { display: block; margin-top: 6px; color: #777; font-size: 11px; }
-    form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #ddd; }
-    #message-input { min-width: 0; flex: 1; padding: 11px 12px; border: 1px solid #aaa; border-radius: 8px; outline-offset: 2px; }
-    #send { padding: 0 16px; border: 1px solid #333; border-radius: 8px; background: #222; color: white; }
+    #chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #e5e5e5; }
+    #message-input {
+      flex: 1; min-width: 0; padding: 11px 12px; border: 1px solid #aaa;
+      border-radius: 8px; outline-offset: 2px;
+    }
+    #send { padding: 0 16px; border: 1px solid #333; border-radius: 8px; background: #222; color: #fff; }
     #send:disabled { opacity: .5; cursor: wait; }
-    @media (max-width: 600px) { .message { max-width: 94%; } }
+    #storage-note { padding: 0 16px 8px; color: #888; font-size: 11px; }
+    #storage-note:empty { display: none; }
+    @media (max-width: 680px) {
+      .sidebar { position: fixed; z-index: 5; inset: 0 auto 0 0; width: min(280px, 84vw); box-shadow: 8px 0 24px rgba(0,0,0,.08); transform: translateX(-105%); transition: transform .16s ease; }
+      .sidebar.open { transform: translateX(0); }
+      #sidebar-toggle { display: inline-block; }
+      .message { max-width: 94%; }
+    }
   </style>
 </head>
 <body>
   <div class="app">
-    <header>
-      <h1>Ari</h1>
-      <button id="new-chat" type="button">New chat</button>
-    </header>
+    <aside class="sidebar" id="sidebar" aria-label="Chat history">
+      <div class="sidebar-header">
+        <strong>Chats</strong>
+        <button class="new-chat" id="new-chat" type="button">+ New chat</button>
+      </div>
+      <div class="history-label">Recent</div>
+      <nav id="chat-list" aria-label="Previous chats">
+        <div class="history-empty">No previous chats yet.</div>
+      </nav>
+    </aside>
 
-    <main id="conversation" aria-live="polite">
-      <div id="empty-state">Type to get started with Ari</div>
-      <div id="messages"></div>
-    </main>
+    <section class="main">
+      <header class="topbar">
+        <button id="sidebar-toggle" type="button" aria-label="Show chat history">Chats</button>
+        <h1>Ari</h1>
+      </header>
 
-    <form id="chat-form">
-      <input id="message-input" type="text" placeholder="Message Ari..." autocomplete="off" maxlength="2000" required>
-      <button id="send" type="submit">Send</button>
-    </form>
+      <main id="conversation" aria-live="polite">
+        <div id="empty-state">Type to get started with Ari</div>
+        <div id="messages"></div>
+      </main>
+
+      <div id="storage-note" role="status"></div>
+      <form id="chat-form">
+        <input id="message-input" type="text" placeholder="Message Ari..." autocomplete="off" maxlength="2000" required>
+        <button id="send" type="submit">Send</button>
+      </form>
+    </section>
   </div>
 
   <script>
     "use strict";
 
+    const STORAGE_KEY = "ari-playground-chats-v1";
     const form = document.getElementById("chat-form");
     const input = document.getElementById("message-input");
     const sendButton = document.getElementById("send");
     const newChatButton = document.getElementById("new-chat");
-    const messages = document.getElementById("messages");
+    const messagesElement = document.getElementById("messages");
     const emptyState = document.getElementById("empty-state");
-    let hasStarted = false;
+    const chatList = document.getElementById("chat-list");
+    const conversation = document.getElementById("conversation");
+    const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebar-toggle");
+    const storageNote = document.getElementById("storage-note");
+
+    let chats = loadChats();
+    let currentChatId = null;
+
+    function createId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+      return "chat-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
+    }
+
+    function loadChats() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(chat =>
+          chat && typeof chat.id === "string" &&
+          Array.isArray(chat.messages) &&
+          chat.messages.every(message =>
+            message && ["user", "ari"].includes(message.role) &&
+            typeof message.text === "string"
+          )
+        );
+      } catch (error) {
+        storageNote.textContent = "Saved chat history could not be read in this browser.";
+        return [];
+      }
+    }
+
+    function saveChats() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+        storageNote.textContent = "Chats are saved only in this browser on this computer.";
+        return true;
+      } catch (error) {
+        storageNote.textContent = "Browser storage is unavailable or full. This conversation may not be saved.";
+        return false;
+      }
+    }
+
+    function currentChat() {
+      return chats.find(chat => chat.id === currentChatId) || null;
+    }
+
+    function makeTitle(text) {
+      const cleaned = String(text || "").replace(/\s+/g, " ").trim();
+      return cleaned.length > 42 ? cleaned.slice(0, 39) + "..." : (cleaned || "New chat");
+    }
 
     function addMessage(text, speaker, mode) {
       const bubble = document.createElement("div");
@@ -68,17 +185,98 @@
         bubble.appendChild(meta);
       }
 
-      messages.appendChild(bubble);
-      document.getElementById("conversation").scrollTop =
-        document.getElementById("conversation").scrollHeight;
+      messagesElement.appendChild(bubble);
+      conversation.scrollTop = conversation.scrollHeight;
       return bubble;
     }
 
-    function beginConversation() {
-      if (!hasStarted) {
-        hasStarted = true;
-        emptyState.hidden = true;
+    function renderConversation(chat) {
+      messagesElement.replaceChildren();
+      const started = Boolean(chat && chat.messages.length);
+      emptyState.hidden = started;
+      if (chat) {
+        for (const message of chat.messages) {
+          addMessage(message.text, message.role, message.mode);
+        }
       }
+    }
+
+    function renderHistory() {
+      chatList.replaceChildren();
+      const sorted = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+      if (!sorted.length) {
+        const empty = document.createElement("div");
+        empty.className = "history-empty";
+        empty.textContent = "No previous chats yet.";
+        chatList.appendChild(empty);
+        return;
+      }
+
+      for (const chat of sorted) {
+        const row = document.createElement("div");
+        row.className = "history-row";
+
+        const select = document.createElement("button");
+        select.type = "button";
+        select.className = "history-select" + (chat.id === currentChatId ? " active" : "");
+        select.textContent = chat.title || "New chat";
+        select.title = chat.title || "New chat";
+        select.addEventListener("click", () => {
+          currentChatId = chat.id;
+          renderConversation(chat);
+          renderHistory();
+          sidebar.classList.remove("open");
+          input.focus();
+        });
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "history-delete";
+        remove.textContent = "×";
+        remove.title = "Delete this chat";
+        remove.setAttribute("aria-label", "Delete " + (chat.title || "chat"));
+        remove.addEventListener("click", () => {
+          const confirmed = window.confirm("Delete this conversation from this browser?");
+          if (!confirmed) return;
+          chats = chats.filter(item => item.id !== chat.id);
+          if (currentChatId === chat.id) {
+            currentChatId = null;
+            renderConversation(null);
+          }
+          saveChats();
+          renderHistory();
+        });
+
+        row.append(select, remove);
+        chatList.appendChild(row);
+      }
+    }
+
+    function createChat() {
+      currentChatId = null;
+      renderConversation(null);
+      renderHistory();
+      sidebar.classList.remove("open");
+      input.value = "";
+      input.focus();
+    }
+
+    function ensureChat(firstMessage) {
+      let chat = currentChat();
+      if (!chat) {
+        chat = {
+          id: createId(),
+          title: makeTitle(firstMessage),
+          messages: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+        chats.push(chat);
+        currentChatId = chat.id;
+      }
+      if (!chat.messages.length) chat.title = makeTitle(firstMessage);
+      return chat;
     }
 
     form.addEventListener("submit", async (event) => {
@@ -86,11 +284,17 @@
       const prompt = input.value.trim();
       if (!prompt || sendButton.disabled) return;
 
-      beginConversation();
-      addMessage(prompt, "user");
+      const chat = ensureChat(prompt);
+      const chatId = chat.id;
+      const userMessage = { role: "user", text: prompt, createdAt: Date.now() };
+      chat.messages.push(userMessage);
+      chat.updatedAt = Date.now();
+      saveChats();
+      renderConversation(chat);
+      renderHistory();
+
       input.value = "";
       sendButton.disabled = true;
-
       const waiting = addMessage("Ari is thinking...", "ari");
 
       try {
@@ -105,28 +309,56 @@
           throw new Error(data.error || "The local Ari server returned an error.");
         }
 
-        waiting.textContent = data.reply || "Ari did not return a response.";
-        if (data.mode) {
-          const meta = document.createElement("small");
-          meta.textContent = data.mode;
-          waiting.appendChild(meta);
+        const reply = data.reply || "Ari did not return a response.";
+        const assistantMessage = {
+          role: "ari",
+          text: reply,
+          mode: data.mode || "",
+          createdAt: Date.now()
+        };
+        const targetChat = chats.find(item => item.id === chatId);
+        if (targetChat) {
+          targetChat.messages.push(assistantMessage);
+          targetChat.updatedAt = Date.now();
+          saveChats();
+        }
+
+        if (currentChatId === chatId) {
+          waiting.textContent = reply;
+          if (assistantMessage.mode) {
+            const meta = document.createElement("small");
+            meta.textContent = assistantMessage.mode;
+            waiting.appendChild(meta);
+          }
+          renderHistory();
         }
       } catch (error) {
-        waiting.textContent = "Couldn't reach Ari's local server: " + error.message;
+        const errorText = "Couldn't reach Ari's local server: " + error.message;
+        const targetChat = chats.find(item => item.id === chatId);
+        if (targetChat) {
+          targetChat.messages.push({ role: "ari", text: errorText, mode: "Local connection error", createdAt: Date.now() });
+          targetChat.updatedAt = Date.now();
+          saveChats();
+        }
+        if (currentChatId === chatId) waiting.textContent = errorText;
       } finally {
         sendButton.disabled = false;
         input.focus();
       }
     });
 
-    newChatButton.addEventListener("click", () => {
-      messages.replaceChildren();
-      hasStarted = false;
-      emptyState.hidden = false;
-      input.value = "";
-      input.focus();
-    });
+    newChatButton.addEventListener("click", createChat);
+    sidebarToggle.addEventListener("click", () => sidebar.classList.toggle("open"));
 
+    renderHistory();
+    const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+    if (mostRecent) {
+      currentChatId = mostRecent.id;
+      renderConversation(mostRecent);
+      storageNote.textContent = "Chats are saved only in this browser on this computer.";
+    } else {
+      renderConversation(null);
+    }
     input.focus();
   </script>
 </body>
