@@ -66,7 +66,7 @@ try {
     assert.deepEqual(wordsStartingWithA.words.map(entry => entry.word), ["abandon", "ability"]);
     const explicitlyShortWords = dictionary.searchWords({ count: 2, startsWith: "a", minLength: 1 });
     assert.deepEqual(explicitlyShortWords.words.map(entry => entry.word), ["a", "aa"]);
-    const largeLimit = dictionary.searchWords({ count: 1000 });
+    const largeLimit = dictionary.searchWords({ count: 1000, minLength: 1 });
     assert.equal(largeLimit.words.length, 10);
 
     assert.equal(editDistanceAtMostOne("persistenca", "persistence"), true);
