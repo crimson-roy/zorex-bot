@@ -42,7 +42,10 @@ npm-debug.log*
 
 # Local AI datasets and generated training examples (keep corpora out of Git)
 data/datasets/oasst1/
+data/datasets/wikitext103/
 data/processed/oasst1-en/
+data/processed/wikitext103/
+data/processed/ari0-v3/
 models/ari/
 
 # Ari-0 local corpora, virtual environment and Python cache
