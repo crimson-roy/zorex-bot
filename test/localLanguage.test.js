@@ -32,15 +32,15 @@ try {
 
     assert.deepEqual(
         extractWordListRequest("gimme 5 seven letter words and their meanings"),
-        { count: 5, length: 7, startsWith: null }
+        { count: 5, length: 7, minLength: 1, startsWith: null }
     );
     assert.deepEqual(
         extractWordListRequest("give me three words starting with A and their definitions"),
-        { count: 3, length: null, startsWith: "a" }
+        { count: 3, length: null, minLength: 3, startsWith: "a" }
     );
     assert.deepEqual(
         extractWordListRequest("list 4 words"),
-        { count: 4, length: null, startsWith: null }
+        { count: 4, length: null, minLength: 3, startsWith: null }
     );
     assert.deepEqual(
         extractWordListRequest("list 7-letter words"),
