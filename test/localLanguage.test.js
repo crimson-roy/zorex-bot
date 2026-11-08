@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { WordNetDictionary } = require("../lib/wordNet");
-const { extractDefinitionTerm, extractWordListRequest, respondToLocalLanguage } = require("../lib/localLanguage");
+const { extractDefinitionTerm, extractWordListRequest, describeWordList, respondToLocalLanguage } = require("../lib/localLanguage");
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "ari-language-test-"));
 
@@ -58,6 +58,15 @@ try {
         extractWordListRequest("Give me words with at least 4 letters"),
         { count: 5, length: null, minLength: 4, startsWith: null }
     );
+    const cleanedList = describeWordList({
+        available: true,
+        words: [{
+            word: "abandon",
+            senses: [{ definition: 'the trait of lacking restraint; "she danced with abandon"' }]
+        }]
+    }, { length: null, minLength: 3, startsWith: null });
+    assert.match(cleanedList, /The trait of lacking restraint/);
+    assert.doesNotMatch(cleanedList, /she danced with abandon/);
 
     assert.equal(extractDefinitionTerm("define persistence"), "persistence");
     assert.equal(extractDefinitionTerm("What does persistence mean?"), "persistence");
