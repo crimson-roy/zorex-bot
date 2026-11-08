@@ -55,8 +55,11 @@ npm run ari:dev
 
 The playground now has a rule-based local language layer; it does not call an AI API.
 
-- Greetings such as `Hi Ari` receive a local response.
+- Greetings such as `Hi Ari` and simple small talk such as `Hi Ari, how are you?` receive local rule-based responses.
 - Definition requests such as `define persistence`, `what is persistence`, and `what does persistence mean` are recognised.
+- Likely one-character misspellings such as `persistenca` can trigger a cautious `Did you mean persistence?` suggestion.
+- Letter-analysis requests such as `count letters in banana` are handled by Ari's local text tokenizer.
+- The tokenizer identifies Unicode letters, numbers, punctuation and word tokens; it does not train a neural model.
 - The WordNet reader loads the ASCII dictionary files directly from the installed `dict` folder.
 - On Windows it checks the WordNet 2.1 locations under Program Files, including `C:\\Program Files (x86)\\WordNet\\2.1\\dict`.
 - To use a different location, set `WORDNET_DICT_DIR` to the full dictionary folder before starting the server.
