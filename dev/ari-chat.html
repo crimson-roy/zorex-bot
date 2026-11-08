@@ -45,6 +45,8 @@
       padding: 10px 16px; border-bottom: 1px solid #e5e5e5;
     }
     .topbar h1 { margin: 0; font-size: 17px; font-weight: 600; }
+    #model-status { margin-left: auto; color: #777; font-size: 11px; text-align: right; }
+    #model-status.connected { color: #287a45; }
     #sidebar-toggle {
       display: none; padding: 5px 8px; border: 1px solid #ccc; border-radius: 6px;
       background: #fff;
@@ -94,6 +96,7 @@
       <header class="topbar">
         <button id="sidebar-toggle" type="button" aria-label="Show chat history">Chats</button>
         <h1>Ari</h1>
+        <small id="model-status" role="status">Checking Ari-0...</small>
       </header>
 
       <main id="conversation" aria-live="polite">
@@ -124,9 +127,30 @@
     const sidebar = document.getElementById("sidebar");
     const sidebarToggle = document.getElementById("sidebar-toggle");
     const storageNote = document.getElementById("storage-note");
+    const modelStatus = document.getElementById("model-status");
 
     let chats = loadChats();
     let currentChatId = null;
+
+    async function refreshModelStatus() {
+      try {
+        const response = await fetch("/api/health", { cache: "no-store" });
+        const data = await response.json();
+        if (data.aiModelConnected) {
+          modelStatus.textContent = "Ari-0 connected · step " + data.checkpointStep;
+          modelStatus.classList.add("connected");
+        } else {
+          modelStatus.textContent = "Ari-0 loading or unavailable";
+          modelStatus.classList.remove("connected");
+        }
+      } catch (_) {
+        modelStatus.textContent = "Local model status unavailable";
+        modelStatus.classList.remove("connected");
+      }
+    }
+
+    refreshModelStatus();
+    window.setInterval(refreshModelStatus, 4000);
 
     function createId() {
       if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -301,7 +325,13 @@
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: prompt })
+          body: JSON.stringify({
+            message: prompt,
+            messages: chat.messages.slice(-8).map(message => ({
+              role: message.role === "ari" ? "assistant" : "user",
+              content: message.text
+            }))
+          })
         });
 
         const data = await response.json().catch(() => ({}));
