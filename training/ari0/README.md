@@ -11,7 +11,7 @@ The initial experiment can use the locally prepared English portion of OpenAssis
 - https://huggingface.co/datasets/OpenAssistant/oasst1
 - https://arxiv.org/abs/2304.07327
 
-The repository's `npm run ari:prepare-oasst` step filters the ready-for-export trees and creates train/validation JSONL files. The next step formats those conversations with explicit `<|user|>`, `<|assistant|>` and `<|end|>` markers. Do not put downloaded datasets or generated corpora into Git.
+The repository's \`npm run ari:prepare-oasst\` step filters the ready-for-export trees and creates train/validation JSONL files. The next step formats those conversations with explicit \`<|user|>\`, \`<|assistant|>\` and \`<|end|>\` markers. Do not put downloaded datasets or generated corpora into Git.
 
 OASST1 is a relatively small conversational dataset, not a broad pretraining corpus. A model trained only on it is expected to have limited vocabulary, knowledge and coherence. The goal at this stage is to learn the mechanics of training our own weights and measure whether loss improves. Better corpora, tokenizer improvements, more training and later instruction tuning are separate milestones.
 
@@ -21,9 +21,9 @@ Use Python 3.14 or another Python version currently supported by PyTorch on Wind
 
 ~~~powershell
 py -m venv .venv-ari0
-.\.venv-ari0\Scripts\Activate.ps1
+.\\.venv-ari0\\Scripts\\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -r training\ari0\requirements.txt --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -r training\\ari0\\requirements.txt --index-url https://download.pytorch.org/whl/cpu
 ~~~
 
 Install the small tokenizer test dependency-free; it uses only Python's standard library.
@@ -32,16 +32,16 @@ Install the small tokenizer test dependency-free; it uses only Python's standard
 
 From the repository root:
 
-~~~powershell
+~~~cmd
 npm run ari:prepare-oasst
 npm run ari:prepare-ari0-corpus
 ~~~
 
-This writes local-only files to `data/processed/ari0/train.txt` and `validation.txt`. If the filtered OASST1 JSONL files already exist, rerun only `npm run ari:prepare-ari0-corpus` to rebuild the role-marked Ari-0 text.
+This writes local-only files to \`data/processed/ari0/train.txt\` and \`validation.txt\`. If the filtered OASST1 JSONL files already exist, rerun only \`npm run ari:prepare-ari0-corpus\` to rebuild the role-marked Ari-0 text.
 
 ## Run tokenizer tests
 
-~~~powershell
+~~~cmd
 npm run ari:test-tokenizer
 ~~~
 
@@ -49,18 +49,28 @@ This checks exact text round-tripping, common-word tokens, character fallback, s
 
 ## Train from random weights
 
-~~~powershell
-python training\ari0\train.py --steps 20 --eval-interval 10 --batch-size 4 --threads 2
+~~~cmd
+python training\\ari0\\train.py --steps 20 --eval-interval 10 --batch-size 4 --threads 2
 ~~~
 
-The default settings are intentionally small: two Transformer blocks, two attention heads, 64 hidden dimensions, a 128-token context, a vocabulary target of 4,096 tokens and a modest batch size. The default run performs 200 training steps.
+The default settings are intentionally small: two Transformer blocks, two attention heads, 64 hidden dimensions, a 128-token context, a vocabulary target of 4,096 tokens and a modest batch size. The default run performs 200 optimizer updates.
 
-The hybrid model saves to `models/ari/ari0/checkpoint-hybrid-v2.pt`. This is a separate file from the first character-level checkpoint, so the original experiment is preserved.
+The hybrid model saves to \`models/ari/ari0/checkpoint-hybrid-v2.pt\`. This is a separate file from the first character-level checkpoint, so the original experiment is preserved.
+
+## Continue training from a checkpoint
+
+The trainer starts from random weights unless \`--resume\` is supplied. The \`--steps\` value means **additional optimizer updates**, not a new total target.
+
+~~~cmd
+python training\\ari0\\train.py --resume --steps 200 --eval-interval 50 --batch-size 4 --threads 2
+~~~
+
+The current first v2 checkpoint was created before optimizer-state saving was added. The first resumed run restores its model weights and starts a fresh AdamW optimizer. New checkpoints save both model and optimizer state, allowing later resume runs to continue with the saved optimizer state. Do not omit \`--resume\` when intending to continue; without it, a new random model is created and the hybrid checkpoint is replaced.
 
 ## Generate a sample
 
-~~~powershell
-python training\ari0\generate.py
+~~~cmd
+python training\\ari0\\generate.py
 ~~~
 
 The default prompt supplies a user message followed by the assistant marker. Generation stops at the assistant end-of-turn marker if the model produces one. Output may still be repetitive or incoherent after a short run: this is a tiny randomly initialized experiment, not a pretrained large language model.
@@ -70,4 +80,4 @@ The default prompt supplies a user message followed by the assistant marker. Gen
 - The model architecture is implemented here, and model weights are initialized randomly. We are not loading another model's weights.
 - OASST1 is an existing dataset with its own licence; using it does not make the dataset our original work.
 - This experiment does not reproduce the capabilities of a modern 2B/7B+ model, and it is not yet connected to Ari's browser playground.
-- Future work can improve subword segmentation, expand properly licensed corpora, test longer training schedules, add instruction tuning and evaluation, implement checkpoint resume, and build a local inference bridge.
+- Future work can improve subword segmentation, expand properly licensed corpora, test longer training schedules, add instruction tuning and evaluation, and build a local inference bridge.
