@@ -18,7 +18,9 @@ try {
         "ability n 1 0 1 1 00000200",
         "absence n 1 0 1 1 00000280",
         "academy n 1 0 1 1 00000300",
-        "account n 1 0 1 1 00000380"
+        "account n 1 0 1 1 00000380",
+        "a n 1 0 1 1 00000400",
+        "aa n 1 0 1 1 00000480"
     ].join("\n") + "\n");
 
     fs.writeFileSync(path.join(directory, "data.noun"), [
@@ -29,7 +31,9 @@ try {
         "00000200 00 n 01 ability 0 000 | the quality of being able to do something",
         "00000280 00 n 01 absence 0 000 | the state of being away from a place",
         "00000300 00 n 01 academy 0 000 | a school or society for special training",
-        "00000380 00 n 01 account 0 000 | a report or description of an event"
+        "00000380 00 n 01 account 0 000 | a report or description of an event",
+        "00000400 00 n 01 a 0 000 | a letter of the alphabet",
+        "00000480 00 n 01 aa 0 000 | a type of rough lava"
     ].join("\n") + "\n");
 
     const dictionary = new WordNetDictionary({ dictDir: directory });
@@ -59,7 +63,11 @@ try {
 
     const wordsStartingWithA = dictionary.searchWords({ count: 2, startsWith: "a" });
     assert.equal(wordsStartingWithA.words.length, 2);
-    assert.ok(wordsStartingWithA.words.every(entry => entry.word.startsWith("a")));
+    assert.deepEqual(wordsStartingWithA.words.map(entry => entry.word), ["abandon", "ability"]);
+    const explicitlyShortWords = dictionary.searchWords({ count: 2, startsWith: "a", minLength: 1 });
+    assert.deepEqual(explicitlyShortWords.words.map(entry => entry.word), ["a", "aa"]);
+    const largeLimit = dictionary.searchWords({ count: 1000 });
+    assert.equal(largeLimit.words.length, 10);
 
     assert.equal(editDistanceAtMostOne("persistenca", "persistence"), true);
     assert.equal(editDistanceAtMostOne("persistence", "perseverance"), false);
