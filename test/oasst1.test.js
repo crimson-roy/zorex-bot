@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const zlib = require("node:zlib");
-const { buildConversationExamples, splitForTree } = require("../lib/oasst1");
+const { buildConversationExamples, hasFlaggedContent, splitForTree } = require("../lib/oasst1");
 const { prepareDataset } = require("../scripts/prepare-oasst1");
 
 const tree = {
@@ -74,6 +74,49 @@ async function main() {
     assert.deepEqual(result.examples[1].messages.map(message => message.role), ["user", "assistant", "user", "assistant"]);
     assert.equal(result.examples[1].messages.at(-1).content, "Practising regularly is an example.");
     assert.ok(result.skippedMessages >= 3);
+
+
+    // The real OASST1 ready-for-export data uses small continuous Detoxify
+    // probabilities. A tiny non-zero score must not reject every conversation.
+    const realisticTree = {
+        message_tree_id: "realistic-oasst-tree",
+        tree_state: "ready_for_export",
+        prompt: {
+            message_id: "realistic-prompt",
+            role: "prompter",
+            lang: "en",
+            text: "Can you explain monopsony?",
+            deleted: false,
+            review_result: true,
+            labels: {
+                pii: { value: 0, count: 3 },
+                spam: { value: 0, count: 3 },
+                sexual_content: { value: 0, count: 3 }
+            },
+            detoxify: {
+                sexual_explicit: 0.00002712695459194947,
+                severe_toxicity: 0.00003252684837207198,
+                threat: 0.00004075629112776369
+            },
+            replies: [{
+                message_id: "realistic-answer",
+                role: "assistant",
+                lang: "en",
+                text: "A monopsony is a market with one dominant buyer.",
+                deleted: false,
+                review_result: true,
+                labels: { pii: { value: 0 }, sexual_content: { value: 0 } },
+                detoxify: { sexual_explicit: 0.0001, severe_toxicity: 0.0001, threat: 0.0001 },
+                replies: []
+            }]
+        }
+    };
+    assert.equal(hasFlaggedContent(realisticTree.prompt), false);
+    assert.equal(hasFlaggedContent({ detoxify: { sexual_explicit: 0.8 } }), true);
+    const realisticResult = buildConversationExamples(realisticTree);
+    assert.equal(realisticResult.skippedTree, false);
+    assert.equal(realisticResult.examples.length, 1);
+    assert.equal(realisticResult.examples[0].messages[1].role, "assistant");
 
     const unsafeRoot = buildConversationExamples({
         prompt: { role: "prompter", lang: "en", text: "Hello", labels: { pii: { value: 1 } }, replies: [] }
