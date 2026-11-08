@@ -72,8 +72,14 @@ function respondToMessage(message, options = {}) {
         };
     }
 
+    const localLanguage = respondToLocalLanguage(prompt, {
+        dictionary: options.dictionary || wordNet
+    });
+
+    if (localLanguage) return localLanguage;
+
     return {
-        reply: "I received your message. My local chat is working, but my local language model is not connected yet. Right now I can answer supported arithmetic requests without an external AI API.",
+        reply: "I don't know how to answer that yet using my local tools. Try a greeting, a calculation, or ask me to define a word. My local language model is not connected yet.",
         mode: "Local runtime · language model not connected"
     };
 }
@@ -103,7 +109,8 @@ function createServer() {
             sendJson(response, 200, {
                 ok: true,
                 mode: "local",
-                aiModelConnected: false
+                aiModelConnected: false,
+                wordNetAvailable: wordNet.isAvailable()
             });
             return;
         }
