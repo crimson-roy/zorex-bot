@@ -13,7 +13,10 @@ async function main() {
             { role: "assistant", content: "Hello. How can I help?" }
         ]
     };
-    assert.equal(serializeExample(example), "User: Hello Ari\nAssistant: Hello. How can I help?\n\n");
+    assert.equal(
+        serializeExample(example),
+        "<|user|>\nHello Ari\n<|assistant|>\nHello. How can I help?\n<|end|>\n\n"
+    );
     assert.equal(serializeExample({ messages: [{ role: "user", content: "Only a prompt" }] }), "");
     assert.equal(serializeExample({ messages: [
         { role: "user", content: "Hi" },
@@ -34,12 +37,12 @@ async function main() {
         assert.equal(result.train.conversationsWritten, 1);
         assert.equal(result.train.rowsSkipped, 1);
         assert.equal(result.validation.conversationsWritten, 1);
-        assert.match(fs.readFileSync(path.join(outputDir, "train.txt"), "utf8"), /Assistant: Hello/);
-        assert.match(fs.readFileSync(path.join(outputDir, "validation.txt"), "utf8"), /User: Hello Ari/);
+        assert.match(fs.readFileSync(path.join(outputDir, "train.txt"), "utf8"), /<\|assistant\|>\nHello/);
+        assert.match(fs.readFileSync(path.join(outputDir, "validation.txt"), "utf8"), /<\|user\|>\nHello Ari/);
     } finally {
         fs.rmSync(tempDir, { recursive: true, force: true });
     }
-    console.log("PASS: Ari-0 corpus preparation formats conversations and preserves train/validation splits.");
+    console.log("PASS: Ari-0 corpus preparation writes explicit role and turn markers.");
 }
 
 main().catch(error => {
