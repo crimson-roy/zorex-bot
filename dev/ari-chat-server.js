@@ -4,6 +4,10 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 const { evaluateMathPrompt } = require("../lib/localMath");
+const { WordNetDictionary } = require("../lib/wordNet");
+const { respondToLocalLanguage } = require("../lib/localLanguage");
+
+const wordNet = new WordNetDictionary();
 
 const HOST = "127.0.0.1";
 const DEFAULT_PORT = 4173;
@@ -47,7 +51,7 @@ function readJsonBody(request) {
     });
 }
 
-function respondToMessage(message) {
+function respondToMessage(message, options = {}) {
     const prompt = String(message || "").trim();
 
     if (!prompt) {
@@ -140,7 +144,8 @@ if (require.main === module) {
         const app = createServer();
         app.listen(port, HOST, () => {
             console.log("[Ari playground] Open http://" + HOST + ":" + port);
-            console.log("[Ari playground] Local arithmetic enabled; no AI API is called.");
+            console.log("[Ari playground] Local arithmetic and language rules enabled; no AI API is called.");
+            console.log("[Ari playground] WordNet dictionary: " + (wordNet.isAvailable() ? "available" : "not found"));
         });
     }
 }
