@@ -42,6 +42,10 @@ try {
         extractWordListRequest("list 4 words"),
         { count: 4, length: null, startsWith: null }
     );
+    assert.deepEqual(
+        extractWordListRequest("list 7-letter words"),
+        { count: 5, length: 7, startsWith: null }
+    );
 
     assert.equal(extractDefinitionTerm("define persistence"), "persistence");
     assert.equal(extractDefinitionTerm("What does persistence mean?"), "persistence");
