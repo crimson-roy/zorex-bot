@@ -29,6 +29,13 @@ try {
     assert.match(greeting.reply, /Hi!/);
     assert.match(greeting.mode, /no AI API/);
 
+    const smallTalk = respondToLocalLanguage("Hi Ari, how are you?");
+    assert.match(smallTalk.reply, /ready to help/);
+    assert.match(smallTalk.mode, /no AI API/);
+
+    const goodbye = respondToLocalLanguage("Goodbye Ari");
+    assert.match(goodbye.reply, /See you later/);
+
     const definition = respondToLocalLanguage("What is persistence?", { dictionary });
     assert.match(definition.reply, /WordNet entries for "persistence"/);
     assert.match(definition.reply, /continued effort/);
