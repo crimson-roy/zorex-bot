@@ -44,3 +44,9 @@ npm-debug.log*
 data/datasets/oasst1/
 data/processed/oasst1-en/
 models/ari/
+
+# Ari-0 local corpora, virtual environment and Python cache
+data/processed/ari0/
+.venv-ari0/
+__pycache__/
+*.pyc
