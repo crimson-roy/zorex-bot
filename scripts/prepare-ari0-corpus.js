@@ -17,8 +17,9 @@ function serializeExample(example) {
     for (const message of messages) {
         if (!message || !["user", "assistant"].includes(message.role)) return "";
         if (typeof message.content !== "string" || !message.content.trim()) return "";
-        const label = message.role === "user" ? "User" : "Assistant";
-        lines.push(label + ": " + message.content.trim());
+        lines.push(message.role === "user" ? "<|user|>" : "<|assistant|>");
+        lines.push(message.content.trim());
+        if (message.role === "assistant") lines.push("<|end|>");
     }
 
     if (messages[messages.length - 1].role !== "assistant") return "";
@@ -85,9 +86,9 @@ async function prepareAri0Corpus(options = {}) {
 if (require.main === module) {
     prepareAri0Corpus()
         .then(stats => {
-            console.log("[Ari-0] Corpus preparation complete.");
+            console.log("[Ari-0] Conversation corpus preparation complete.");
             console.log(JSON.stringify(stats, null, 2));
-            console.log("This creates text data only; it does not train model weights.");
+            console.log("Conversation roles and end-of-turn markers are included; no model weights are trained here.");
         })
         .catch(error => {
             console.error("[Ari-0] " + error.message);
