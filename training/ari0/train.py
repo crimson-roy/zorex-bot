@@ -1,4 +1,4 @@
-"""Train the small Ari-0 character-level Transformer from random weights."""
+"""Train Ari-0's small hybrid-token Transformer from random weights."""
 
 import argparse
 import random
@@ -7,11 +7,12 @@ from pathlib import Path
 import torch
 
 from model import Ari0LanguageModel, ModelConfig, parameter_count
+from tokenizer import HybridTokenizer
 
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CORPUS_DIR = ROOT / "data" / "processed" / "ari0"
-DEFAULT_CHECKPOINT = ROOT / "models" / "ari" / "ari0" / "checkpoint.pt"
+DEFAULT_CHECKPOINT = ROOT / "models" / "ari" / "ari0" / "checkpoint-hybrid-v2.pt"
 
 
 def read_text(path: Path) -> str:
@@ -23,12 +24,8 @@ def read_text(path: Path) -> str:
     return text
 
 
-def encode_text(text: str, token_to_id: dict[str, int]) -> torch.Tensor:
-    unknown_id = token_to_id["<unk>"]
-    return torch.tensor(
-        [token_to_id.get(character, unknown_id) for character in text],
-        dtype=torch.long,
-    )
+def encode_text(text: str, tokenizer: HybridTokenizer) -> torch.Tensor:
+    return torch.tensor(tokenizer.encode(text), dtype=torch.long)
 
 
 def make_batch(data: torch.Tensor, batch_size: int, block_size: int, device: torch.device):
@@ -55,15 +52,15 @@ def estimate_loss(model, train_data, validation_data, args, device):
     return results
 
 
-def save_checkpoint(path: Path, model, config, vocabulary, step, losses):
+def save_checkpoint(path: Path, model, config, tokenizer, step, losses):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_suffix(path.suffix + ".tmp")
     torch.save(
         {
-            "format": "ari0-char-transformer-v1",
+            "format": "ari0-hybrid-transformer-v2",
             "step": step,
             "config": config.__dict__,
-            "vocabulary": vocabulary,
+            "tokenizer": tokenizer.to_dict(),
             "model_state_dict": model.state_dict(),
             "losses": losses,
         },
@@ -77,11 +74,12 @@ def parse_args():
     parser.add_argument("--corpus-dir", type=Path, default=DEFAULT_CORPUS_DIR)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
     parser.add_argument("--steps", type=int, default=200)
-    parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--block-size", type=int, default=64)
+    parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--block-size", type=int, default=128)
     parser.add_argument("--embedding-size", type=int, default=64)
     parser.add_argument("--heads", type=int, default=2)
     parser.add_argument("--layers", type=int, default=2)
+    parser.add_argument("--vocab-size", type=int, default=4096)
     parser.add_argument("--learning-rate", type=float, default=3e-4)
     parser.add_argument("--eval-interval", type=int, default=50)
     parser.add_argument("--eval-batches", type=int, default=8)
@@ -104,10 +102,9 @@ def main():
 
     train_text = read_text(args.corpus_dir / "train.txt")
     validation_text = read_text(args.corpus_dir / "validation.txt")
-    vocabulary = ["<unk>"] + sorted(set(train_text))
-    token_to_id = {token: index for index, token in enumerate(vocabulary)}
-    train_data = encode_text(train_text, token_to_id)
-    validation_data = encode_text(validation_text, token_to_id)
+    tokenizer = HybridTokenizer.train(train_text, vocab_size=args.vocab_size)
+    train_data = encode_text(train_text, tokenizer)
+    validation_data = encode_text(validation_text, tokenizer)
 
     if args.device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but no CUDA-enabled GPU is available.")
@@ -117,7 +114,7 @@ def main():
     )
 
     config = ModelConfig(
-        vocab_size=len(vocabulary),
+        vocab_size=len(tokenizer.tokens),
         block_size=args.block_size,
         n_embd=args.embedding_size,
         n_head=args.heads,
@@ -128,11 +125,12 @@ def main():
     model = Ari0LanguageModel(config).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
 
-    print("[Ari-0] Training from random initial weights.")
+    print("[Ari-0] Training a new hybrid-token model from random initial weights.")
     print(f"[Ari-0] Device: {device}; parameters: {parameter_count(model):,}")
-    print(f"[Ari-0] Vocabulary: {len(vocabulary):,} characters")
-    print(f"[Ari-0] Training characters: {train_data.numel():,}; validation: {validation_data.numel():,}")
-    print("[Ari-0] This is a small character-level experiment, not a capable assistant yet.")
+    print(f"[Ari-0] Vocabulary: {len(tokenizer.tokens):,} tokens")
+    print(f"[Ari-0] Encoded tokens: training {train_data.numel():,}; validation {validation_data.numel():,}")
+    print(f"[Ari-0] Context window: {args.block_size} tokens; frequent words are single tokens.")
+    print("[Ari-0] This is still a small language-model experiment, not a capable assistant yet.")
 
     latest_losses = {}
     for step in range(1, args.steps + 1):
@@ -151,7 +149,7 @@ def main():
                 f"train loss {latest_losses['train']:.4f} | "
                 f"validation loss {latest_losses['validation']:.4f}"
             )
-            save_checkpoint(args.checkpoint, model, config, vocabulary, step, latest_losses)
+            save_checkpoint(args.checkpoint, model, config, tokenizer, step, latest_losses)
 
     print(f"[Ari-0] Checkpoint saved to: {args.checkpoint}")
 
