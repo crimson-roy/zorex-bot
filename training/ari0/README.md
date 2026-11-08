@@ -66,6 +66,7 @@ This writes local-only files to \`data/processed/ari0/train.txt\` and \`validati
 ~~~cmd
 npm run ari:test-tokenizer
 npm run ari:test-training
+npm run ari:test-serve
 ~~~
 
 These test round-tripping, common-word tokens, character fallback, special conversation markers, checkpoint tokenizer serialization, fixed evaluation samples, repeatable loss calculation and local CSV history writing.
