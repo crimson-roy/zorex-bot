@@ -34,6 +34,23 @@ The server binds to `127.0.0.1`, so it is intended for use in a browser on the s
 - Clearing browser site data or using a different browser profile removes or hides this local history.
 - Conversations are not uploaded to the VPS or an AI provider by the playground's history feature.
 
+## Check the WordNet installation
+
+Run this from the repository root:
+
+```bash
+npm run ari:check-wordnet
+```
+
+The diagnostic reports whether the WordNet 2.1 dictionary files were found and tests the terms `persistence` and `persistenca`. It runs entirely locally.
+
+If automatic Windows path detection fails, PowerShell can set the path before starting the playground:
+
+```powershell
+$env:WORDNET_DICT_DIR = "C:\\Program Files (x86)\\WordNet\\2.1\\dict"
+npm run ari:dev
+```
+
 ## Local language capabilities
 
 The playground now has a rule-based local language layer; it does not call an AI API.
