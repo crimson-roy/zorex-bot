@@ -13,7 +13,8 @@
     "ari:prepare-oasst": "node scripts/prepare-oasst1.js",
     "editor-worker": "node workers/editorWorker.js",
     "ari:check-wordnet": "node scripts/check-wordnet.js",
-    "ari:prepare-ari0-corpus": "node scripts/prepare-ari0-corpus.js"
+    "ari:prepare-ari0-corpus": "node scripts/prepare-ari0-corpus.js",
+    "ari:test-tokenizer": "python -m unittest discover -s training/ari0 -p test_tokenizer.py"
   },
   "keywords": [],
   "author": "",
