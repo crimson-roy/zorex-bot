@@ -45,7 +45,8 @@ Use Python 3.14 or another Python version currently supported by PyTorch on Wind
 py -m venv .venv-ari0
 .\.venv-ari0\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -r training\ari0\requirements.txt --index-url https://download.pytorch.org/whl/cpu
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install pyarrow tokenizers
 ~~~
 
 Install the small tokenizer test dependency-free; the tokenizer tests use Python's standard library.
