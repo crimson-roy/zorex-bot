@@ -48,7 +48,7 @@ async function main() {
         assert.equal(page.status, 200);
         const html = await page.text();
         assert.match(html, /Type to get started with Ari/);
-        assert.match(html, /aria-playground-chats-v1/);
+        assert.match(html, /ari-playground-chats-v1/);
         assert.match(html, /id="chat-list"/);
         assert.match(html, /Delete this conversation from this browser/);
         assert.match(html, /localStorage\\.setItem/);
