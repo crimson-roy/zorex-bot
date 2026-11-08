@@ -15,7 +15,8 @@
     "ari:check-wordnet": "node scripts/check-wordnet.js",
     "ari:prepare-ari0-corpus": "node scripts/prepare-ari0-corpus.js",
     "ari:test-tokenizer": "python -m unittest discover -s training/ari0 -p test_tokenizer.py",
-    "ari:test-training": "python -m unittest discover -s training/ari0 -p test_training.py -v"
+    "ari:test-training": "python -m unittest discover -s training/ari0 -p test_training.py -v",
+    "ari:test-serve": "python -m unittest discover -s training/ari0 -p test_serve.py -v"
   },
   "keywords": [],
   "author": "",
