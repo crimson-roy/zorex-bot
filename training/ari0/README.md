@@ -4,6 +4,28 @@ Ari-0 is a small, decoder-only Transformer whose weights begin from random initi
 
 The first character-level checkpoint proved that the training loop and generation path work. The next experiment uses a **hybrid word-and-character tokenizer**: frequent words are represented as one token, while less common words fall back to characters. This keeps the vocabulary manageable without making unseen words impossible to encode.
 
+
+## Connect Ari-0 to the local HTML playground
+
+The HTML playground now uses the locally trained Ari-0 hybrid checkpoint for open-ended messages. No Ollama model or external inference API is required for this connection.
+
+The normal startup command launches both processes:
+
+~~~cmd
+npm run ari:dev
+~~~
+
+- Node serves the browser UI at \`http://127.0.0.1:4173\`.
+- Node starts the Python inference bridge automatically.
+- Python loads \`models/ari/ari0/checkpoint-hybrid-v2.pt\` once and listens only on \`127.0.0.1:4174\`.
+- The header shows whether Ari-0 is connected and which training step is loaded.
+- The browser sends the recent conversation turns so the model receives short chat context.
+- Maths, WordNet definitions and word-list lookups continue to use their deterministic local tools.
+
+The checkpoint is local-only and ignored by Git. Make sure the trained checkpoint exists at the path above before starting the playground. The Python environment used by \`npm run ari:dev\` must have PyTorch installed. By default Node launches \`python\`; to choose another interpreter, set \`ARI_PYTHON\` to the full path of its executable before starting the server.
+
+Stop the playground with Ctrl+C. This also stops its Python inference child process.
+
 ## Data source
 
 The initial experiment can use the locally prepared English portion of OpenAssistant Conversations (OASST1). The dataset is published under Apache-2.0. Keep its licence and attribution with any redistribution:
@@ -97,5 +119,5 @@ Generation remains a qualitative check; loss and generated samples should be con
 
 - The model architecture is implemented here, and model weights are initialized randomly. We are not loading another model's weights.
 - OASST1 is an existing dataset with its own licence; using it does not make the dataset our original work.
-- This experiment does not reproduce the capabilities of a modern 2B/7B+ model, and it is not yet connected to Ari's browser playground.
-- Future work can improve subword segmentation, expand properly licensed corpora, test longer training schedules, add instruction tuning and evaluation, and build a local inference bridge.
+- This experiment does not reproduce the capabilities of a modern 2B/7B+ model. It is connected to the browser playground for early local generation tests, but its replies are not expected to be reliable yet.
+- Future work can improve subword segmentation, expand properly licensed corpora, test longer training schedules, add instruction tuning and evaluation, improve generation stopping and context management, and connect the same bridge to richer chat memory.
