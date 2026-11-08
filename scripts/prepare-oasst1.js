@@ -83,9 +83,11 @@ async function prepareDataset(options = {}) {
             }
         }
 
+        const trainFinished = once(trainStream, "finish");
+        const validationFinished = once(validationStream, "finish");
         trainStream.end();
         validationStream.end();
-        await Promise.all([once(trainStream, "finish"), once(validationStream, "finish")]);
+        await Promise.all([trainFinished, validationFinished]);
     } catch (error) {
         trainStream.destroy();
         validationStream.destroy();
