@@ -36,11 +36,11 @@ try {
     );
     assert.deepEqual(
         extractWordListRequest("give me three words starting with A and their definitions"),
-        { count: 3, length: null, minLength: 3, startsWith: "a" }
+        { count: 3, length: null, minLength: 4, startsWith: "a" }
     );
     assert.deepEqual(
         extractWordListRequest("list 4 words"),
-        { count: 4, length: null, minLength: 3, startsWith: null }
+        { count: 4, length: null, minLength: 4, startsWith: null }
     );
     assert.deepEqual(
         extractWordListRequest("list 7-letter words"),
@@ -52,7 +52,7 @@ try {
     );
     assert.deepEqual(
         extractWordListRequest("Give me 5 words starting with A"),
-        { count: 5, length: null, minLength: 3, startsWith: "a" }
+        { count: 5, length: null, minLength: 4, startsWith: "a" }
     );
     assert.deepEqual(
         extractWordListRequest("Give me words with at least 4 letters"),
@@ -64,7 +64,7 @@ try {
             word: "abandon",
             senses: [{ definition: 'the trait of lacking restraint; "she danced with abandon"' }]
         }]
-    }, { length: null, minLength: 3, startsWith: null });
+    }, { length: null, minLength: 4, startsWith: null });
     assert.match(cleanedList, /The trait of lacking restraint/);
     assert.doesNotMatch(cleanedList, /she danced with abandon/);
 
