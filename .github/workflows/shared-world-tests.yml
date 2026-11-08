@@ -41,11 +41,13 @@ jobs:
           node --check lib/relationshipStore.js
           node --check lib/commandRegistry.js
           node --check lib/localMath.js
+          node --check lib/textTokenizer.js
           node --check lib/wordNet.js
           node --check lib/localLanguage.js
           node --check lib/oasst1.js
           node --check dev/ari-chat-server.js
           node --check scripts/prepare-oasst1.js
+          node --check test/textTokenizer.test.js
           node --check test/wordNet.test.js
           node --check test/localLanguage.test.js
           node --check test/oasst1.test.js
@@ -53,6 +55,9 @@ jobs:
 
       - name: Test Ari local arithmetic
         run: node test/localMath.test.js
+
+      - name: Test Ari local text tokenizer
+        run: node test/textTokenizer.test.js
 
       - name: Test Ari WordNet dictionary reader
         run: node test/wordNet.test.js
