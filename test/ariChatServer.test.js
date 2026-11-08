@@ -23,7 +23,12 @@ async function main() {
 
         const page = await fetch(baseUrl + "/");
         assert.equal(page.status, 200);
-        assert.match(await page.text(), /Type to get started with Ari/);
+        const html = await page.text();
+        assert.match(html, /Type to get started with Ari/);
+        assert.match(html, /aria-playground-chats-v1/);
+        assert.match(html, /id="chat-list"/);
+        assert.match(html, /Delete this conversation from this browser/);
+        assert.match(html, /localStorage\.setItem/);
 
         const health = await fetch(baseUrl + "/api/health");
         assert.equal(health.status, 200);
@@ -50,7 +55,7 @@ async function main() {
         });
         assert.equal(empty.status, 400);
 
-        console.log("PASS: Ari playground serves the chat UI and answers arithmetic locally over HTTP.");
+        console.log("PASS: Ari playground serves its persistent-history UI and answers arithmetic locally over HTTP.");
     } finally {
         await new Promise(resolve => app.close(resolve));
     }
