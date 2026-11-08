@@ -7,10 +7,11 @@ from tokenizer import HybridTokenizer
 
 class HybridTokenizerTests(unittest.TestCase):
     def setUp(self):
+        extra_words = " ".join(f"aardvark{index}" for index in range(50))
         self.text = (
             "<|user|>\nhello hello hello hello\n"
             "<|assistant|>\nhello there!\n<|end|>\n"
-            "quasar uncommonword"
+            "quasar uncommonword " + extra_words
         )
         self.tokenizer = HybridTokenizer.train(self.text, vocab_size=64)
 
