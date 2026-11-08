@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument("--new-tokens", "--new-characters", dest="new_tokens", type=int, default=120)
     parser.add_argument("--temperature", type=float, default=0.8)
     parser.add_argument("--top-k", type=int, default=40)
+    parser.add_argument("--seed", type=int, default=42, help="Fixed sampling seed for repeatable comparisons.")
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     return parser.parse_args()
 
@@ -33,6 +34,7 @@ def main():
     if args.device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but no CUDA-enabled GPU is available.")
 
+    torch.manual_seed(args.seed)
     device = torch.device(
         "cuda" if args.device == "cuda" or (args.device == "auto" and torch.cuda.is_available())
         else "cpu"
