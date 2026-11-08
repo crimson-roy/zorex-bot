@@ -47,6 +47,8 @@ jobs:
           node --check lib/oasst1.js
           node --check dev/ari-chat-server.js
           node --check scripts/prepare-oasst1.js
+          node --check scripts/prepare-ari0-corpus.js
+          node --check test/ari0Corpus.test.js
           node --check scripts/check-wordnet.js
           node --check test/textTokenizer.test.js
           node --check test/wordNet.test.js
@@ -72,6 +74,12 @@ jobs:
 
       - name: Test Ari OASST1 dataset preparation
         run: node test/oasst1.test.js
+
+      - name: Test Ari-0 corpus preparation
+        run: node test/ari0Corpus.test.js
+
+      - name: Check Ari-0 Python syntax
+        run: python -m py_compile training/ari0/model.py training/ari0/train.py training/ari0/generate.py
 
       - name: Test Ari local chat HTTP API
         run: node test/ariChatServer.test.js
