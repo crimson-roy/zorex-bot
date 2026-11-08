@@ -5,7 +5,7 @@ from pathlib import Path
 
 import torch
 from model import Ari0LanguageModel, ModelConfig
-from prepare_v3 import encode_conversation_file, encode_text_file, train_bpe_tokenizer
+from prepare_v3 import PARQUET_FILES, encode_conversation_file, encode_text_file, prepare_wikitext, train_bpe_tokenizer
 from train_v3 import compute_loss, load_token_stream, sample_batch
 
 
@@ -24,6 +24,24 @@ class Ari0V3Tests(unittest.TestCase):
         result = train_bpe_tokenizer(source, output, vocab_size=512)
         self.assertIsNotNone(result["special_tokens"]["<|assistant|>"])
         return output
+
+    def test_parquet_preparation_keeps_three_splits_separate(self):
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+
+        parquet_dir = self.root / "parquet"
+        output_dir = self.root / "prepared"
+        parquet_dir.mkdir()
+        for split, filenames in PARQUET_FILES.items():
+            for filename in filenames:
+                table = pa.table({"text": [f"{split} article line one", f"{split} article line two"]})
+                pq.write_table(table, parquet_dir / filename)
+        result = prepare_wikitext(parquet_dir, output_dir, batch_size=1)
+        self.assertEqual(set(result), {"train", "validation", "test"})
+        self.assertIn("train article", (output_dir / "train.txt").read_text(encoding="utf-8"))
+        self.assertIn("validation article", (output_dir / "validation.txt").read_text(encoding="utf-8"))
+        self.assertIn("test article", (output_dir / "test.txt").read_text(encoding="utf-8"))
+        self.assertNotIn("validation article", (output_dir / "train.txt").read_text(encoding="utf-8"))
 
     def test_text_encoder_writes_memory_mappable_int16(self):
         tokenizer = self.make_tokenizer()
