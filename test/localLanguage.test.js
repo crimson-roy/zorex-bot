@@ -24,6 +24,10 @@ try {
     assert.equal(extractDefinitionTerm("What does persistence mean?"), "persistence");
     assert.equal(extractDefinitionTerm("What is persistence?"), "persistence");
     assert.equal(extractDefinitionTerm("Hi Ari, define persistence"), "persistence");
+    assert.equal(extractDefinitionTerm("Explain the word persistence"), "persistence");
+    assert.equal(extractDefinitionTerm("Explain photosynthesis"), null);
+
+    assert.equal(respondToLocalLanguage("Explain photosynthesis."), null);
 
     const greeting = respondToLocalLanguage("Hi Ari");
     assert.match(greeting.reply, /Hi!/);
