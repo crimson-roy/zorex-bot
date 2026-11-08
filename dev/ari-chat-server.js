@@ -79,7 +79,7 @@ function respondToMessage(message, options = {}) {
     if (localLanguage) return localLanguage;
 
     return {
-        reply: "I don't know how to answer that yet using my local tools. Try a greeting, a calculation, or ask me to define a word. My local language model is not connected yet.",
+        reply: "I don't know how to answer that yet using my local tools. Try a greeting, a calculation, ask me to define a word, or request a word list. My local language model is not connected yet.",
         mode: "Local runtime · language model not connected"
     };
 }
