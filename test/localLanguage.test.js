@@ -44,7 +44,19 @@ try {
     );
     assert.deepEqual(
         extractWordListRequest("list 7-letter words"),
-        { count: 5, length: 7, startsWith: null }
+        { count: 5, length: 7, minLength: 1, startsWith: null }
+    );
+    assert.deepEqual(
+        extractWordListRequest("Gimme 1000 ten letter words and their meanings"),
+        { count: 1000, length: 10, minLength: 1, startsWith: null }
+    );
+    assert.deepEqual(
+        extractWordListRequest("Give me 5 words starting with A"),
+        { count: 5, length: null, minLength: 3, startsWith: "a" }
+    );
+    assert.deepEqual(
+        extractWordListRequest("Give me words with at least 4 letters"),
+        { count: 5, length: null, minLength: 4, startsWith: null }
     );
 
     assert.equal(extractDefinitionTerm("define persistence"), "persistence");
