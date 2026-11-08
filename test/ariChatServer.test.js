@@ -51,7 +51,7 @@ async function main() {
         assert.match(html, /ari-playground-chats-v1/);
         assert.match(html, /id="chat-list"/);
         assert.match(html, /Delete this conversation from this browser/);
-        assert.match(html, /localStorage\\.setItem/);
+        assert.ok(html.includes("localStorage.setItem"));
 
         const health = await fetch(baseUrl + "/api/health");
         assert.equal(health.status, 200);
