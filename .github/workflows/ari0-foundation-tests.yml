@@ -35,14 +35,18 @@ jobs:
           node-version: "20"
       - name: Install CPU PyTorch
         run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Install Ari-0 v3 data dependencies
+        run: python -m pip install pyarrow tokenizers
       - name: Test hybrid tokenizer
         run: python -m unittest discover -s training/ari0 -p test_tokenizer.py -v
       - name: Test fixed evaluation and history
         run: python -m unittest discover -s training/ari0 -p test_training.py -v
+      - name: Test v3 data preparation and assistant masks
+        run: python -m unittest discover -s training/ari0 -p test_v3.py -v
       - name: Test inference prompt builder
         run: python -m unittest discover -s training/ari0 -p test_serve.py -v
       - name: Check Python syntax
-        run: python -m py_compile training/ari0/tokenizer.py training/ari0/train.py training/ari0/generate.py training/ari0/model.py training/ari0/serve.py
+        run: python -m py_compile training/ari0/tokenizer.py training/ari0/train.py training/ari0/generate.py training/ari0/model.py training/ari0/serve.py training/ari0/prepare_v3.py training/ari0/train_v3.py training/ari0/test_v3.py
       - name: Test conversation corpus formatting
         run: node test/ari0Corpus.test.js
       - name: Test local chat server and model routing
