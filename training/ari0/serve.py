@@ -133,8 +133,12 @@ class Ari0Inference:
             else:
                 raise ValueError(f"Unsupported Ari-0 checkpoint format: {checkpoint_format}")
 
-            for marker in ("<|user|>", "<|assistant|>", "<|end|>"):
-                self.stop_ids.add(_token_id(tokenizer, marker)) if marker == "<|end|>" else _token_id(tokenizer, marker)
+            required_ids = {
+                _token_id(tokenizer, "<|user|>"),
+                _token_id(tokenizer, "<|assistant|>"),
+                _token_id(tokenizer, "<|end|>"),
+            }
+            self.stop_ids = required_ids
 
             config = ModelConfig(**checkpoint["config"])
             config.validate()
