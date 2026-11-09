@@ -137,7 +137,7 @@
         const response = await fetch("/api/health", { cache: "no-store" });
         const data = await response.json();
         if (data.aiModelConnected) {
-          modelStatus.textContent = "Ari-0 connected · step " + data.checkpointStep;
+          modelStatus.textContent = (data.model || "Ari-0") + " connected · step " + data.checkpointStep;
           modelStatus.classList.add("connected");
         } else {
           modelStatus.textContent = "Ari-0 loading or unavailable";
