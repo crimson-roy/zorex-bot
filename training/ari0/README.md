@@ -183,7 +183,7 @@ python training\ari0\prepare_v3.py encode-conversations --text data\processed\ar
 python training\ari0\train_v3.py --mode finetune --init-from models\ari\ari0-v3\checkpoint-pretrain.pt --steps 500 --eval-interval 100 --eval-batches 16 --batch-size 2 --threads 2 --learning-rate 0.0001
 ~~~
 
-Fine-tuning writes a separate `checkpoint-finetune.pt`. Resume it with `--mode finetune --resume` and omit `--init-from`. The v3 model is not yet connected to the HTML playground; the existing playground continues to use Ari-0 v2 until a separate v3 inference adapter is implemented and tested.
+Fine-tuning writes a separate `checkpoint-finetune.pt`. Resume it with `--mode finetune --resume` and omit `--init-from`. The local inference bridge now prefers `models/ari/ari0-v3/checkpoint-finetune.pt` when that fine-tuned checkpoint exists, and falls back to the v2 checkpoint only when v3 is absent. It loads the BPE tokenizer JSON stored inside the v3 checkpoint, validates the role/end markers, and runs the same v3 architecture on CPU. The HTML playground displays the model name and checkpoint step. Restart `npm run ari:dev` after training to load the latest saved checkpoint. If the v3 checkpoint fails to load, inspect the Python bridge error rather than deleting or overwriting either checkpoint.
 
 ### V3 tests and safety notes
 
@@ -196,3 +196,22 @@ python -m unittest discover -s training/ari0 -p test_v3.py -v
 - V3 uses CPU training by default. Start with a short pilot, inspect temperatures and throughput, and only then consider longer runs. A cooling fan does not replace temperature monitoring.
 - Dataset files, encoded token streams, tokenizers and checkpoints remain local and are ignored by Git.
 - WikiText-103 and OASST1 are third-party datasets; retain their licence and attribution when redistributing data.
+
+
+### Use the fine-tuned v3 checkpoint in the HTML playground
+
+After `checkpoint-finetune.pt` has been saved:
+
+~~~cmd
+npm run ari:dev
+~~~
+
+The bridge chooses the fine-tuned Ari-0 BPE v3 checkpoint automatically. At startup, expect a message similar to:
+
+~~~text
+[Ari-0 inference] Loaded Ari-0 BPE v3 checkpoint at step 500; 1,874,688 parameters; CPU.
+~~~
+
+Open or refresh `http://127.0.0.1:4173`. The header should identify `Ari-0 BPE v3 connected · step 500`. The response metadata should also say `Ari-0 BPE v3 · step 500 · local inference`. The bridge falls back to v2 only when the v3 fine-tuned checkpoint file does not exist. Set `ARI0_CHECKPOINT` to explicitly select another compatible checkpoint path.
+
+The inference tests cover both the legacy v2 hybrid tokenizer and the v3 BPE tokenizer, v3 fine-tuned checkpoint loading, role-marker safety and context truncation.
