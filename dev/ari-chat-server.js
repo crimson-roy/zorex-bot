@@ -124,6 +124,7 @@ function createLocalModelClient(options = {}) {
                 return {
                     connected: data.modelLoaded === true,
                     model: data.model || null,
+                    mode: data.mode || null,
                     step: data.step ?? null,
                     parameters: data.parameters ?? null,
                     error: data.error || null
@@ -283,6 +284,8 @@ function createServer(options = {}) {
                 mode: "local",
                 aiModelConnected: modelHealth.connected === true,
                 model: modelHealth.model || null,
+                modelMode: modelHealth.mode || null,
+                modelParameters: modelHealth.parameters ?? null,
                 checkpointStep: modelHealth.step ?? null,
                 wordNetAvailable: wordNet.isAvailable()
             });
