@@ -8,7 +8,7 @@
     * { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; }
     body { font: 15px system-ui, sans-serif; color: #171717; background: #fff; }
-    button, input { font: inherit; }
+    button, input, select, textarea { font: inherit; }
     button { cursor: pointer; }
     .app { display: flex; height: 100%; width: 100%; }
     .sidebar {
@@ -27,17 +27,18 @@
     .history-label { padding: 14px 12px 7px; color: #777; font-size: 12px; }
     #chat-list { display: flex; flex: 1; flex-direction: column; gap: 4px; overflow-y: auto; padding: 4px 8px 12px; }
     .history-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .history-row.pinned::before { content: "◆"; flex: 0 0 auto; padding: 0 2px 0 4px; color: #aaa; font-size: 10px; }
     .history-select {
       flex: 1; min-width: 0; overflow: hidden; padding: 9px 10px; border: 0;
       border-radius: 7px; background: transparent; color: #333; text-align: left;
       text-overflow: ellipsis; white-space: nowrap;
     }
     .history-select:hover, .history-select.active { background: #ededed; }
-    .history-delete {
-      flex: 0 0 auto; width: 30px; height: 30px; border: 0; border-radius: 6px;
-      background: transparent; color: #888;
-    }
-    .history-delete:hover { background: #eee; color: #222; }
+    .history-actions { position: fixed; z-index: 10; display: flex; min-width: 130px; flex-direction: column; padding: 4px; border: 1px solid #454545; border-radius: 9px; background: #222; box-shadow: 0 8px 25px #0008; }
+    .history-actions[hidden] { display: none; }
+    .history-action { padding: 8px 10px; border: 0; border-radius: 6px; color: #eee; background: transparent; text-align: left; }
+    .history-action:hover, .history-action:focus-visible { background: #3a3a3a; }
+    .history-action.delete { color: #ffb4ab; }
     .history-empty { padding: 8px 10px; color: #888; font-size: 13px; }
     .main { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
     .topbar {
@@ -45,12 +46,7 @@
       padding: 10px 16px; border-bottom: 1px solid #e5e5e5;
     }
     .topbar h1 { margin: 0; font-size: 17px; font-weight: 600; }
-    #model-status { margin-left: auto; color: #777; font-size: 11px; text-align: right; }
-    #model-status.connected { color: #287a45; }
-    #sidebar-toggle {
-      display: none; padding: 5px 8px; border: 1px solid #ccc; border-radius: 6px;
-      background: #fff;
-    }
+    #sidebar-toggle { display: grid; flex: 0 0 auto; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid #444; border-radius: 10px; color: #eee; background: #222; }
     #conversation { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 22px 16px; }
     #empty-state { position: absolute; inset: 0; display: grid; place-items: center; color: #888; pointer-events: none; }
     #empty-state[hidden] { display: none; }
@@ -62,20 +58,75 @@
     .message.user { align-self: flex-end; background: #f4f4f4; }
     .message.ari { align-self: flex-start; }
     .message small { display: block; margin-top: 6px; color: #777; font-size: 11px; }
-    #chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #e5e5e5; }
+    #tier-select { max-width: 100%; }
     #message-input {
       flex: 1; min-width: 0; padding: 11px 12px; border: 1px solid #aaa;
       border-radius: 8px; outline-offset: 2px;
     }
     #send { padding: 0 16px; border: 1px solid #333; border-radius: 8px; background: #222; color: #fff; }
     #send:disabled { opacity: .5; cursor: wait; }
-    #storage-note { padding: 0 16px 8px; color: #888; font-size: 11px; }
-    #storage-note:empty { display: none; }
     @media (max-width: 680px) {
       .sidebar { position: fixed; z-index: 5; inset: 0 auto 0 0; width: min(280px, 84vw); box-shadow: 8px 0 24px rgba(0,0,0,.08); transform: translateX(-105%); transition: transform .16s ease; }
       .sidebar.open { transform: translateX(0); }
-      #sidebar-toggle { display: inline-block; }
+      .app.sidebar-collapsed .sidebar { display: flex; }
       .message { max-width: 94%; }
+    }
+
+    /* Integrated composer and low-noise dark theme inspired by the supplied references. */
+    body { color: #ececec; background: #212121; }
+    .sidebar { border-color: #303030; background: #171717; }
+    .sidebar-header, .topbar { border-color: #303030; }
+    .new-chat, #sidebar-toggle { color: #eee; border-color: #444; background: #222; }
+    .history-select { color: #ddd; }
+    .history-select:hover, .history-select.active { background: #2b2b2b; }
+    .history-delete { color: #999; }
+    .history-delete:hover { color: #fff; background: #333; }
+    .history-empty, .history-label { color: #929292; }
+    #conversation { padding-bottom: 16px; }
+    .message { border-color: #383838; border-radius: 16px; }
+    .message.user { background: #303030; }
+    .message.ari { border-color: transparent; }
+    #composer-wrap { width: min(100%, 820px); margin: 0 auto; padding: 10px 16px 12px; }
+    #chat-form { display: flex; align-items: flex-end; gap: 10px; padding: 10px; border: 1px solid #484848; border-top: 1px solid #484848; border-radius: 26px; background: #303030; box-shadow: 0 4px 18px rgba(0,0,0,.16); }
+    #attach-button, #send { display: grid; flex: 0 0 auto; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; }
+    #attach-button { color: #eee; background: transparent; }
+    #attach-button:hover, #attach-button:focus-visible { background: #454545; }
+    #compose-center { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 7px; }
+    #message-input { display: block; flex: 0 0 auto; width: 100%; min-height: 34px; max-height: 180px; resize: none; overflow-y: auto; padding: 7px 2px 2px; border: 0; border-radius: 0; outline: 0; color: #f5f5f5; background: transparent; line-height: 1.45; }
+    #message-input::placeholder { color: #aaa; }
+    #composer-bottom { display: flex; align-items: center; gap: 7px; min-width: 0; }
+    #composer-spacer { flex: 1; }
+    #think-toggle, #tier-select { min-height: 32px; border: 1px solid transparent; border-radius: 16px; color: #ddd; background: transparent; }
+    #think-toggle { padding: 0 11px; }
+    #think-toggle:hover, #think-toggle[aria-pressed="true"] { color: #fff; background: #454545; }
+    #think-toggle[aria-pressed="true"] { border-color: #686868; }
+    #tier-select { width: 112px; max-width: 112px; padding: 0 22px 0 10px; outline-offset: 2px; }
+    #tier-select:hover, #tier-select:focus { background: #454545; }
+    #tier-select option { color: #eee; background: #303030; }
+    #send { width: 38px; height: 38px; color: #fff; background: #f5f5f5; }
+    #send svg { color: #202020; }
+    #send:disabled { opacity: .48; cursor: wait; }
+    #image-input, #audio-input, #file-input { display: none; }
+    .attach-wrap { position: relative; flex: 0 0 auto; }
+    #attach-menu { position: absolute; z-index: 8; bottom: calc(100% + 10px); left: 0; display: flex; width: 165px; flex-direction: column; gap: 2px; padding: 5px; border: 1px solid #484848; border-radius: 12px; background: #292929; box-shadow: 0 8px 24px #0008; }
+    #attach-menu[hidden] { display: none; }
+    .attach-option { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: 8px; color: #eee; background: transparent; text-align: left; }
+    .attach-option:hover, .attach-option:focus-visible { background: #414141; }
+    .attach-option svg { width: 18px; height: 18px; }
+    .app.sidebar-collapsed .sidebar { display: none; }
+    #attachment-chip { display: flex; align-items: center; align-self: flex-start; gap: 8px; max-width: 100%; padding: 5px 8px 5px 11px; border: 1px solid #505050; border-radius: 14px; color: #ddd; background: #272727; font-size: 12px; }
+    #attachment-chip[hidden] { display: none; }
+    #attachment-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #remove-attachment { border: 0; border-radius: 50%; color: #ddd; background: transparent; font-size: 16px; line-height: 1; }
+    #composer-disclaimer { margin: 8px 4px 0; color: #929292; font-size: 11px; text-align: center; }
+    #composer-notice { margin: 8px 4px 0; color: #f0b8b8; font-size: 12px; text-align: center; }
+    @media (max-width: 680px) {
+      #composer-wrap { padding: 8px 10px max(10px, env(safe-area-inset-bottom)); }
+      #chat-form { gap: 5px; padding: 8px; border-radius: 23px; }
+      #attach-button { width: 36px; height: 36px; }
+      #tier-select { width: 112px; max-width: 112px; padding-right: 18px; }
+      #think-toggle { padding: 0 8px; }
+      #composer-bottom { gap: 3px; }
     }
   </style>
 </head>
@@ -94,9 +145,10 @@
 
     <section class="main">
       <header class="topbar">
-        <button id="sidebar-toggle" type="button" aria-label="Show chat history">Chats</button>
+        <button id="sidebar-toggle" type="button" aria-label="Collapse chat sidebar" title="Collapse chat sidebar" aria-expanded="true">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M14 9l-3 3 3 3"/></svg>
+        </button>
         <h1>Ari</h1>
-        <small id="model-status" role="status">Checking Ari-0...</small>
       </header>
 
       <main id="conversation" aria-live="polite">
@@ -104,11 +156,45 @@
         <div id="messages"></div>
       </main>
 
-      <div id="storage-note" role="status"></div>
-      <form id="chat-form">
-        <input id="message-input" type="text" placeholder="Message Ari..." autocomplete="off" maxlength="2000" required>
-        <button id="send" type="submit">Send</button>
-      </form>
+      <div id="composer-wrap">
+        <form id="chat-form" aria-label="Message Ari">
+          <div class="attach-wrap">
+          <button id="attach-button" type="button" aria-label="Add an attachment" title="Add an attachment" aria-haspopup="menu" aria-expanded="false">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <div id="attach-menu" role="menu" hidden>
+            <button class="attach-option" type="button" role="menuitem" data-picker="image-input">Images</button>
+            <button class="attach-option" type="button" role="menuitem" data-picker="audio-input">Audio</button>
+            <button class="attach-option" type="button" role="menuitem" data-picker="file-input">Files</button>
+          </div>
+          </div>
+          <input id="image-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose an image">
+          <input id="audio-input" type="file" accept="audio/*" aria-label="Choose audio">
+          <input id="file-input" type="file" aria-label="Choose a file">
+          <div id="compose-center">
+            <div id="attachment-chip" hidden>
+              <span id="attachment-name"></span>
+              <button id="remove-attachment" type="button" aria-label="Remove attached image">×</button>
+            </div>
+            <textarea id="message-input" placeholder="Message Ari..." rows="1" maxlength="2000" required aria-label="Message Ari"></textarea>
+            <div id="composer-bottom">
+              <button id="think-toggle" type="button" aria-pressed="false" title="Enable deeper reasoning">Think</button>
+              <span id="composer-spacer"></span>
+              <select id="tier-select" aria-label="Choose Ari model">
+                <option value="mini">Mini</option>
+                <option value="medium">Medium</option>
+                <option value="max">Max</option>
+                <option value="ultra">Ultra</option>
+              </select>
+              <button id="send" type="submit" aria-label="Send message" title="Send message">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </form>
+        <p id="composer-notice" role="status" hidden></p>
+        <p id="composer-disclaimer">Ari is AI and can make mistakes. Please double-check important information.</p>
+      </div>
     </section>
   </div>
 
@@ -126,31 +212,22 @@
     const conversation = document.getElementById("conversation");
     const sidebar = document.getElementById("sidebar");
     const sidebarToggle = document.getElementById("sidebar-toggle");
-    const storageNote = document.getElementById("storage-note");
-    const modelStatus = document.getElementById("model-status");
+    const app = document.querySelector(".app");
+    const tierSelect = document.getElementById("tier-select");
+    const imageInput = document.getElementById("image-input");
+    const attachButton = document.getElementById("attach-button");
+    const attachMenu = document.getElementById("attach-menu");
+    const attachmentInputs = [document.getElementById("image-input"), document.getElementById("audio-input"), document.getElementById("file-input")];
+    const attachmentChip = document.getElementById("attachment-chip");
+    const attachmentName = document.getElementById("attachment-name");
+    const removeAttachmentButton = document.getElementById("remove-attachment");
+    const thinkToggle = document.getElementById("think-toggle");
+    const composerNotice = document.getElementById("composer-notice");
+    let activeAttachmentInput = imageInput;
 
     let chats = loadChats();
     let currentChatId = null;
-
-    async function refreshModelStatus() {
-      try {
-        const response = await fetch("/api/health", { cache: "no-store" });
-        const data = await response.json();
-        if (data.aiModelConnected) {
-          modelStatus.textContent = (data.model || "Ari-0") + " connected · step " + data.checkpointStep;
-          modelStatus.classList.add("connected");
-        } else {
-          modelStatus.textContent = "Ari-0 loading or unavailable";
-          modelStatus.classList.remove("connected");
-        }
-      } catch (_) {
-        modelStatus.textContent = "Local model status unavailable";
-        modelStatus.classList.remove("connected");
-      }
-    }
-
-    refreshModelStatus();
-    window.setInterval(refreshModelStatus, 4000);
+    let thinkEnabled = false;
 
     function createId() {
       if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -173,7 +250,6 @@
           )
         );
       } catch (error) {
-        storageNote.textContent = "Saved chat history could not be read in this browser.";
         return [];
       }
     }
@@ -181,10 +257,8 @@
     function saveChats() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
-        storageNote.textContent = "Chats are saved only in this browser on this computer.";
         return true;
       } catch (error) {
-        storageNote.textContent = "Browser storage is unavailable or full. This conversation may not be saved.";
         return false;
       }
     }
@@ -194,18 +268,45 @@
     }
 
     function makeTitle(text) {
-      const cleaned = String(text || "").replace(/\s+/g, " ").trim();
-      return cleaned.length > 42 ? cleaned.slice(0, 39) + "..." : (cleaned || "New chat");
+      const cleaned = String(text || "").replace(/\s+/g, " ").trim()
+        .replace(/^(?:hey ari[,!:\s]*|ari[,!:\s]*|can you\s+|could you\s+|please\s+|tell me\s+|explain\s+|what is\s+)/i, "")
+        .replace(/[?.!]+$/g, "");
+      const words = cleaned.split(" ").filter(Boolean);
+      if (!words.length) return "New chat";
+      const concise = words.slice(0, 6).join(" ");
+      const title = concise.charAt(0).toUpperCase() + concise.slice(1);
+      return words.length > 6 || title.length > 38 ? title.slice(0, 35).trimEnd() + "…" : title;
     }
 
-    function addMessage(text, speaker, mode) {
+    async function generateChatTitle(tier, userText, ariText) {
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: "Create a short chat-list title from this exchange. Summarize the topic in your own words from Ari's perspective; do not copy the user's wording. Return only a 2–6 word title, with no quotes or punctuation.",
+            messages: [{ role: "user", content: "User asked: " + userText }, { role: "assistant", content: ariText }],
+            tier,
+            options: { thinking: false, max_new_tokens: 32 }
+          })
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        const title = String(data.reply || "").replace(/[\r\n"'`]+/g, " ").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
+        return title && title.length <= 48 ? title : title.slice(0, 45).trimEnd() + "...";
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function addMessage(text, speaker, imageName) {
       const bubble = document.createElement("div");
       bubble.className = "message " + speaker;
       bubble.textContent = text;
 
-      if (mode) {
+      if (imageName) {
         const meta = document.createElement("small");
-        meta.textContent = mode;
+        meta.textContent = "Image attached: " + imageName;
         bubble.appendChild(meta);
       }
 
@@ -220,14 +321,14 @@
       emptyState.hidden = started;
       if (chat) {
         for (const message of chat.messages) {
-          addMessage(message.text, message.role, message.mode);
+          addMessage(message.text, message.role, message.imageName);
         }
       }
     }
 
     function renderHistory() {
       chatList.replaceChildren();
-      const sorted = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      const sorted = [...chats].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || (b.updatedAt || 0) - (a.updatedAt || 0));
 
       if (!sorted.length) {
         const empty = document.createElement("div");
@@ -239,7 +340,7 @@
 
       for (const chat of sorted) {
         const row = document.createElement("div");
-        row.className = "history-row";
+        row.className = "history-row" + (chat.pinned ? " pinned" : "");
 
         const select = document.createElement("button");
         select.type = "button";
@@ -254,28 +355,97 @@
           input.focus();
         });
 
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.className = "history-delete";
-        remove.textContent = "×";
-        remove.title = "Delete this chat";
-        remove.setAttribute("aria-label", "Delete " + (chat.title || "chat"));
-        remove.addEventListener("click", () => {
-          const confirmed = window.confirm("Delete this conversation from this browser?");
-          if (!confirmed) return;
-          chats = chats.filter(item => item.id !== chat.id);
-          if (currentChatId === chat.id) {
+        row.append(select);
+        row.addEventListener("contextmenu", event => {
+          event.preventDefault();
+          showHistoryActions(chat, event.clientX, event.clientY);
+        });
+        let pressTimer = null;
+        let longPressHandled = false;
+        row.addEventListener("pointerdown", event => {
+          if (event.pointerType !== "touch") return;
+          longPressHandled = false;
+          pressTimer = window.setTimeout(() => {
+            longPressHandled = true;
+            showHistoryActions(chat, Math.min(event.clientX, window.innerWidth - 150), Math.min(event.clientY, window.innerHeight - 110));
+          }, 550);
+        });
+        for (const type of ["pointerup", "pointercancel", "pointerleave"]) row.addEventListener(type, () => window.clearTimeout(pressTimer));
+        row.addEventListener("click", event => {
+          if (!longPressHandled) return;
+          event.preventDefault();
+          event.stopPropagation();
+          longPressHandled = false;
+        }, true);
+        chatList.appendChild(row);
+      }
+    }
+
+    function ensureHistoryActions() {
+      let menu = document.getElementById("history-actions");
+      if (menu) return menu;
+      menu = document.createElement("div");
+      menu.id = "history-actions";
+      menu.className = "history-actions";
+      menu.setAttribute("role", "menu");
+      menu.hidden = true;
+      const pin = document.createElement("button");
+      pin.className = "history-action";
+      pin.type = "button";
+      pin.setAttribute("role", "menuitem");
+      pin.dataset.action = "pin";
+      const remove = document.createElement("button");
+      remove.className = "history-action delete";
+      remove.type = "button";
+      remove.setAttribute("role", "menuitem");
+      remove.dataset.action = "delete";
+      menu.append(pin, remove);
+      document.body.appendChild(menu);
+      menu.addEventListener("click", event => {
+        const action = event.target.closest("button")?.dataset.action;
+        const target = chats.find(item => item.id === menu.dataset.chatId);
+        if (!target || !action) return;
+        if (action === "pin") {
+          target.pinned = !target.pinned;
+          target.updatedAt = Date.now();
+          saveChats();
+          renderHistory();
+        } else if (action === "delete" && window.confirm("Delete this conversation from this browser?")) {
+          chats = chats.filter(item => item.id !== target.id);
+          if (currentChatId === target.id) {
             currentChatId = null;
             renderConversation(null);
           }
           saveChats();
           renderHistory();
-        });
-
-        row.append(select, remove);
-        chatList.appendChild(row);
-      }
+        }
+        hideHistoryActions();
+      });
+      return menu;
     }
+
+    function showHistoryActions(chat, x, y) {
+      const menu = ensureHistoryActions();
+      menu.dataset.chatId = chat.id;
+      menu.querySelector('[data-action="pin"]').textContent = chat.pinned ? "Unpin chat" : "Pin chat";
+      menu.querySelector('[data-action="delete"]').textContent = "Delete chat";
+      menu.style.left = Math.max(8, Math.min(x, window.innerWidth - 150)) + "px";
+      menu.style.top = Math.max(8, Math.min(y, window.innerHeight - 90)) + "px";
+      menu.hidden = false;
+    }
+
+    function hideHistoryActions() {
+      const menu = document.getElementById("history-actions");
+      if (menu) menu.hidden = true;
+    }
+
+    document.addEventListener("click", event => {
+      if (!event.target.closest(".history-actions")) hideHistoryActions();
+      if (!event.target.closest(".attach-wrap")) setAttachMenuOpen(false);
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") { hideHistoryActions(); setAttachMenuOpen(false); }
+    });
 
     function createChat() {
       currentChatId = null;
@@ -283,8 +453,60 @@
       renderHistory();
       sidebar.classList.remove("open");
       input.value = "";
+      resizeComposer();
       input.focus();
     }
+
+    function resizeComposer() {
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 180) + "px";
+    }
+
+    function updateAttachmentChip() {
+      const file = activeAttachmentInput.files && activeAttachmentInput.files[0];
+      attachmentChip.hidden = !file;
+      attachmentName.textContent = file ? file.name : "";
+    }
+
+    function setAttachMenuOpen(open) {
+      attachMenu.hidden = !open;
+      attachButton.setAttribute("aria-expanded", String(open));
+    }
+
+    function showComposerMessage(message) {
+      composerNotice.textContent = message;
+      composerNotice.hidden = false;
+    }
+
+    attachButton.addEventListener("click", () => setAttachMenuOpen(attachMenu.hidden));
+    attachMenu.addEventListener("click", event => {
+      const pickerId = event.target.closest("[data-picker]")?.dataset.picker;
+      if (!pickerId) return;
+      activeAttachmentInput = document.getElementById(pickerId);
+      setAttachMenuOpen(false);
+      activeAttachmentInput.click();
+    });
+    for (const attachmentInput of attachmentInputs) attachmentInput.addEventListener("change", () => {
+      for (const other of attachmentInputs) if (other !== attachmentInput) other.value = "";
+      activeAttachmentInput = attachmentInput;
+      updateAttachmentChip();
+    });
+    removeAttachmentButton.addEventListener("click", () => {
+      activeAttachmentInput.value = "";
+      updateAttachmentChip();
+    });
+    thinkToggle.addEventListener("click", () => {
+      thinkEnabled = !thinkEnabled;
+      thinkToggle.setAttribute("aria-pressed", String(thinkEnabled));
+      thinkToggle.title = thinkEnabled ? "Deeper reasoning is on" : "Enable deeper reasoning";
+    });
+    input.addEventListener("input", resizeComposer);
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        if (form.reportValidity()) form.requestSubmit();
+      }
+    });
 
     function ensureChat(firstMessage) {
       let chat = currentChat();
@@ -303,14 +525,57 @@
       return chat;
     }
 
+    function encodeImage(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("The selected image could not be read."));
+        reader.onload = () => {
+          const result = String(reader.result || "");
+          const comma = result.indexOf(",");
+          if (comma < 0) return reject(new Error("The selected image could not be encoded."));
+          resolve({ mime_type: file.type, data_base64: result.slice(comma + 1) });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const prompt = input.value.trim();
       if (!prompt || sendButton.disabled) return;
 
+      const tier = tierSelect.value;
+      const selectedFile = activeAttachmentInput.files && activeAttachmentInput.files[0] ? activeAttachmentInput.files[0] : null;
+      if (selectedFile && activeAttachmentInput !== imageInput) {
+        showComposerMessage("Audio and file uploads will be available after Ari's server supports them. Image uploads are ready now.");
+        return;
+      }
+      const selectedImage = selectedFile;
+      if (selectedImage) {
+        if (tier === "mini") {
+          showComposerMessage("Choose Medium, Max, or Ultra to ask about an image.");
+          return;
+        }
+        if (!["image/jpeg", "image/png", "image/webp"].includes(selectedImage.type)) {
+          showComposerMessage("That image type isn't supported. Choose another image.");
+          return;
+        }
+        if (selectedImage.size > 8 * 1024 * 1024) {
+          showComposerMessage("Choose an image smaller than 8 MiB.");
+          return;
+        }
+      }
+
       const chat = ensureChat(prompt);
+      composerNotice.textContent = "";
+      composerNotice.hidden = true;
       const chatId = chat.id;
-      const userMessage = { role: "user", text: prompt, createdAt: Date.now() };
+      const userMessage = {
+        role: "user",
+        text: prompt,
+        ...(selectedImage ? { imageName: selectedImage.name || "uploaded image", tier } : {}),
+        createdAt: Date.now()
+      };
       chat.messages.push(userMessage);
       chat.updatedAt = Date.now();
       saveChats();
@@ -318,10 +583,12 @@
       renderHistory();
 
       input.value = "";
+      resizeComposer();
       sendButton.disabled = true;
-      const waiting = addMessage("Thinking...", "ari");
+      const waiting = addMessage("Thinking…", "ari");
 
       try {
+        const image = selectedImage ? await encodeImage(selectedImage) : null;
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -330,7 +597,10 @@
             messages: chat.messages.slice(-8).map(message => ({
               role: message.role === "ari" ? "assistant" : "user",
               content: message.text
-            }))
+            })),
+            tier,
+            image,
+            options: { thinking: thinkEnabled, max_new_tokens: thinkEnabled ? 1024 : 512 }
           })
         });
 
@@ -343,7 +613,6 @@
         const assistantMessage = {
           role: "ari",
           text: reply,
-          mode: data.mode || "",
           createdAt: Date.now()
         };
         const targetChat = chats.find(item => item.id === chatId);
@@ -352,43 +621,69 @@
           targetChat.updatedAt = Date.now();
           saveChats();
         }
-
         if (currentChatId === chatId) {
           waiting.textContent = reply;
-          if (assistantMessage.mode) {
-            const meta = document.createElement("small");
-            meta.textContent = assistantMessage.mode;
-            waiting.appendChild(meta);
-          }
           renderHistory();
         }
+
+        if (targetChat && targetChat.messages.filter(message => message.role === "user").length === 1) {
+          void generateChatTitle(tier, prompt, reply).then(generatedTitle => {
+          if (generatedTitle && chats.includes(targetChat)) {
+            targetChat.title = generatedTitle;
+            targetChat.updatedAt = Date.now();
+            saveChats();
+            renderHistory();
+          }
+          });
+        }
       } catch (error) {
-        const errorText = "Couldn't reach Ari's local server: " + error.message;
+        const safeMessage = typeof error.message === "string" && error.message.startsWith("Ari ")
+          ? error.message
+          : error.message === "Failed to fetch"
+            ? "Couldn't reach Ari right now. Please try again in a moment."
+            : "Ari couldn't answer just now. Please try again.";
+        const errorText = safeMessage;
         const targetChat = chats.find(item => item.id === chatId);
         if (targetChat) {
-          targetChat.messages.push({ role: "ari", text: errorText, mode: "Local connection error", createdAt: Date.now() });
+          targetChat.messages.push({ role: "ari", text: errorText, createdAt: Date.now() });
           targetChat.updatedAt = Date.now();
           saveChats();
         }
         if (currentChatId === chatId) waiting.textContent = errorText;
       } finally {
+        activeAttachmentInput.value = "";
+        activeAttachmentInput = imageInput;
+        updateAttachmentChip();
         sendButton.disabled = false;
         input.focus();
       }
     });
 
     newChatButton.addEventListener("click", createChat);
-    sidebarToggle.addEventListener("click", () => sidebar.classList.toggle("open"));
+    sidebarToggle.addEventListener("click", () => {
+      if (window.matchMedia("(max-width: 680px)").matches) {
+        const open = !sidebar.classList.contains("open");
+        sidebar.classList.toggle("open", open);
+        sidebarToggle.setAttribute("aria-expanded", String(open));
+        sidebarToggle.setAttribute("aria-label", open ? "Close chat sidebar" : "Open chat sidebar");
+      } else {
+        const collapsed = !app.classList.contains("sidebar-collapsed");
+        app.classList.toggle("sidebar-collapsed", collapsed);
+        sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+        sidebarToggle.setAttribute("aria-label", collapsed ? "Show chat sidebar" : "Collapse chat sidebar");
+        sidebarToggle.title = collapsed ? "Show chat sidebar" : "Collapse chat sidebar";
+      }
+    });
 
     renderHistory();
     const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
     if (mostRecent) {
       currentChatId = mostRecent.id;
       renderConversation(mostRecent);
-      storageNote.textContent = "Chats are saved only in this browser on this computer.";
     } else {
       renderConversation(null);
     }
+    resizeComposer();
     input.focus();
   </script>
 </body>

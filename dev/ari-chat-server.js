@@ -7,6 +7,7 @@ const { spawn } = require("node:child_process");
 const { evaluateMathPrompt } = require("../lib/localMath");
 const { WordNetDictionary } = require("../lib/wordNet");
 const { respondToLocalLanguage } = require("../lib/localLanguage");
+const { createAriGpuClient, AriGpuClientError, REMOTE_TIERS } = require("./ariGpuClient");
 
 const wordNet = new WordNetDictionary();
 
@@ -14,7 +15,9 @@ const HOST = "127.0.0.1";
 const DEFAULT_PORT = 4173;
 const MODEL_HOST = "127.0.0.1";
 const MODEL_PORT = 4174;
-const MAX_BODY_BYTES = 32768;
+const MAX_BODY_BYTES = 12 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const ALLOWED_IMAGE_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 const HTML_PATH = path.join(__dirname, "ari-chat.html");
 const INFERENCE_SCRIPT = path.join(__dirname, "..", "training", "ari0", "serve.py");
 const ROOT = path.resolve(__dirname, "..");
@@ -28,7 +31,7 @@ function sendJson(response, statusCode, payload) {
     response.end(JSON.stringify(payload));
 }
 
-function readJsonBody(request) {
+function readJsonBody(request, maxBytes = MAX_BODY_BYTES) {
     return new Promise((resolve, reject) => {
         let size = 0;
         const chunks = [];
@@ -37,7 +40,7 @@ function readJsonBody(request) {
         request.on("data", chunk => {
             if (settled) return;
             size += chunk.length;
-            if (size > MAX_BODY_BYTES) {
+            if (size > maxBytes) {
                 settled = true;
                 reject(Object.assign(new Error("Request body is too large."), { statusCode: 413 }));
                 request.resume();
@@ -90,6 +93,99 @@ function normalizeMessages(body) {
         throw Object.assign(new Error("The latest chat message must be from the user."), { statusCode: 400 });
     }
     return messages;
+}
+
+function normalizeGpuOptions(options) {
+    if (options === undefined) options = {};
+    if (!options || typeof options !== "object" || Array.isArray(options)) {
+        throw Object.assign(new Error("Options must be an object."), { statusCode: 400 });
+    }
+    const allowed = new Set(["thinking", "max_new_tokens", "temperature", "top_p", "top_k"]);
+    if (Object.keys(options).some(key => !allowed.has(key))) {
+        throw Object.assign(new Error("Unsupported generation option."), { statusCode: 400 });
+    }
+    const normalized = {
+        thinking: options.thinking === undefined ? false : options.thinking,
+        max_new_tokens: options.max_new_tokens === undefined ? 512 : options.max_new_tokens
+    };
+    if (typeof normalized.thinking !== "boolean") {
+        throw Object.assign(new Error("thinking must be true or false."), { statusCode: 400 });
+    }
+    if (!Number.isInteger(normalized.max_new_tokens) || normalized.max_new_tokens < 1 || normalized.max_new_tokens > 1024) {
+        throw Object.assign(new Error("max_new_tokens must be an integer from 1 to 1,024."), { statusCode: 400 });
+    }
+    for (const [key, min, max, exclusiveMin] of [["temperature", 0, 2, false], ["top_p", 0, 1, true]]) {
+        if (options[key] === undefined) continue;
+        if (typeof options[key] !== "number" || !Number.isFinite(options[key]) || options[key] < min || options[key] > max || (exclusiveMin && options[key] === min)) {
+            throw Object.assign(new Error(key + " is outside its supported range."), { statusCode: 400 });
+        }
+        normalized[key] = options[key];
+    }
+    if (options.top_k !== undefined) {
+        if (!Number.isInteger(options.top_k) || options.top_k < 1 || options.top_k > 200) {
+            throw Object.assign(new Error("top_k must be an integer from 1 to 200."), { statusCode: 400 });
+        }
+        normalized.top_k = options.top_k;
+    }
+    return normalized;
+}
+
+function normalizeImagePayload(image) {
+    if (image == null) return null;
+    if (!image || typeof image !== "object" || Array.isArray(image) ||
+        Object.keys(image).some(key => !["mime_type", "data_base64"].includes(key))) {
+        throw Object.assign(new Error("Image must contain a MIME type and base64 data."), { statusCode: 400 });
+    }
+    if (!ALLOWED_IMAGE_MIME.has(image.mime_type) || typeof image.data_base64 !== "string" || !image.data_base64) {
+        throw Object.assign(new Error("Image must be a JPEG, PNG or WebP file with valid base64 data."), { statusCode: 400 });
+    }
+    if (image.data_base64.length > Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 4) {
+        throw Object.assign(new Error("Images must be 8 MiB or smaller."), { statusCode: 413 });
+    }
+    const bytes = Buffer.from(image.data_base64, "base64");
+    if (!bytes.length || bytes.length > MAX_IMAGE_BYTES || bytes.toString("base64") !== image.data_base64) {
+        throw Object.assign(new Error(bytes.length > MAX_IMAGE_BYTES ? "Images must be 8 MiB or smaller." : "Image data is not valid base64."), {
+            statusCode: bytes.length > MAX_IMAGE_BYTES ? 413 : 400
+        });
+    }
+    return { mime_type: image.mime_type, data_base64: image.data_base64 };
+}
+
+async function respondWithGpuModel(message, messages, options = {}) {
+    const prompt = String(message || "").trim();
+    const calculation = evaluateMathPrompt(prompt);
+    if (calculation.matched) {
+        return { reply: calculation.error ? "⚠️ " + calculation.error : calculation.display, mode: "Local arithmetic · no AI API" };
+    }
+    const localLanguage = options.image ? null : respondToLocalLanguage(prompt, { dictionary: options.dictionary || wordNet });
+    const mode = String(localLanguage?.mode || "");
+    const completedLocalTool = /^(?:WordNet (?:word search|dictionary)|Local character analysis|Local capability summary)/.test(mode);
+    if (completedLocalTool) return localLanguage;
+    if (!options.gpuClient) {
+        throw new AriGpuClientError("Kaggle GPU inference is unavailable. Configure ARI_GPU_BASE_URL and ARI_GPU_API_KEY on the local Ari server.", {
+            statusCode: 503, code: "GPU_NOT_CONFIGURED"
+        });
+    }
+    const generated = await options.gpuClient.chat({
+        tier: options.tier,
+        messages,
+        image: options.image || null,
+        options: options.generationOptions || { thinking: false, max_new_tokens: 512 }
+    });
+    return {
+        reply: generated.reply,
+        mode: options.tier.charAt(0).toUpperCase() + options.tier.slice(1)
+    };
+}
+
+function friendlyGpuError(error) {
+    const status = error && error.statusCode;
+    if (status === 400) return "That message or option could not be processed. Please check it and try again.";
+    if (status === 413) return "That image or message is too large. Try a smaller image or shorter message.";
+    if (status === 429) return "Ari is answering another request right now. Please try again shortly.";
+    if (status === 502) return "Ari couldn't complete that answer. Please try again.";
+    if (status === 503) return "Ari is temporarily unavailable for that model. Please check back shortly.";
+    return "Ari couldn't answer just now. Please try again.";
 }
 
 function createLocalModelClient(options = {}) {
@@ -171,7 +267,7 @@ function respondToMessage(message, options = {}) {
     if (localLanguage) return localLanguage;
 
     return {
-        reply: "I don't know how to answer that yet using my local tools. Try a greeting, a calculation, ask me to define a word, or request a word list. My local language model is not connected yet.",
+        reply: "I’m still learning how to help with that. Try asking in another way or choose a different Ari model.",
         mode: "Local runtime · language model not connected"
     };
 }
@@ -196,10 +292,9 @@ async function respondWithModel(message, messages, options = {}) {
         try {
             const generated = await options.modelClient.generate(messages);
             if (generated && typeof generated.reply === "string") {
-                const step = Number.isInteger(generated.step) ? " · step " + generated.step : "";
                 return {
                     reply: generated.reply,
-                    mode: (generated.model || "Ari-0 local model") + step + " · local inference"
+                    mode: "Mini"
                 };
             }
             throw new Error("Ari-0 returned an empty response.");
@@ -207,8 +302,8 @@ async function respondWithModel(message, messages, options = {}) {
             console.error("[Ari playground] Local model request failed:", error.message);
             if (!localLanguage) {
                 return {
-                    reply: "I couldn't get a response from Ari-0. Check that the local model bridge is running and that its checkpoint is available.",
-                    mode: "Ari-0 · local inference unavailable"
+                    reply: "Ari couldn't answer right now. Please try again in a moment.",
+                    mode: "Mini unavailable"
                 };
             }
         }
@@ -216,8 +311,8 @@ async function respondWithModel(message, messages, options = {}) {
 
     if (localLanguage) return localLanguage;
     return {
-        reply: "I don't know how to answer that yet using my local tools. The Ari-0 model is not connected.",
-        mode: "Local runtime · language model not connected"
+        reply: "I'm not able to answer that right now. Please try again in a moment.",
+        mode: "Mini unavailable"
     };
 }
 
@@ -279,22 +374,32 @@ function createServer(options = {}) {
             const modelHealth = options.modelClient
                 ? await options.modelClient.health()
                 : { connected: false, model: null, step: null };
+            const gpuHealth = options.gpuClient
+                ? await options.gpuClient.health()
+                : { configured: false, connected: false, error: "Kaggle GPU client is not configured.", models: {}, tiers: {}, gpus: [] };
             sendJson(response, 200, {
                 ok: true,
                 mode: "local",
                 aiModelConnected: modelHealth.connected === true,
-                model: modelHealth.model || null,
-                modelMode: modelHealth.mode || null,
-                modelParameters: modelHealth.parameters ?? null,
-                checkpointStep: modelHealth.step ?? null,
-                wordNetAvailable: wordNet.isAvailable()
+                model: modelHealth.connected ? "Mini" : null,
+                wordNetAvailable: wordNet.isAvailable(),
+                gpu: {
+                    configured: gpuHealth.configured === true,
+                    connected: gpuHealth.connected === true,
+                    tiers: Object.fromEntries(Object.entries(gpuHealth.tiers || {}).map(([tier, state]) => [tier, {
+                        ready: state && state.ready === true,
+                        text_ready: state && state.text_ready === true,
+                        image_ready: state && state.image_ready === true,
+                        state: state && typeof state.state === "string" ? state.state : "unknown"
+                    }]))
+                }
             });
             return;
         }
 
         if (request.method === "POST" && url.pathname === "/api/chat") {
             try {
-                const body = await readJsonBody(request);
+                const body = await readJsonBody(request, MAX_BODY_BYTES);
                 if (typeof body?.message !== "string" || !body.message.trim()) {
                     sendJson(response, 400, { error: "Message must be a non-empty string." });
                     return;
@@ -304,16 +409,46 @@ function createServer(options = {}) {
                     return;
                 }
 
+                const tier = body.tier === undefined ? "mini" : body.tier;
+                if (tier !== "mini" && !REMOTE_TIERS.has(tier)) {
+                    sendJson(response, 400, { error: "tier must be mini, medium, max, or ultra." });
+                    return;
+                }
                 const messages = normalizeMessages(body);
-                const result = await respondWithModel(body.message, messages, {
-                    dictionary: wordNet,
-                    modelClient: options.modelClient
-                });
+                let result;
+                if (tier === "mini") {
+                    if (body.image != null) {
+                        sendJson(response, 400, { error: "Image input requires Medium, Max, or Ultra." });
+                        return;
+                    }
+                    result = await respondWithModel(body.message, messages, {
+                        dictionary: wordNet,
+                        modelClient: options.modelClient
+                    });
+                } else {
+                    const image = normalizeImagePayload(body.image);
+                    const generationOptions = normalizeGpuOptions(body.options);
+                    result = await respondWithGpuModel(body.message, messages, {
+                        dictionary: wordNet,
+                        gpuClient: options.gpuClient,
+                        tier,
+                        image,
+                        generationOptions
+                    });
+                }
                 sendJson(response, 200, result);
             } catch (error) {
                 if (!response.headersSent && !response.destroyed) {
+                    const remoteRequest = typeof error.code === "string" && error.code.startsWith("GPU_");
+                    if (remoteRequest) {
+                        console.error("[Ari playground] GPU inference failed:", {
+                            code: error.code || "GPU_REQUEST_FAILED",
+                            statusCode: error.statusCode || 500,
+                            message: error.message || "Unknown GPU inference error"
+                        });
+                    }
                     sendJson(response, error.statusCode || 400, {
-                        error: error.message || "Could not process the message."
+                        error: remoteRequest ? friendlyGpuError(error) : error.message || "Could not process the message."
                     });
                 }
             }
@@ -331,7 +466,10 @@ if (require.main === module) {
         process.exitCode = 1;
     } else {
         const modelProcess = startInferenceBridge();
-        const app = createServer({ modelClient: createLocalModelClient() });
+        const app = createServer({
+            modelClient: createLocalModelClient(),
+            gpuClient: createAriGpuClient()
+        });
         app.on("close", () => {
             if (modelProcess && !modelProcess.killed) modelProcess.kill();
         });
@@ -355,8 +493,14 @@ module.exports = {
     createLocalModelClient,
     startInferenceBridge,
     isDeterministicToolResult,
+    normalizeGpuOptions,
+    normalizeImagePayload,
+    respondWithGpuModel,
+    createAriGpuClient,
     HOST,
     DEFAULT_PORT,
     MODEL_HOST,
-    MODEL_PORT
+    MODEL_PORT,
+    MAX_BODY_BYTES,
+    MAX_IMAGE_BYTES
 };
