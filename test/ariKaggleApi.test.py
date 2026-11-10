@@ -254,6 +254,9 @@ class KaggleApiTests(unittest.TestCase):
         self.assertEqual(seen[0][0]["role"], "system")
         self.assertTrue(seen[0][0]["content"].startswith("You are Ari."))
         self.assertIn("Never introduce yourself as Qwen, Gemma, Alibaba Cloud, Google", seen[0][0]["content"])
+        self.assertIn("never reveal or guess a creator's personal or legal name", seen[0][0]["content"])
+        self.assertIn("never disclose numeric quotas", seen[0][0]["content"])
+        self.assertIn("browser-local, isolated by the signed-in Google account", seen[0][0]["content"])
         self.assertEqual(seen[0][1], request["messages"][0])
         max_request = sample_request("max")
         max_request["messages"] = [{"role": "user", "content": "Who are you?"}]

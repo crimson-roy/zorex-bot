@@ -9,6 +9,7 @@ const { WordNetDictionary } = require("../lib/wordNet");
 const { respondToLocalLanguage } = require("../lib/localLanguage");
 const { createAriGpuClient, AriGpuClientError, REMOTE_TIERS } = require("./ariGpuClient");
 const { createAriDeveloperAccess, createAriDeveloperUsage } = require("./ariDeveloperAccess");
+const { respondAriSelfKnowledge } = require("./ariSelfKnowledge");
 
 const wordNet = new WordNetDictionary();
 
@@ -20,6 +21,7 @@ const MAX_BODY_BYTES = 12 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_IMAGE_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 const HTML_PATH = path.join(__dirname, "ari-chat.html");
+const FAVICON_PATH = path.join(__dirname, "ari-favicon.png");
 const INFERENCE_SCRIPT = path.join(__dirname, "..", "training", "ari0", "serve.py");
 const ROOT = path.resolve(__dirname, "..");
 
@@ -385,6 +387,23 @@ function createServer(options = {}) {
     const server = http.createServer(async (request, response) => {
         const url = new URL(request.url, "http://" + HOST);
 
+        if (request.method === "GET" && url.pathname === "/ari-favicon.png") {
+            try {
+                const favicon = fs.readFileSync(FAVICON_PATH);
+                response.writeHead(200, {
+                    "Content-Type": "image/png",
+                    "Content-Length": favicon.length,
+                    "Cache-Control": "public, max-age=86400",
+                    "X-Content-Type-Options": "nosniff"
+                });
+                response.end(favicon);
+            } catch (error) {
+                console.error("[Ari playground] Could not read the Ari favicon.");
+                sendJson(response, 500, { error: "The Ari site icon could not be loaded." });
+            }
+            return;
+        }
+
         if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
             try {
                 const html = fs.readFileSync(HTML_PATH);
@@ -512,6 +531,11 @@ function createServer(options = {}) {
                     sendAuthJson(response, 429, { error: "Ari's usage limit has been reached. Please try again later." }, {
                         "Retry-After": String(retryAfter)
                     });
+                    return;
+                }
+                const selfKnowledgeReply = respondAriSelfKnowledge(body.message);
+                if (selfKnowledgeReply) {
+                    sendJson(response, 200, { reply: selfKnowledgeReply, mode: "Ari information" });
                     return;
                 }
                 if (tier === "mini") {

@@ -62,6 +62,11 @@ async function main() {
         const page = await fetch(baseUrl + "/");
         assert.equal(page.status, 200);
         const html = await page.text();
+        assert.match(html, /<link rel="icon" type="image\/png" href="\/ari-favicon\.png">/);
+        const favicon = await fetch(baseUrl + "/ari-favicon.png");
+        assert.equal(favicon.status, 200);
+        assert.equal(favicon.headers.get("content-type"), "image/png");
+        assert.ok(Number(favicon.headers.get("content-length")) > 1000);
         assert.match(html, /Type to get started with Ari/);
         assert.match(html, /ari-playground-chats-v1/);
         assert.match(html, /id="chat-list"/);
@@ -124,6 +129,13 @@ async function main() {
         assert.equal(greetingChat.status, 200);
         assert.match((await greetingChat.json()).reply, /Hi!/);
 
+        const creatorQuestion = await fetch(baseUrl + "/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "Who created you?", tier: "medium" })
+        });
+        assert.equal(creatorQuestion.status, 200);
+        assert.equal((await creatorQuestion.json()).reply, "I'm Ari, an AI assistant created by Zorex AI.");
 
         const empty = await fetch(baseUrl + "/api/chat", {
             method: "POST",

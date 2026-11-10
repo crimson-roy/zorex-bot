@@ -11,6 +11,7 @@ const {
     CSRF_COOKIE,
 } = require("../dev/ariDeveloperAccess");
 const { createServer, HOST } = require("../dev/ari-chat-server");
+const { ARI_SELF_KNOWLEDGE_POLICY, respondAriSelfKnowledge } = require("../dev/ariSelfKnowledge");
 
 const CLIENT_ID = "ari-test-client.apps.googleusercontent.com";
 const BASE_CLAIMS = {
@@ -63,6 +64,18 @@ function request({ host = "127.0.0.1:4173", origin = `http://${host}`, cookie = 
 }
 
 async function main() {
+    assert.equal(respondAriSelfKnowledge("Who are you?"), "I'm Ari, an AI assistant created by Zorex AI.");
+    assert.equal(respondAriSelfKnowledge("What is your creator's real name?"), "I was created by Zorex AI. I don't have a personal creator name to share.");
+    assert.match(respondAriSelfKnowledge("What are your usage limits?"), /contact the person who invited you/i);
+    assert.doesNotMatch(respondAriSelfKnowledge("What are your usage limits?"), /\b(?:100|10)\b/);
+    assert.match(ARI_SELF_KNOWLEDGE_POLICY, /never disclose numeric quotas/i);
+    const selfKnowledgeDoc = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-self-knowledge.md"), "utf8");
+    const developerDoc = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-developer-reference.md"), "utf8");
+    assert.match(selfKnowledgeDoc, /Zorex AI/);
+    assert.doesNotMatch(selfKnowledgeDoc, /100 accepted chat requests|10 requests per minute/);
+    assert.match(developerDoc, /ARI_DAILY_MESSAGE_LIMIT=100/);
+    assert.match(developerDoc, /ARI_MESSAGES_PER_MINUTE=10/);
+
     let current = 1_900_000_000_000;
     const { access } = setupAccess({}, () => current);
     assert.equal(access.config().configured, true);
