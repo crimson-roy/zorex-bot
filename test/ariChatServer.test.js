@@ -62,6 +62,9 @@ async function main() {
         const page = await fetch(baseUrl + "/");
         assert.equal(page.status, 200);
         const html = await page.text();
+        assert.match(html, /Sign in with your Google account/);
+        assert.match(html, /open registration is enabled/);
+        assert.doesNotMatch(html, /invited developers only|invited Google account/i);
         assert.match(html, /<link rel="icon" type="image\/png" href="\/ari-favicon\.png">/);
         const favicon = await fetch(baseUrl + "/ari-favicon.png");
         assert.equal(favicon.status, 200);

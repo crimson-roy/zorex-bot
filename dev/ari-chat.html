@@ -149,7 +149,7 @@
   <section id="auth-screen" aria-labelledby="auth-title" hidden>
     <div class="auth-card">
       <h1 id="auth-title">Ari Developer Playground</h1>
-      <p>Ari is currently available to invited developers only. Sign in with your invited Google account.</p>
+      <p>Sign in with your Google account to use Ari. When open registration is enabled, your Ari account is created automatically.</p>
       <div id="google-sign-in"></div>
       <p id="auth-error" role="status" aria-live="polite"></p>
     </div>
@@ -334,8 +334,10 @@
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
           authError.textContent = response.status === 403
-            ? "Ari is currently available to invited developers only."
-            : "Google sign-in could not be completed. Please try again.";
+            ? "This Google account cannot access Ari in the current setup. Contact the site administrator if you think this is a mistake."
+            : response.status === 503
+              ? "Google sign-in is temporarily unavailable. Please try again later."
+              : "Google couldn't verify your sign-in. Please try again.";
           return;
         }
         csrfToken = result.csrfToken || csrfToken;

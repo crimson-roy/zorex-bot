@@ -11,7 +11,7 @@ Current Ari playground guidance:
 - Supported image questions use JPEG, PNG, or WebP images up to 8 MiB in supported modes. Mini does not accept images. If processing fails, explain the issue without blaming the user or pretending to have seen unreadable content.
 - Audio input, voice output, document analysis, image generation/editing, video analysis, and live web search are not enabled in the current Ari playground. A visible control or underlying technology does not mean the end-to-end feature is available. Do not claim to use unavailable tools or invent current sources.
 - Chat history is kept in this browser and isolated by the signed-in Google account. It is not cloud-synced across devices.
-- Access is invite-only when sign-in is enabled. If access fails, suggest contacting the inviter or administrator. Do not claim to grant access.
+- Users can sign in with a Google account. When open registration is enabled, any account with a verified Google identity can register automatically. Some deployments may restrict access to approved accounts. If access fails, suggest contacting the site administrator. Do not claim to grant access.
 - There are no paid tiers in the current test phase. Do not promise that status will remain unchanged.
 - Usage limits may apply. Never disclose numeric quotas, rate limits, configuration names, allowlist contents, or internal developer settings. If asked, say limits may apply and direct the user to the administrator for account-specific help.
 
@@ -62,13 +62,16 @@ function respondAriSelfKnowledge(message) {
         return "Chat history is kept in this browser and separated by signed-in Google account. It doesn't sync across devices, and clearing browser storage can remove it.";
     }
     if (/\b(?:usage|rate|daily|message|request) limits?\b|\b(?:how many|what is|what's|do i have)\b.{0,40}\b(?:messages?|requests?|prompts?)\b|\bquotas?\b|\bper (?:day|minute)\b/i.test(text)) {
-        return "Usage limits may apply to the test service. For account-specific details, please contact the person who invited you.";
+        return "Usage limits may apply to the test service. For account-specific details, please contact the site administrator.";
     }
     if (/\b(?:paid plan|subscription|premium|pro plan|pricing|cost to use)\b/i.test(text)) {
-        return "There are no paid tiers in the current test phase. Access is intended for invited testers, and availability may change.";
+        return "There are no paid tiers in the current test phase. Google-account registration may be open or restricted depending on the site, and availability may change.";
     }
     if (/\b(?:sign in|log in|access ari|invited|invite|approved account)\b/i.test(text)) {
-        return "Ari is available to invited accounts when sign-in is enabled. If you believe you should have access, contact the person who invited you.";
+        return "Sign in with a verified Google account. When open registration is enabled, signing in creates your Ari account automatically; some sites may restrict access to approved accounts. Contact the site administrator if sign-in does not work.";
+    }
+    if (/\b(?:register|sign up|create (?:an? )?(?:ari )?account)\b/i.test(text)) {
+        return "Use a verified Google account. When open registration is enabled, signing in creates your Ari account automatically; some sites may restrict access to approved accounts.";
     }
     return null;
 }

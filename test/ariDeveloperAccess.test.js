@@ -66,12 +66,16 @@ function request({ host = "127.0.0.1:4173", origin = `http://${host}`, cookie = 
 async function main() {
     assert.equal(respondAriSelfKnowledge("Who are you?"), "I'm Ari, an AI assistant created by Zorex AI.");
     assert.equal(respondAriSelfKnowledge("What is your creator's real name?"), "I was created by Zorex AI. I don't have a personal creator name to share.");
-    assert.match(respondAriSelfKnowledge("What are your usage limits?"), /contact the person who invited you/i);
+    assert.match(respondAriSelfKnowledge("What are your usage limits?"), /contact the site administrator/i);
     assert.doesNotMatch(respondAriSelfKnowledge("What are your usage limits?"), /\b(?:100|10)\b/);
+    assert.match(respondAriSelfKnowledge("How do I register?"), /verified Google account.*automatically/i);
+    assert.doesNotMatch(respondAriSelfKnowledge("How do I get an invite?"), /invited accounts/i);
     assert.match(ARI_SELF_KNOWLEDGE_POLICY, /never disclose numeric quotas/i);
     const selfKnowledgeDoc = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-self-knowledge.md"), "utf8");
     const developerDoc = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-developer-reference.md"), "utf8");
     assert.match(selfKnowledgeDoc, /Zorex AI/);
+    assert.match(selfKnowledgeDoc, /open registration is enabled/);
+    assert.doesNotMatch(selfKnowledgeDoc, /invited accounts|contact their inviter/i);
     assert.doesNotMatch(selfKnowledgeDoc, /100 accepted chat requests|10 requests per minute/);
     assert.match(developerDoc, /ARI_DAILY_MESSAGE_LIMIT=100/);
     assert.match(developerDoc, /ARI_MESSAGES_PER_MINUTE=10/);
@@ -79,6 +83,9 @@ async function main() {
     let current = 1_900_000_000_000;
     const { access } = setupAccess({}, () => current);
     assert.equal(access.config().configured, true);
+    assert.equal(access.registrationMode, "restricted");
+    const restrictedWithoutEmails = setupAccess({ env: { ARI_ALLOWED_EMAILS: "" } }).access;
+    assert.equal(restrictedWithoutEmails.config().configured, false);
     const csrfResponse = responseStub();
     const issued = access.issueCsrf(request(), csrfResponse);
     const csrfCookie = cookieValue(csrfResponse, CSRF_COOKIE);
@@ -122,6 +129,7 @@ async function main() {
         { ...BASE_CLAIMS, aud: "wrong-client" },
         { ...BASE_CLAIMS, iss: "https://evil.example" },
         { ...BASE_CLAIMS, email_verified: false },
+        { ...BASE_CLAIMS, sub: "" },
     ]) {
         const invalid = setupAccess({ claims: invalidClaims }, () => current).access;
         await assert.rejects(() => invalid.authenticateCredential(
@@ -131,7 +139,54 @@ async function main() {
     const unapproved = setupAccess({ claims: { ...BASE_CLAIMS, email: "stranger@example.com" } }, () => current).access;
     await assert.rejects(() => unapproved.authenticateCredential(
         request({ cookie: `${CSRF_COOKIE}=${csrfCookie}`, csrf: csrfCookie }), responseStub(), { credential: "valid" }
-    ), error => error.statusCode === 403 && /invited developers only/.test(error.message));
+    ), error => error.statusCode === 403 && /not enabled for Ari/i.test(error.message));
+
+    const openRegistration = setupAccess({
+        env: { ARI_REGISTRATION_MODE: "open", ARI_ALLOWED_EMAILS: "" },
+        claims: { ...BASE_CLAIMS, email: "New.User@example.com" },
+    }, () => current).access;
+    assert.equal(openRegistration.config().configured, true);
+    assert.equal(openRegistration.registrationMode, "open");
+    for (let signIn = 0; signIn < 2; signIn += 1) {
+        const openResponse = responseStub();
+        const openLogin = await openRegistration.authenticateCredential(
+            request({ cookie: `${CSRF_COOKIE}=${csrfCookie}`, csrf: csrfCookie }), openResponse, { credential: "valid" }
+        );
+        assert.equal(openLogin.authenticated, true);
+        assert.equal(openLogin.user.sub, BASE_CLAIMS.sub);
+        assert.equal(openLogin.user.email, "new.user@example.com");
+        const openSessionCookie = cookieValue(openResponse, SESSION_COOKIE);
+        assert.equal(openRegistration.requireSession(request({ cookie: `${SESSION_COOKIE}=${openSessionCookie}` })).sub, BASE_CLAIMS.sub);
+    }
+
+    for (const invalidClaims of [
+        { ...BASE_CLAIMS, exp: 1_899_999_999 },
+        { ...BASE_CLAIMS, aud: "wrong-client" },
+        { ...BASE_CLAIMS, iss: "https://evil.example" },
+        { ...BASE_CLAIMS, email_verified: false },
+        { ...BASE_CLAIMS, sub: "" },
+    ]) {
+        const openInvalid = setupAccess({
+            env: { ARI_REGISTRATION_MODE: "open", ARI_ALLOWED_EMAILS: "" },
+            claims: invalidClaims,
+        }, () => current).access;
+        await assert.rejects(() => openInvalid.authenticateCredential(
+            request({ cookie: `${CSRF_COOKIE}=${csrfCookie}`, csrf: csrfCookie }), responseStub(), { credential: "valid" }
+        ), { statusCode: 401 });
+    }
+
+    const invalidSignature = setupAccess({
+        env: { ARI_REGISTRATION_MODE: "open", ARI_ALLOWED_EMAILS: "" },
+        verifyIdToken: async () => { throw new Error("invalid signature"); },
+    }, () => current).access;
+    await assert.rejects(() => invalidSignature.authenticateCredential(
+        request({ cookie: `${CSRF_COOKIE}=${csrfCookie}`, csrf: csrfCookie }), responseStub(), { credential: "tampered" }
+    ), { statusCode: 401 });
+    const invalidMode = setupAccess({ env: { ARI_REGISTRATION_MODE: "anyone" } }, () => current).access;
+    assert.equal(invalidMode.config().configured, false);
+    await assert.rejects(() => invalidMode.authenticateCredential(
+        request({ cookie: `${CSRF_COOKIE}=${csrfCookie}`, csrf: csrfCookie }), responseStub(), { credential: "valid" }
+    ), { statusCode: 503 });
     await assert.rejects(() => access.authenticateCredential(
         request({ cookie: `${CSRF_COOKIE}=${csrfCookie}`, csrf: "wrong" }), responseStub(), { credential: "valid" }
     ), { statusCode: 403 });
@@ -248,7 +303,7 @@ async function main() {
         fs.rmSync(authDataDir, { recursive: true, force: true });
     }
 
-    console.log("PASS: Google token validation, invited access, CSRF, sessions, account quotas, persistence and protected routes.");
+    console.log("PASS: Google token validation, restricted/open registration, CSRF, sessions, account quotas, persistence and protected routes.");
 }
 
 main().catch(error => {

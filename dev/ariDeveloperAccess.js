@@ -41,6 +41,9 @@ function createAriDeveloperAccess(options = {}) {
     const env = options.env || process.env;
     const isProduction = options.isProduction ?? env.NODE_ENV === "production";
     const clientId = String(env.GOOGLE_CLIENT_ID || "").trim();
+    const requestedRegistrationMode = String(env.ARI_REGISTRATION_MODE || "restricted").trim().toLowerCase();
+    const registrationModeValid = requestedRegistrationMode === "restricted" || requestedRegistrationMode === "open";
+    const registrationMode = registrationModeValid ? requestedRegistrationMode : "restricted";
     const allowedEmails = new Set(String(env.ARI_ALLOWED_EMAILS || "").split(",").map(normalizedEmail).filter(Boolean));
     const sessionTtlSeconds = integerSetting(env.ARI_SESSION_TTL_SECONDS, 28800, 60, 2592000);
     const publicOrigin = String(env.ARI_PUBLIC_ORIGIN || "").trim();
@@ -69,13 +72,15 @@ function createAriDeveloperAccess(options = {}) {
     }
 
     const configured = Boolean(
-        clientId && allowedEmails.size && sessionTtlSeconds && verifyIdToken &&
+        clientId && registrationModeValid && (registrationMode === "open" || allowedEmails.size) && sessionTtlSeconds && verifyIdToken &&
         (!isProduction || validPublicOrigin)
     );
     const configError = !clientId
         ? "Google sign-in is not configured yet. Please contact Ari's administrator."
-        : !allowedEmails.size
-            ? "Ari has no invited developer accounts configured. Please contact Ari's administrator."
+        : !registrationModeValid
+            ? "Google sign-in configuration is invalid. Please contact Ari's administrator."
+            : registrationMode === "restricted" && !allowedEmails.size
+                ? "Google sign-in is not fully configured. Please contact Ari's administrator."
             : !sessionTtlSeconds
                 ? "Ari's session configuration is invalid. Please contact Ari's administrator."
                 : verifierLoadError
@@ -218,8 +223,8 @@ function createAriDeveloperAccess(options = {}) {
         }
 
         const email = normalizedEmail(claims.email);
-        if (!email || !allowedEmails.has(email)) {
-            const error = new Error("Ari is currently available to invited developers only.");
+        if (registrationMode === "restricted" && (!email || !allowedEmails.has(email))) {
+            const error = new Error("This Google account is not enabled for Ari. Please contact the site administrator.");
             error.statusCode = 403;
             throw error;
         }
@@ -275,6 +280,7 @@ function createAriDeveloperAccess(options = {}) {
         sessions,
         sessionTtlSeconds,
         isProduction,
+        registrationMode,
     };
 }
 

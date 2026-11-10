@@ -257,6 +257,8 @@ class KaggleApiTests(unittest.TestCase):
         self.assertIn("never reveal or guess a creator's personal or legal name", seen[0][0]["content"])
         self.assertIn("never disclose numeric quotas", seen[0][0]["content"])
         self.assertIn("browser-local, isolated by the signed-in Google account", seen[0][0]["content"])
+        self.assertIn("When open registration is enabled", seen[0][0]["content"])
+        self.assertNotIn("invite-only", seen[0][0]["content"])
         self.assertEqual(seen[0][1], request["messages"][0])
         max_request = sample_request("max")
         max_request["messages"] = [{"role": "user", "content": "Who are you?"}]
