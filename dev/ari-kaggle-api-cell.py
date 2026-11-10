@@ -478,7 +478,16 @@ class AriGpuApi:
             return_tensors="pt",
             enable_thinking=options["thinking"],
         )
-        inputs = encoded if isinstance(encoded, dict) else {"input_ids": encoded}
+        # Hugging Face BatchEncoding is mapping-like but is not always a
+        # plain dict. Unpack it instead of treating the whole object as input_ids.
+        if isinstance(encoded, dict):
+            inputs = encoded
+        elif callable(getattr(encoded, "items", None)):
+            inputs = dict(encoded.items())
+        else:
+            inputs = {"input_ids": encoded}
+        if "input_ids" not in inputs or not callable(getattr(inputs["input_ids"], "shape", None)):
+            raise AriGpuApiError(500, "Qwen tokenizer did not return tensor input_ids.")
         inputs = self._move_inputs(inputs, model)
         input_ids = inputs["input_ids"]
         input_length = self._seq_length(input_ids)
