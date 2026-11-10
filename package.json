@@ -31,6 +31,7 @@
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "fast-speedtest-api": "^0.3.2",
+    "google-auth-library": "10.9.1",
     "link-preview-js": "^3.2.0",
     "pdf-parse": "^1.1.1",
     "pdf-poppler": "^0.2.3",

@@ -40,6 +40,10 @@ npm-debug.log*
 # shop.json
 # data/
 
+# Ari developer-only session usage data (never commit private account usage)
+data/ariDeveloperUsage.json
+data/ariDeveloperUsage.json.tmp-*
+
 # Local AI datasets and generated training examples (keep corpora out of Git)
 data/datasets/oasst1/
 data/datasets/wikitext103/

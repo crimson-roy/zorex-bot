@@ -128,10 +128,32 @@
       #think-toggle { padding: 0 8px; }
       #composer-bottom { gap: 3px; }
     }
+    #auth-screen { display: grid; min-height: 100%; place-items: center; padding: 24px; background: #212121; }
+    #auth-screen[hidden] { display: none; }
+    .app[hidden] { display: none; }
+    .auth-card { width: min(100%, 420px); padding: 32px; border: 1px solid #383838; border-radius: 20px; background: #252525; box-shadow: 0 16px 44px #0005; text-align: center; }
+    .auth-card h1 { margin: 0 0 10px; font-size: 25px; font-weight: 600; }
+    .auth-card p { color: #b8b8b8; line-height: 1.55; }
+    #google-sign-in { display: flex; justify-content: center; min-height: 44px; margin-top: 22px; }
+    #auth-error { min-height: 20px; color: #ffb4ab !important; font-size: 13px; }
+    #account-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; min-width: 0; }
+    #account-controls[hidden] { display: none; }
+    #account-email { overflow: hidden; color: #aaa; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    #sign-out { padding: 6px 10px; border: 1px solid #484848; border-radius: 14px; color: #ddd; background: #292929; font-size: 12px; }
+    #sign-out:hover { background: #3b3b3b; }
+    @media (max-width: 480px) { .auth-card { padding: 26px 20px; } #account-email { display: none; } }
   </style>
 </head>
 <body>
-  <div class="app">
+  <section id="auth-screen" aria-labelledby="auth-title" hidden>
+    <div class="auth-card">
+      <h1 id="auth-title">Ari Developer Playground</h1>
+      <p>Ari is currently available to invited developers only. Sign in with your invited Google account.</p>
+      <div id="google-sign-in"></div>
+      <p id="auth-error" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+  <div class="app" id="ari-app" hidden>
     <aside class="sidebar" id="sidebar" aria-label="Chat history">
       <div class="sidebar-header">
         <strong>Chats</strong>
@@ -149,6 +171,10 @@
           <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M14 9l-3 3 3 3"/></svg>
         </button>
         <h1>Ari</h1>
+        <div id="account-controls" hidden>
+          <span id="account-email"></span>
+          <button id="sign-out" type="button">Sign out</button>
+        </div>
       </header>
 
       <main id="conversation" aria-live="polite">
@@ -201,7 +227,14 @@
   <script>
     "use strict";
 
-    const STORAGE_KEY = "ari-playground-chats-v1";
+    const STORAGE_KEY_PREFIX = "ari-playground-chats-v1:";
+    const appElement = document.getElementById("ari-app");
+    const authScreen = document.getElementById("auth-screen");
+    const authError = document.getElementById("auth-error");
+    const googleSignIn = document.getElementById("google-sign-in");
+    const accountControls = document.getElementById("account-controls");
+    const accountEmail = document.getElementById("account-email");
+    const signOutButton = document.getElementById("sign-out");
     const form = document.getElementById("chat-form");
     const input = document.getElementById("message-input");
     const sendButton = document.getElementById("send");
@@ -225,9 +258,134 @@
     const composerNotice = document.getElementById("composer-notice");
     let activeAttachmentInput = imageInput;
 
-    let chats = loadChats();
+    let storageKey = null;
+    let chats = [];
     let currentChatId = null;
     let thinkEnabled = false;
+    let csrfToken = "";
+    let authenticatedUser = null;
+
+    function historyStorageKey(sub) {
+      return STORAGE_KEY_PREFIX + encodeURIComponent(String(sub));
+    }
+
+    function setAuthVisible(visible) {
+      authScreen.hidden = !visible;
+      appElement.hidden = visible;
+      accountControls.hidden = visible;
+    }
+
+    function clearAccountMemory() {
+      chats = [];
+      currentChatId = null;
+      thinkEnabled = false;
+      authenticatedUser = null;
+      storageKey = null;
+      input.value = "";
+      sendButton.disabled = false;
+      imageInput.value = "";
+      for (const attachmentInput of attachmentInputs) attachmentInput.value = "";
+      activeAttachmentInput = imageInput;
+      updateAttachmentChip();
+      composerNotice.textContent = "";
+      composerNotice.hidden = true;
+      thinkToggle.setAttribute("aria-pressed", "false");
+      renderConversation(null);
+      renderHistory();
+      accountEmail.textContent = "";
+    }
+
+    function restoreAccount(user) {
+      authenticatedUser = user;
+      storageKey = historyStorageKey(user.sub);
+      chats = loadChats();
+      currentChatId = null;
+      const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+      if (mostRecent) currentChatId = mostRecent.id;
+      accountEmail.textContent = user.email || "";
+      renderHistory();
+      renderConversation(mostRecent || null);
+      setAuthVisible(false);
+      resizeComposer();
+      input.focus();
+    }
+
+    async function fetchCsrf() {
+      const response = await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" });
+      const data = await response.json();
+      csrfToken = typeof data.csrfToken === "string" ? data.csrfToken : "";
+      return data;
+    }
+
+    function csrfHeaders(extra = {}) {
+      return { ...extra, "X-Ari-CSRF": csrfToken };
+    }
+
+    async function onGoogleCredential(credentialResponse) {
+      authError.textContent = "";
+      try {
+        const response = await fetch("/api/auth/google", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: csrfHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ credential: credentialResponse.credential })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          authError.textContent = response.status === 403
+            ? "Ari is currently available to invited developers only."
+            : "Google sign-in could not be completed. Please try again.";
+          return;
+        }
+        csrfToken = result.csrfToken || csrfToken;
+        restoreAccount(result.user);
+      } catch (_) {
+        authError.textContent = "Google sign-in could not be completed. Please try again.";
+      }
+    }
+
+    function loadGoogleIdentity(clientId) {
+      if (!clientId) return;
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        if (!window.google?.accounts?.id) {
+          authError.textContent = "Google sign-in is temporarily unavailable. Please try again later.";
+          return;
+        }
+        window.google.accounts.id.initialize({ client_id: clientId, callback: onGoogleCredential });
+        window.google.accounts.id.renderButton(googleSignIn, {
+          type: "standard", theme: "filled_black", size: "large", shape: "pill", text: "signin_with"
+        });
+      };
+      script.onerror = () => { authError.textContent = "Google sign-in is temporarily unavailable. Please try again later."; };
+      document.head.appendChild(script);
+    }
+
+    async function initializeAuthentication() {
+      setAuthVisible(true);
+      authError.textContent = "";
+      try {
+        const configResponse = await fetch("/api/auth/config", { credentials: "same-origin", cache: "no-store" });
+        const config = await configResponse.json();
+        await fetchCsrf();
+        const meResponse = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
+        const me = await meResponse.json();
+        if (me.authenticated && me.user) {
+          restoreAccount(me.user);
+          return;
+        }
+        if (!config.configured) {
+          authError.textContent = config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.";
+          return;
+        }
+        loadGoogleIdentity(config.clientId);
+      } catch (_) {
+        authError.textContent = "Ari sign-in is temporarily unavailable. Refresh the page to try again.";
+      }
+    }
 
     function createId() {
       if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -237,8 +395,9 @@
     }
 
     function loadChats() {
+      if (!storageKey) return [];
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(storageKey);
         const parsed = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(parsed)) return [];
         return parsed.filter(chat =>
@@ -255,8 +414,9 @@
     }
 
     function saveChats() {
+      if (!storageKey) return false;
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+        localStorage.setItem(storageKey, JSON.stringify(chats));
         return true;
       } catch (error) {
         return false;
@@ -282,7 +442,8 @@
       try {
         const response = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          headers: csrfHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             message: "Create a short chat-list title from this exchange. Summarize the topic in your own words from Ari's perspective; do not copy the user's wording. Return only a 2–6 word title, with no quotes or punctuation.",
             messages: [{ role: "user", content: "User asked: " + userText }, { role: "assistant", content: ariText }],
@@ -591,7 +752,9 @@
         const image = selectedImage ? await encodeImage(selectedImage) : null;
         const response = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          headers: csrfHeaders({ "Content-Type": "application/json" }),
+          signal: AbortSignal.timeout(190000),
           body: JSON.stringify({
             message: prompt,
             messages: chat.messages.slice(-8).map(message => ({
@@ -606,6 +769,10 @@
 
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
+          if (response.status === 401) {
+            clearAccountMemory();
+            setAuthVisible(true);
+          }
           throw new Error(data.error || "The local Ari server returned an error.");
         }
 
@@ -660,6 +827,27 @@
     });
 
     newChatButton.addEventListener("click", createChat);
+    signOutButton.addEventListener("click", async () => {
+      signOutButton.disabled = true;
+      try {
+        const response = await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: csrfHeaders()
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error("Ari could not sign out safely. Refresh the page and try again.");
+        csrfToken = result.csrfToken || csrfToken;
+        clearAccountMemory();
+        setAuthVisible(true);
+        authError.textContent = "";
+      } catch (error) {
+        composerNotice.textContent = error.message;
+        composerNotice.hidden = false;
+      } finally {
+        signOutButton.disabled = false;
+      }
+    });
     sidebarToggle.addEventListener("click", () => {
       if (window.matchMedia("(max-width: 680px)").matches) {
         const open = !sidebar.classList.contains("open");
@@ -676,15 +864,8 @@
     });
 
     renderHistory();
-    const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
-    if (mostRecent) {
-      currentChatId = mostRecent.id;
-      renderConversation(mostRecent);
-    } else {
-      renderConversation(null);
-    }
-    resizeComposer();
-    input.focus();
+    renderConversation(null);
+    initializeAuthentication();
   </script>
 </body>
 </html>

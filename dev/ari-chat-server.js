@@ -8,6 +8,7 @@ const { evaluateMathPrompt } = require("../lib/localMath");
 const { WordNetDictionary } = require("../lib/wordNet");
 const { respondToLocalLanguage } = require("../lib/localLanguage");
 const { createAriGpuClient, AriGpuClientError, REMOTE_TIERS } = require("./ariGpuClient");
+const { createAriDeveloperAccess, createAriDeveloperUsage } = require("./ariDeveloperAccess");
 
 const wordNet = new WordNetDictionary();
 
@@ -62,6 +63,29 @@ function readJsonBody(request, maxBytes = MAX_BODY_BYTES) {
             if (!settled) reject(error);
         });
     });
+}
+
+function sendAuthJson(response, statusCode, payload, headers = {}) {
+    response.writeHead(statusCode, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+        ...headers
+    });
+    response.end(JSON.stringify(payload));
+}
+
+function developerUsageSettings(env = process.env) {
+    const positiveInteger = (value, fallback) => {
+        if (value === undefined || value === "") return fallback;
+        const parsed = Number(value);
+        return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+    };
+    const dailyLimit = positiveInteger(env.ARI_DAILY_MESSAGE_LIMIT, 100);
+    const perMinuteLimit = positiveInteger(env.ARI_MESSAGES_PER_MINUTE, 10);
+    if (!dailyLimit || !perMinuteLimit) throw new Error("ARI_DAILY_MESSAGE_LIMIT and ARI_MESSAGES_PER_MINUTE must be positive integers.");
+    return { dailyLimit, perMinuteLimit };
 }
 
 function normalizeMessages(body) {
@@ -299,7 +323,7 @@ async function respondWithModel(message, messages, options = {}) {
             }
             throw new Error("Ari-0 returned an empty response.");
         } catch (error) {
-            console.error("[Ari playground] Local model request failed:", error.message);
+            console.error("[Ari playground] Local model request failed.");
             if (!localLanguage) {
                 return {
                     reply: "Ari couldn't answer right now. Please try again in a moment.",
@@ -350,7 +374,15 @@ function startInferenceBridge(options = {}) {
 }
 
 function createServer(options = {}) {
-    return http.createServer(async (request, response) => {
+    const auth = options.authService || createAriDeveloperAccess({ env: options.env || process.env, port: options.port || DEFAULT_PORT });
+    const env = options.env || process.env;
+    const limits = developerUsageSettings(env);
+    const usage = options.usageStore || createAriDeveloperUsage({
+        dataDir: env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data"),
+        ...limits,
+        ...(options.now ? { now: options.now } : {})
+    });
+    const server = http.createServer(async (request, response) => {
         const url = new URL(request.url, "http://" + HOST);
 
         if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
@@ -370,7 +402,56 @@ function createServer(options = {}) {
             return;
         }
 
+        if (request.method === "GET" && url.pathname === "/api/auth/config") {
+            sendAuthJson(response, 200, auth.config());
+            return;
+        }
+
+        if (request.method === "GET" && url.pathname === "/api/auth/csrf") {
+            sendAuthJson(response, 200, auth.issueCsrf(request, response));
+            return;
+        }
+
+        if (request.method === "GET" && url.pathname === "/api/auth/me") {
+            const session = auth.requireSession(request);
+            sendAuthJson(response, 200, {
+                authenticated: Boolean(session),
+                user: session ? auth.publicUser(session) : null,
+                configured: auth.config().configured
+            });
+            return;
+        }
+
+        if (request.method === "POST" && url.pathname === "/api/auth/google") {
+            try {
+                auth.assertOriginAndCsrf(request);
+                const body = await readJsonBody(request, 16 * 1024);
+                const result = await auth.authenticateCredential(request, response, body);
+                sendAuthJson(response, 200, result);
+            } catch (error) {
+                const status = Number.isInteger(error.statusCode) ? error.statusCode : 401;
+                sendAuthJson(response, status, { error: error.message || "Google sign-in could not be verified." });
+            }
+            return;
+        }
+
+        if (request.method === "POST" && url.pathname === "/api/auth/logout") {
+            try {
+                sendAuthJson(response, 200, auth.logout(request, response));
+            } catch (error) {
+                sendAuthJson(response, Number.isInteger(error.statusCode) ? error.statusCode : 403, {
+                    error: error.message || "This request could not be verified."
+                });
+            }
+            return;
+        }
+
         if (request.method === "GET" && url.pathname === "/api/health") {
+            const session = auth.requireSession(request);
+            if (!session) {
+                sendAuthJson(response, 401, { error: "Sign in to view Ari's private status." });
+                return;
+            }
             const modelHealth = options.modelClient
                 ? await options.modelClient.health()
                 : { connected: false, model: null, step: null };
@@ -379,19 +460,11 @@ function createServer(options = {}) {
                 : { configured: false, connected: false, error: "Kaggle GPU client is not configured.", models: {}, tiers: {}, gpus: [] };
             sendJson(response, 200, {
                 ok: true,
-                mode: "local",
                 aiModelConnected: modelHealth.connected === true,
-                model: modelHealth.connected ? "Mini" : null,
-                wordNetAvailable: wordNet.isAvailable(),
                 gpu: {
                     configured: gpuHealth.configured === true,
                     connected: gpuHealth.connected === true,
-                    tiers: Object.fromEntries(Object.entries(gpuHealth.tiers || {}).map(([tier, state]) => [tier, {
-                        ready: state && state.ready === true,
-                        text_ready: state && state.text_ready === true,
-                        image_ready: state && state.image_ready === true,
-                        state: state && typeof state.state === "string" ? state.state : "unknown"
-                    }]))
+                    ready: Boolean(Object.values(gpuHealth.tiers || {}).some(state => state && (state.ready === true || state.text_ready === true || state.image_ready === true)))
                 }
             });
             return;
@@ -399,6 +472,12 @@ function createServer(options = {}) {
 
         if (request.method === "POST" && url.pathname === "/api/chat") {
             try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in with Google to use Ari." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
                 const body = await readJsonBody(request, MAX_BODY_BYTES);
                 if (typeof body?.message !== "string" || !body.message.trim()) {
                     sendJson(response, 400, { error: "Message must be a non-empty string." });
@@ -416,18 +495,31 @@ function createServer(options = {}) {
                 }
                 const messages = normalizeMessages(body);
                 let result;
+                let image = null;
+                let generationOptions = null;
                 if (tier === "mini") {
                     if (body.image != null) {
                         sendJson(response, 400, { error: "Image input requires Medium, Max, or Ultra." });
                         return;
                     }
+                } else {
+                    image = normalizeImagePayload(body.image);
+                    generationOptions = normalizeGpuOptions(body.options);
+                }
+                const quota = await usage.consumeAcceptedMessage(session.sub);
+                if (!quota.allowed) {
+                    const retryAfter = quota.reason === "daily" ? quota.dayResetSeconds : quota.retryAfterSeconds;
+                    sendAuthJson(response, 429, { error: "Ari's usage limit has been reached. Please try again later." }, {
+                        "Retry-After": String(retryAfter)
+                    });
+                    return;
+                }
+                if (tier === "mini") {
                     result = await respondWithModel(body.message, messages, {
                         dictionary: wordNet,
                         modelClient: options.modelClient
                     });
                 } else {
-                    const image = normalizeImagePayload(body.image);
-                    const generationOptions = normalizeGpuOptions(body.options);
                     result = await respondWithGpuModel(body.message, messages, {
                         dictionary: wordNet,
                         gpuClient: options.gpuClient,
@@ -443,11 +535,10 @@ function createServer(options = {}) {
                     if (remoteRequest) {
                         console.error("[Ari playground] GPU inference failed:", {
                             code: error.code || "GPU_REQUEST_FAILED",
-                            statusCode: error.statusCode || 500,
-                            message: error.message || "Unknown GPU inference error"
+                            statusCode: error.statusCode || 500
                         });
                     }
-                    sendJson(response, error.statusCode || 400, {
+                    sendAuthJson(response, error.statusCode || 500, {
                         error: remoteRequest ? friendlyGpuError(error) : error.message || "Could not process the message."
                     });
                 }
@@ -457,6 +548,10 @@ function createServer(options = {}) {
 
         sendJson(response, 404, { error: "Not found." });
     });
+    server.requestTimeout = 30_000;
+    server.headersTimeout = 15_000;
+    server.keepAliveTimeout = 5_000;
+    return server;
 }
 
 if (require.main === module) {

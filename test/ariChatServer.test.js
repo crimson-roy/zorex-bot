@@ -8,6 +8,20 @@ const { WordNetDictionary } = require("../lib/wordNet");
 const { createServer, respondToMessage, HOST } = require("../dev/ari-chat-server");
 const { AriGpuClient } = require("../dev/ariGpuClient");
 
+function createTestServer(options = {}) {
+    const authService = {
+        config: () => ({ clientId: "test-client", configured: true, error: null }),
+        issueCsrf: () => ({ csrfToken: "test-csrf", clientId: "test-client", configured: true, error: null }),
+        requireSession: () => ({ sub: "test-google-sub", email: "test@example.com", name: "Test" }),
+        publicUser: session => ({ sub: session.sub, email: session.email, name: session.name }),
+        assertOriginAndCsrf() {},
+        authenticateCredential: async () => ({ authenticated: true }),
+        logout: () => ({ ok: true }),
+    };
+    const usageStore = { async consumeAcceptedMessage() { return { allowed: true }; } };
+    return createServer({ ...options, authService, usageStore });
+}
+
 async function main() {
     const arithmetic = respondToMessage("What is 1 + 1?");
     assert.equal(arithmetic.reply, "2");
@@ -35,7 +49,7 @@ async function main() {
         fs.rmSync(dictionaryDir, { recursive: true, force: true });
     }
 
-    const app = createServer();
+    const app = createTestServer();
     await new Promise((resolve, reject) => {
         app.once("error", reject);
         app.listen(0, HOST, resolve);
@@ -87,11 +101,10 @@ async function main() {
         assert.equal(health.status, 200);
         const healthBody = await health.json();
         assert.equal(healthBody.ok, true);
-        assert.equal(healthBody.mode, "local");
         assert.equal(healthBody.aiModelConnected, false);
-        assert.equal(healthBody.model, null);
-        assert.equal(typeof healthBody.wordNetAvailable, "boolean");
         assert.equal(healthBody.gpu.connected, false);
+        assert.equal(healthBody.gpu.ready, false);
+        assert.equal(JSON.stringify(healthBody).includes("wordNetAvailable"), false);
 
         const chat = await fetch(baseUrl + "/api/chat", {
             method: "POST",
@@ -111,6 +124,7 @@ async function main() {
         assert.equal(greetingChat.status, 200);
         assert.match((await greetingChat.json()).reply, /Hi!/);
 
+
         const empty = await fetch(baseUrl + "/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -123,7 +137,7 @@ async function main() {
         await new Promise(resolve => app.close(resolve));
     }
     const modelCalls = [];
-    const modelApp = createServer({
+    const modelApp = createTestServer({
         modelClient: {
             async health() {
                 return { connected: true, model: "Ari-0 BPE v3", mode: "fine-tuned", step: 500, parameters: 1874688 };
@@ -143,7 +157,7 @@ async function main() {
         const baseUrl = `http://${HOST}:${modelApp.address().port}`;
         const health = await (await fetch(baseUrl + "/api/health")).json();
         assert.equal(health.aiModelConnected, true);
-        assert.equal(health.model, "Mini");
+        assert.equal(Object.hasOwn(health, "model"), false);
         assert.equal(JSON.stringify(health).includes("Ari-0 BPE v3"), false);
 
         const response = await fetch(baseUrl + "/api/chat", {
@@ -180,7 +194,7 @@ async function main() {
     }
 
     const gpuCalls = [];
-    const gpuApp = createServer({
+    const gpuApp = createTestServer({
         gpuClient: {
             async health() {
                 return {
@@ -205,7 +219,8 @@ async function main() {
         const baseUrl = `http://${HOST}:${gpuApp.address().port}`;
         const health = await (await fetch(baseUrl + "/api/health")).json();
         assert.equal(health.gpu.connected, true);
-        assert.equal(health.gpu.tiers.medium.text_ready, true);
+        assert.equal(health.gpu.ready, true);
+        assert.equal(Object.hasOwn(health.gpu, "tiers"), false);
         assert.equal(JSON.stringify(health).includes("Qwen"), false);
         assert.equal(JSON.stringify(health).includes("cuda:1"), false);
         assert.equal(JSON.stringify(health).includes("T4"), false);
@@ -229,7 +244,7 @@ async function main() {
         assert.equal(gpuCalls[0].tier, "medium");
         assert.equal(gpuCalls[0].messages.length, 1);
         assert.equal(gpuCalls[0].options.thinking, false);
-        assert.equal((await (await fetch(baseUrl + "/api/health")).json()).model, null);
+        assert.equal(Object.hasOwn(await (await fetch(baseUrl + "/api/health")).json(), "model"), false);
 
         const thinkingResponse = await fetch(baseUrl + "/api/chat", {
             method: "POST",
@@ -272,7 +287,7 @@ async function main() {
         });
         assert.equal(unsupportedImage.status, 400);
 
-        const noGpuApp = createServer();
+        const noGpuApp = createTestServer();
         await new Promise((resolve, reject) => {
             noGpuApp.once("error", reject);
             noGpuApp.listen(0, HOST, resolve);
@@ -293,7 +308,7 @@ async function main() {
             await new Promise(resolve => noGpuApp.close(resolve));
         }
 
-        const failureApp = createServer({
+        const failureApp = createTestServer({
             gpuClient: {
                 async health() { return { configured: true, connected: false, tiers: {} }; },
                 async chat() {
@@ -347,7 +362,7 @@ async function main() {
             return new Response(JSON.stringify({ ok: true, tier: "medium", answer: "ARI CONNECTION OK" }), { status: 200 });
         }
     });
-    const browserPathApp = createServer({ gpuClient: directClient });
+    const browserPathApp = createTestServer({ gpuClient: directClient });
     await new Promise((resolve, reject) => {
         browserPathApp.once("error", reject);
         browserPathApp.listen(0, HOST, resolve);
