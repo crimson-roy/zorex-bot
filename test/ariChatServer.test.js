@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { WordNetDictionary } = require("../lib/wordNet");
-const { createServer, respondToMessage, respondWithGpuModel, respondWithModel, shouldSearchWeb, isExplicitWebSearchRequest, prepareSearchMessages, HOST } = require("../dev/ari-chat-server");
+const { createServer, respondToMessage, respondWithGpuModel, respondWithModel, shouldSearchWeb, isExplicitWebSearchRequest, buildSearchQuery, prepareSearchMessages, HOST } = require("../dev/ari-chat-server");
 const { AriGpuClient } = require("../dev/ariGpuClient");
 const { createAriWorkspaceStore } = require("../dev/ariWorkspaceStore");
 
@@ -81,6 +81,8 @@ async function main() {
 
     assert.equal(shouldSearchWeb("What's the latest Kaggle CPU notebook runtime?"), true);
     assert.equal(shouldSearchWeb("What is a CPU?"), false);
+    assert.equal(shouldSearchWeb("Can you search the web?"), false);
+    assert.equal(buildSearchQuery("Search the web for current Kaggle CPU limits."), "current Kaggle CPU limits.");
     assert.equal(isExplicitWebSearchRequest("Search the web for the current Kaggle session limit."), true);
     const searchMessages = [{ role: "user", content: "Search the web for current Kaggle CPU limits." }];
     let searchQuery = "";
@@ -113,7 +115,7 @@ async function main() {
             };
         }
     });
-    assert.equal(searchQuery, searchMessages[0].content);
+    assert.equal(searchQuery, "current Kaggle CPU limits.");
     assert.equal(pageReadCount, 1);
     assert.equal(preparedResearch.searched, true);
     assert.equal(preparedResearch.providers[0], "serper");
@@ -132,7 +134,7 @@ async function main() {
         searchRouter: {
             config: { enabled: true },
             async web_search(query) {
-                assert.match(query, /search the web/i);
+                assert.equal(query, "current notebook information.");
                 return {
                     providers_used: ["serper"],
                     results: [{
