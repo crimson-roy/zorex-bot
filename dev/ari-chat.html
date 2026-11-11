@@ -345,6 +345,27 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
     }
+  
+    .library-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:22px 0 15px; flex-wrap:wrap; }
+    .library-storage { display:flex; flex-direction:column; gap:8px; padding:15px 17px; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
+    .library-storage-row { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--muted); font-size:12px; }
+    .library-meter { height:7px; overflow:hidden; border-radius:99px; background:var(--surface); }
+    .library-meter-fill { height:100%; border-radius:99px; background:var(--accent); transition:width .2s ease; }
+    .library-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; margin-top:18px; }
+    .library-card { display:flex; min-width:0; flex-direction:column; gap:12px; padding:13px; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
+    .library-card-preview { display:grid; width:100%; aspect-ratio:1.7; place-items:center; overflow:hidden; border-radius:10px; color:var(--accent); background:var(--surface); }
+    .library-card-preview img { width:100%; height:100%; object-fit:cover; }
+    .library-card-preview span { font-size:12px; font-weight:700; letter-spacing:.08em; }
+    .library-card-name { overflow:hidden; color:var(--text); font-size:13px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+    .library-card-meta { color:var(--muted); font-size:11px; }
+    .library-card-actions { display:flex; gap:8px; margin-top:auto; }
+    .library-action { min-height:34px; padding:7px 11px; border:1px solid var(--line); border-radius:9px; color:var(--text); background:var(--surface); font:500 11px var(--sans); cursor:pointer; text-decoration:none; }
+    .library-action:hover { border-color:var(--accent); }
+    .library-action.danger { color:var(--danger); }
+    .library-empty { padding:28px 20px; border:1px dashed var(--line); border-radius:15px; color:var(--muted); text-align:center; font-size:13px; }
+    .library-error { color:var(--danger); }
+    @media (max-width:600px) { .library-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; } .library-card { padding:9px; } .library-card-actions { flex-wrap:wrap; } }
+
   </style>
 </head>
 <body>
@@ -612,6 +633,7 @@
     const app = document.querySelector(".app");
     const tierSelect = document.getElementById("tier-select");
     const imageInput = document.getElementById("image-input");
+    const fileInput = document.getElementById("file-input");
     const attachButton = document.getElementById("attach-button");
     const attachMenu = document.getElementById("attach-menu");
     const attachmentInputs = [document.getElementById("image-input"), document.getElementById("audio-input"), document.getElementById("file-input")];
@@ -642,6 +664,12 @@
     let activeAttachmentInput = imageInput;
     let attachmentObjectUrl = null;
     let activeWorkspaceView = "chat";
+    let selectedLibraryFile = null;
+    let attachmentUploadError = "";
+    let attachmentUploadPromise = Promise.resolve(null);
+    let attachmentUploadToken = 0;
+    let libraryLoadToken = 0;
+    let uploadPickerFromLibrary = false;
 
     let storageKey = null;
     let chats = [];
@@ -1155,9 +1183,9 @@
           eyebrow: "Your workspace",
           title: "Library",
           description: "A home for the images, documents and other files you keep with Ari.",
-          status: "Storage setup in progress",
-          heading: "Your files will live here",
-          copy: "The Library interface is being prepared. Account-linked file storage, upload history, downloads and deletion controls still need their server-side storage service. Files selected in the composer are currently used only for the supported message flow; they are not being saved to a persistent Library yet."
+          status: "Your private file space",
+          heading: "Your saved files",
+          copy: "Files you add from the message bar are saved to this account's private Library. You can download or delete them here."
         },
         projects: {
           eyebrow: "Your workspace",
@@ -1248,6 +1276,7 @@
         return;
       }
       workspaceContent.appendChild(panel);
+      if (view === "library") void loadLibraryView();
     }
 
     libraryNav.addEventListener("click", () => showWorkspaceView("library"));
@@ -1262,6 +1291,159 @@
       if (!item) return;
       showWorkspaceView(item.dataset.accountView);
     });
+
+
+    async function loadLibraryView() {
+      const token = ++libraryLoadToken;
+      workspaceContent.replaceChildren();
+      const loading = document.createElement("div");
+      loading.className = "library-empty";
+      loading.textContent = "Loading your Library…";
+      workspaceContent.appendChild(loading);
+      try {
+        const response = await fetch("/api/library/files", { credentials: "same-origin", cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (token !== libraryLoadToken || activeWorkspaceView !== "library") return;
+        if (response.status === 401) {
+          clearAccountMemory();
+          showLanding();
+          return;
+        }
+        if (!response.ok) throw new Error(data.error || "Ari could not load your Library.");
+        workspaceContent.replaceChildren();
+
+        const toolbar = document.createElement("div");
+        toolbar.className = "library-toolbar";
+        const count = document.createElement("span");
+        count.className = "library-card-meta";
+        count.textContent = data.files.length + (data.files.length === 1 ? " saved file" : " saved files");
+        const upload = document.createElement("button");
+        upload.type = "button";
+        upload.className = "library-action";
+        upload.textContent = "Upload a file";
+        upload.addEventListener("click", () => {
+          uploadPickerFromLibrary = true;
+          activeAttachmentInput = fileInput;
+          fileInput.click();
+        });
+        toolbar.append(count, upload);
+
+        const storage = document.createElement("div");
+        storage.className = "library-storage";
+        const storageRow = document.createElement("div");
+        storageRow.className = "library-storage-row";
+        const used = document.createElement("span");
+        used.textContent = formatFileSize(data.usedBytes || 0) + " used";
+        const quota = document.createElement("span");
+        quota.textContent = formatFileSize(data.quotaBytes || 0) + " account limit";
+        storageRow.append(used, quota);
+        const meter = document.createElement("div");
+        meter.className = "library-meter";
+        const fill = document.createElement("div");
+        fill.className = "library-meter-fill";
+        fill.style.width = Math.min(100, data.quotaBytes ? (data.usedBytes / data.quotaBytes) * 100 : 0) + "%";
+        meter.appendChild(fill);
+        storage.append(storageRow, meter);
+        workspaceContent.append(toolbar, storage);
+
+        if (!Array.isArray(data.files) || !data.files.length) {
+          const empty = document.createElement("div");
+          empty.className = "library-empty";
+          empty.textContent = "Nothing saved yet. Use the + button in the message bar or Upload a file to add something to your Library.";
+          workspaceContent.appendChild(empty);
+          return;
+        }
+
+        const grid = document.createElement("div");
+        grid.className = "library-grid";
+        for (const file of data.files) {
+          const card = document.createElement("article");
+          card.className = "library-card";
+          const preview = document.createElement("div");
+          preview.className = "library-card-preview";
+          if (["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"].includes(file.mimeType)) {
+            const image = document.createElement("img");
+            image.alt = "";
+            image.loading = "lazy";
+            image.src = "/api/library/files/" + encodeURIComponent(file.id) + "/preview";
+            preview.appendChild(image);
+          } else {
+            const type = document.createElement("span");
+            const ext = String(file.name || "").split(".").pop().slice(0, 8).toUpperCase();
+            type.textContent = ext && ext !== file.name.toUpperCase() ? ext : "FILE";
+            preview.appendChild(type);
+          }
+          const name = document.createElement("div");
+          name.className = "library-card-name";
+          name.textContent = file.name;
+          name.title = file.name;
+          const meta = document.createElement("div");
+          meta.className = "library-card-meta";
+          meta.textContent = formatFileSize(file.size) + " · " + new Date(file.createdAt).toLocaleDateString();
+          const actions = document.createElement("div");
+          actions.className = "library-card-actions";
+          const download = document.createElement("a");
+          download.className = "library-action";
+          download.href = "/api/library/files/" + encodeURIComponent(file.id) + "/download";
+          download.textContent = "Download";
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "library-action danger";
+          remove.textContent = "Delete";
+          remove.addEventListener("click", async () => {
+            if (!window.confirm("Delete " + file.name + " from your Library?")) return;
+            remove.disabled = true;
+            try {
+              const result = await fetch("/api/library/files/" + encodeURIComponent(file.id), {
+                method: "DELETE",
+                credentials: "same-origin",
+                headers: csrfHeaders()
+              });
+              const payload = await result.json().catch(() => ({}));
+              if (!result.ok) throw new Error(payload.error || "Ari could not delete this file.");
+              await loadLibraryView();
+            } catch (error) {
+              remove.disabled = false;
+              const message = document.createElement("p");
+              message.className = "library-error";
+              message.textContent = error.message;
+              card.appendChild(message);
+            }
+          });
+          actions.append(download, remove);
+          card.append(preview, name, meta, actions);
+          grid.appendChild(card);
+        }
+        workspaceContent.appendChild(grid);
+      } catch (error) {
+        if (token !== libraryLoadToken || activeWorkspaceView !== "library") return;
+        workspaceContent.replaceChildren();
+        const message = document.createElement("div");
+        message.className = "library-empty library-error";
+        message.textContent = error.message || "Ari could not load your Library.";
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "library-action";
+        retry.textContent = "Try again";
+        retry.addEventListener("click", () => void loadLibraryView());
+        workspaceContent.append(message, retry);
+      }
+    }
+
+    async function uploadAttachmentToLibrary(file) {
+      const response = await fetch("/api/library/files", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: csrfHeaders({
+          "Content-Type": file.type || "application/octet-stream",
+          "X-Ari-Filename": encodeURIComponent(file.name || "uploaded-file")
+        }),
+        body: file
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.file) throw new Error(data.error || "Ari could not save this file to your Library.");
+      return data.file;
+    }
 
     function showHistoryActions(chat, x, y) {
       const menu = ensureHistoryActions();
@@ -1323,7 +1505,9 @@
       const file = activeAttachmentInput.files && activeAttachmentInput.files[0];
       attachmentChip.hidden = !file;
       attachmentName.textContent = file ? file.name : "";
-      attachmentMeta.textContent = file ? formatFileSize(file.size) + " · " + (file.type || "File") : "";
+      attachmentMeta.textContent = file
+        ? formatFileSize(file.size) + " · " + (selectedLibraryFile ? "Saved to Library" : attachmentUploadError || "Saving to Library…")
+        : "";
       attachmentPreview.hidden = true;
       attachmentKind.hidden = !file;
       if (attachmentObjectUrl) {
@@ -1336,7 +1520,8 @@
         attachmentPreview.hidden = false;
         attachmentKind.hidden = true;
       } else if (file) {
-        const type = file.type.startsWith("audio/") ? "AUDIO" : "FILE";
+        const extension = String(file.name || "").split(".").pop().slice(0, 7).toUpperCase();
+        const type = file.type.startsWith("audio/") ? "AUDIO" : (extension && extension !== file.name.toUpperCase() ? extension : "FILE");
         attachmentKind.textContent = type;
       } else {
         attachmentPreview.removeAttribute("src");
@@ -1371,10 +1556,51 @@
     for (const attachmentInput of attachmentInputs) attachmentInput.addEventListener("change", () => {
       for (const other of attachmentInputs) if (other !== attachmentInput) other.value = "";
       activeAttachmentInput = attachmentInput;
+      const file = attachmentInput.files && attachmentInput.files[0];
+      const token = ++attachmentUploadToken;
+      selectedLibraryFile = null;
+      attachmentUploadError = "";
       updateAttachmentChip();
+      if (!file) {
+        attachmentUploadPromise = Promise.resolve(null);
+        sendButton.disabled = false;
+        return;
+      }
+      sendButton.disabled = true;
+      composerNotice.textContent = "Saving this file to your Library…";
+      composerNotice.hidden = false;
+      attachmentUploadPromise = uploadAttachmentToLibrary(file).then(record => {
+        if (token !== attachmentUploadToken) return record;
+        selectedLibraryFile = record;
+        composerNotice.textContent = file.type.startsWith("image/")
+          ? "Saved to your Library. Choose Medium, Max or Ultra to ask Ari about this image."
+          : "Saved to your Library. Ari can store this file, but document and audio analysis are not connected yet.";
+        composerNotice.hidden = false;
+        updateAttachmentChip();
+        if (activeWorkspaceView === "library") void loadLibraryView();
+        uploadPickerFromLibrary = false;
+        return record;
+      }).catch(error => {
+        if (token === attachmentUploadToken) {
+          attachmentUploadError = "Upload failed";
+          composerNotice.textContent = error.message || "Ari could not save this file.";
+          composerNotice.hidden = false;
+          updateAttachmentChip();
+          uploadPickerFromLibrary = false;
+        }
+        throw error;
+      }).finally(() => {
+        if (token === attachmentUploadToken) sendButton.disabled = false;
+      });
+      attachmentUploadPromise.catch(() => undefined);
     });
     removeAttachmentButton.addEventListener("click", () => {
+      attachmentUploadToken++;
       activeAttachmentInput.value = "";
+      selectedLibraryFile = null;
+      attachmentUploadError = "";
+      attachmentUploadPromise = Promise.resolve(null);
+      sendButton.disabled = false;
       updateAttachmentChip();
     });
     thinkToggle.addEventListener("click", () => {
@@ -1438,12 +1664,20 @@
 
       const tier = tierSelect.value;
       const selectedFile = activeAttachmentInput.files && activeAttachmentInput.files[0] ? activeAttachmentInput.files[0] : null;
+      if (selectedFile && !selectedLibraryFile) {
+        showComposerMessage(attachmentUploadError || "Wait until the file has finished saving to your Library.");
+        return;
+      }
       if (selectedFile && activeAttachmentInput !== imageInput) {
-        showComposerMessage("Audio and file uploads will be available after Ari's server supports them. Image uploads are ready now.");
+        showComposerMessage("This file is saved in your Library, but Ari cannot analyse documents or audio yet. Remove it from the composer to send your text.");
         return;
       }
       const selectedImage = selectedFile;
       if (selectedImage) {
+        if (selectedImage.size > 8 * 1024 * 1024) {
+          showComposerMessage("This image is saved in your Library, but image chat input is limited to 8 MiB. Choose a smaller image to ask Ari about it.");
+          return;
+        }
         if (tier === "mini") {
           showComposerMessage("Choose Medium, Max, or Ultra to ask about an image.");
           return;
@@ -1553,6 +1787,9 @@
       } finally {
         activeAttachmentInput.value = "";
         activeAttachmentInput = imageInput;
+        selectedLibraryFile = null;
+        attachmentUploadError = "";
+        attachmentUploadPromise = Promise.resolve(null);
         updateAttachmentChip();
         sendButton.disabled = false;
         input.focus();
