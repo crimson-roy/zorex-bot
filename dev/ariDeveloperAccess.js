@@ -260,7 +260,7 @@ function createAriDeveloperAccess(options = {}) {
     }
 
     function config() {
-        return { clientId, configured, error: configured ? null : configError };
+        return { clientId, configured, error: configured ? null : configError, registrationMode };
     }
 
     function invalidateAll() {
