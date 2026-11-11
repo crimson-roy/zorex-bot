@@ -24,6 +24,7 @@ const MAX_BODY_BYTES = 12 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_IMAGE_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 const HTML_PATH = path.join(__dirname, "ari-chat.html");
+const ABOUT_PATH = path.join(__dirname, "ari-about.html");
 const FAVICON_PATH = path.join(__dirname, "ari-favicon.png");
 const INFERENCE_SCRIPT = path.join(__dirname, "..", "training", "ari0", "serve.py");
 const ROOT = path.resolve(__dirname, "..");
@@ -448,6 +449,69 @@ function createServer(options = {}) {
     });
     const server = http.createServer(async (request, response) => {
         const url = new URL(request.url, "http://" + HOST);
+
+        if (request.method === "GET" && url.pathname === "/about") {
+            try {
+                const configuredOrigin = String(env.ARI_PUBLIC_ORIGIN || "").trim().replace(/\/$/, "");
+                let canonicalOrigin = "";
+                try {
+                    const parsed = new URL(configuredOrigin);
+                    if (parsed.origin === configuredOrigin && (!env.NODE_ENV || env.NODE_ENV !== "production" || parsed.protocol === "https:")) {
+                        canonicalOrigin = parsed.origin;
+                    }
+                } catch { /* Omit canonical metadata until the public origin is configured. */ }
+                const html = fs.readFileSync(ABOUT_PATH, "utf8").replaceAll("{{ARI_ORIGIN}}", canonicalOrigin);
+                response.writeHead(200, {
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Cache-Control": "public, max-age=300",
+                    "X-Content-Type-Options": "nosniff",
+                    "Referrer-Policy": "strict-origin-when-cross-origin"
+                });
+                response.end(html);
+            } catch (error) {
+                console.error("[Ari playground] Could not read the About Ari page.");
+                sendJson(response, 500, { error: "The About Ari page could not be loaded." });
+            }
+            return;
+        }
+
+        if (request.method === "GET" && url.pathname === "/robots.txt") {
+            const configuredOrigin = String(env.ARI_PUBLIC_ORIGIN || "").trim().replace(/\/$/, "");
+            const sitemap = configuredOrigin ? "Sitemap: " + configuredOrigin + "/sitemap.xml\\n" : "";
+            response.writeHead(200, {
+                "Content-Type": "text/plain; charset=utf-8",
+                "Cache-Control": "public, max-age=3600",
+                "X-Content-Type-Options": "nosniff"
+            });
+            response.end("User-agent: *\\nAllow: /\\nDisallow: /api/\\n" + sitemap);
+            return;
+        }
+
+        if (request.method === "GET" && url.pathname === "/sitemap.xml") {
+            const configuredOrigin = String(env.ARI_PUBLIC_ORIGIN || "").trim().replace(/\/$/, "");
+            let sitemapOrigin = "";
+            try {
+                const parsed = new URL(configuredOrigin);
+                if (parsed.origin === configuredOrigin && parsed.protocol === "https:") sitemapOrigin = parsed.origin;
+            } catch { /* Sitemap requires a configured canonical HTTPS origin. */ }
+            if (!sitemapOrigin) {
+                sendJson(response, 503, { error: "The public HTTPS site origin is not configured." });
+                return;
+            }
+            const xmlEscape = value => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+            const urls = [sitemapOrigin + "/", sitemapOrigin + "/about"];
+            const xml = '<?xml version="1.0" encoding="UTF-8"?>\\n' +
+                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
+                urls.map(location => "<url><loc>" + xmlEscape(location) + "</loc></url>").join("") +
+                "</urlset>";
+            response.writeHead(200, {
+                "Content-Type": "application/xml; charset=utf-8",
+                "Cache-Control": "public, max-age=3600",
+                "X-Content-Type-Options": "nosniff"
+            });
+            response.end(xml);
+            return;
+        }
 
         if (request.method === "GET" && url.pathname === "/ari-favicon.png") {
             try {
