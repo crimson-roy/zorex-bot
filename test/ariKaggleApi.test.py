@@ -1,5 +1,6 @@
 import base64
 import http.client
+from collections import UserDict
 import importlib.util
 import json
 import pathlib
@@ -84,11 +85,16 @@ class GeneratingFakeModel(FakeModel):
         return FakeTensor([input_ids + self.output_ids])
 
 
+class FakeMappingBatch(UserDict):
+    """Mapping-like BatchEncoding that is deliberately not a plain dict."""
+    pass
+
+
 class FakeQwenTokenizer(FakeProcessor):
     def apply_chat_template(self, messages, **kwargs):
         self.last_messages = messages
         self.last_template_options = kwargs
-        return FakeBatch(input_ids=FakeTensor([[101, 102]]), attention_mask=FakeTensor([[1, 1]]))
+        return FakeMappingBatch({"input_ids": FakeTensor([[101, 102]]), "attention_mask": FakeTensor([[1, 1]])})
 
     def convert_tokens_to_ids(self, _token):
         return 151668
@@ -108,7 +114,7 @@ class LongPromptQwenTokenizer(FakeQwenTokenizer):
     def apply_chat_template(self, messages, **kwargs):
         self.last_messages = messages
         self.last_template_options = kwargs
-        return FakeBatch(input_ids=FakeTensor([[101] * 100]), attention_mask=FakeTensor([[1] * 100]))
+        return FakeMappingBatch({"input_ids": FakeTensor([[101] * 100]), "attention_mask": FakeTensor([[1] * 100])})
 
 
 class FakeGemmaProcessor(FakeProcessor):
