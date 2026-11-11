@@ -712,7 +712,7 @@
     function openAuthScreen(mode = "login") {
       setAuthVisible(true);
       setAuthMode(mode);
-      if (googleClientId && !googleScriptLoaded && !(mode === "signup" && registrationMode !== "open")) {
+      if (googleClientId && !authConfigurationError && !googleScriptLoaded && !(mode === "signup" && registrationMode !== "open")) {
         loadGoogleIdentity(googleClientId);
       }
     }
@@ -798,7 +798,7 @@
     }
 
     function renderGoogleIdentityButton() {
-      if (!googleScriptLoaded || !window.google?.accounts?.id || !googleClientId) return;
+      if (!googleScriptLoaded || !window.google?.accounts?.id || !googleClientId || authConfigurationError) return;
       if (authMode === "signup" && registrationMode !== "open") return;
       googleSignIn.replaceChildren();
       window.google.accounts.id.initialize({ client_id: googleClientId, callback: onGoogleCredential });
