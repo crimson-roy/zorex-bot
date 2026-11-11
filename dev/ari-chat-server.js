@@ -341,15 +341,15 @@ async function respondWithGpuModel(message, messages, options = {}) {
 
 function appendWebpageImages(reply, images = []) {
     let output = String(reply || "").trim();
-    const existing = new Set([...output.matchAll(/!\\[[^\\]]*\\]\\((https:\\/\\/[^)\\s]+)\\)/g)].map(match => match[1]));
+    const existing = new Set([...output.matchAll(/!\[([^\]]*)\]\((https:\/\/[^)\s]+)\)/g)].map(match => match[2]));
     const additions = [];
     for (const image of images.slice(0, 2)) {
         if (!image || typeof image.url !== "string" || !/^https:\/\//i.test(image.url) || existing.has(image.url)) continue;
-        const alt = String(image.alt || "Image from webpage").replace(/[\\r\\n\\[\\]]/g, " ").slice(0, 140).trim() || "Image from webpage";
+        const alt = String(image.alt || "Image from webpage").replace(/[\r\n\[\]]/g, " ").slice(0, 140).trim() || "Image from webpage";
         additions.push("![" + alt + "](" + image.url + ")");
         existing.add(image.url);
     }
-    if (additions.length) output = (output ? output + "\\n\\n" : "") + additions.join("\\n");
+    if (additions.length) output = (output ? output + "\n\n" : "") + additions.join("\n");
     return output;
 }
 
