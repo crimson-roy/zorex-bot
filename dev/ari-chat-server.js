@@ -556,6 +556,72 @@ function createServer(options = {}) {
             return;
         }
 
+
+        if (request.method === "GET" && url.pathname === "/api/workspace/memory") {
+            const session = auth.requireSession(request);
+            if (!session) {
+                sendAuthJson(response, 401, { error: "Sign in to access your Ari Memory." });
+                return;
+            }
+            try {
+                sendAuthJson(response, 200, { memories: workspace.listMemories(session.sub) });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not load your memories." });
+            }
+            return;
+        }
+
+        if (request.method === "POST" && url.pathname === "/api/workspace/memory") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to save a memory." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const body = await readJsonBody(request, 16 * 1024);
+                const memory = await workspace.createMemory(session.sub, body?.memory || body);
+                sendAuthJson(response, 201, { created: true, memory });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not save this memory." });
+            }
+            return;
+        }
+
+        const memoryMatch = url.pathname.match(/^\/api\/workspace\/memory\/([0-9a-f-]{36})$/i);
+        if (memoryMatch && request.method === "PATCH") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to edit your memories." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const body = await readJsonBody(request, 16 * 1024);
+                const memory = await workspace.updateMemory(session.sub, memoryMatch[1], body?.memory || body);
+                sendAuthJson(response, 200, { updated: true, memory });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not update this memory." });
+            }
+            return;
+        }
+
+        if (memoryMatch && request.method === "DELETE") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to delete your memories." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const memory = await workspace.deleteMemory(session.sub, memoryMatch[1]);
+                sendAuthJson(response, 200, { deleted: true, memory });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not delete this memory." });
+            }
+            return;
+        }
+
         if (request.method === "GET" && url.pathname === "/api/library/files") {
             const session = auth.requireSession(request);
             if (!session) {
