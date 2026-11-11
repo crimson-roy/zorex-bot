@@ -44,6 +44,7 @@ npm-debug.log*
 # data/
 
 # Ari developer-only session usage data (never commit private account usage)
+data/ariWorkspace.json
 data/ariDeveloperUsage.json
 data/ariDeveloperUsage.json.tmp-*
 
