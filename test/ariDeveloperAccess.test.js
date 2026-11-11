@@ -69,7 +69,7 @@ async function main() {
     assert.equal(respondAriSelfKnowledge("What is your creator's real name?"), "I was created by Zorex AI. I don't have a personal creator name to share.");
     assert.match(respondAriSelfKnowledge("What are your usage limits?"), /contact the site administrator/i);
     assert.doesNotMatch(respondAriSelfKnowledge("What are your usage limits?"), /\b(?:100|10)\b/);
-    assert.match(respondAriSelfKnowledge("How do I register?"), /verified Google account.*automatically/i);
+    assert.match(respondAriSelfKnowledge("How do I register?"), /verified Google account or, when configured, a one-time code/i);
     assert.match(respondAriSelfKnowledge("Can you search the web?"), /search public web information.*configured and available/i);
     assert.doesNotMatch(respondAriSelfKnowledge("How do I get an invite?"), /invited accounts/i);
     assert.match(ARI_SELF_KNOWLEDGE_POLICY, /never disclose numeric quotas/i);
@@ -260,7 +260,7 @@ async function main() {
     assert.match(pageSource, /isn\x27t on Ari\x27s approved sign-in list/,
         "the sign-in page should explain that a 403 means the Google account is not allowlisted");
     const historyFunction = pageSource.match(/function historyStorageKey\(sub\) \{([\s\S]*?)\n    \}/);
-    assert.ok(historyFunction, "the browser must scope history using the authenticated Google subject");
+    assert.ok(historyFunction, "the browser must scope history using the authenticated account subject");
     const getHistoryKey = new Function("STORAGE_KEY_PREFIX", `return function historyStorageKey(sub) {${historyFunction[1]}\n}`)("ari-playground-chats-v1:");
     assert.notEqual(getHistoryKey("google-sub-one"), getHistoryKey("google-sub-two"));
     assert.match(getHistoryKey("google-sub-one"), /^ari-playground-chats-v1:/);
