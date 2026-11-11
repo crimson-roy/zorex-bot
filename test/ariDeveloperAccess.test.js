@@ -238,6 +238,8 @@ async function main() {
     }
 
     const pageSource = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-chat.html"), "utf8");
+    assert.match(pageSource, /isn\x27t on Ari\x27s approved sign-in list/,
+        "the sign-in page should explain that a 403 means the Google account is not allowlisted");
     const historyFunction = pageSource.match(/function historyStorageKey\(sub\) \{([\s\S]*?)\n    \}/);
     assert.ok(historyFunction, "the browser must scope history using the authenticated Google subject");
     const getHistoryKey = new Function("STORAGE_KEY_PREFIX", `return function historyStorageKey(sub) {${historyFunction[1]}\n}`)("ari-playground-chats-v1:");
