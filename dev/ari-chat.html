@@ -712,6 +712,9 @@
     function openAuthScreen(mode = "login") {
       setAuthVisible(true);
       setAuthMode(mode);
+      if (googleClientId && !googleScriptLoaded && !(mode === "signup" && registrationMode !== "open")) {
+        loadGoogleIdentity(googleClientId);
+      }
     }
 
     function clearAccountMemory() {
