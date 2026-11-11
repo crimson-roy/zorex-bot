@@ -10,7 +10,6 @@ const { SearchRouter, canonicalUrl, deduplicate, open_webpage } = require("../li
 const { requestJson } = require("../lib/searchRouter/providerUtils");
 const { searchTools, formatUntrustedToolOutput } = require("../lib/searchRouter/tools");
 const { openWebpage, resolvePublicHost, extractPage } = require("../lib/searchRouter/openWebpage");
-const TavilyProvider = require("../lib/searchRouter/providers/tavily");
 const SearXNGProvider = require("../lib/searchRouter/providers/searxng");
 const SerperProvider = require("../lib/searchRouter/providers/serper");
 
@@ -23,7 +22,7 @@ function provider(name, fn, configured = true) {
 }
 function makeRouter(providers, overrides = {}) {
     const env = {
-        SEARCH_ENABLED: "true", SEARCH_PROVIDER_ORDER: "tavily,searxng,serper",
+        SEARCH_ENABLED: "true", SEARCH_PROVIDER_ORDER: "serper,searxng",
         SEARCH_MAX_FALLBACKS: "2", SEARCH_CIRCUIT_FAILURES: "3",
         SEARCH_CIRCUIT_COOLDOWN_MS: "5000", SEARCH_MONTHLY_SOFT_LIMIT: "900",
         SEARCH_RESEARCH_MODE: "true", ...overrides
@@ -40,19 +39,6 @@ function response(data, status = 200, headers = {}) {
 }
 
 async function testProviderNormalization() {
-    let tavilyRequest;
-    const tv = new TavilyProvider({ env: { TAVILY_API_KEY: "mock-secret" }, fetchImpl: async (url, init) => {
-        tavilyRequest = { url: String(url), init };
-        return response({ results: [{ title: "T", url: "https://example.org/a", content: "Snippet", raw_content: "Full", score: 0.7, published_date: "2026-11-01" }], usage: { credits: 2 } });
-    } });
-    const tvResult = await tv.search({ query: "q", limit: 3, freshness: "week", country: "US", research_mode: true }, { timeoutMs: 1000 });
-    assert.equal(tavilyRequest.url, "https://api.tavily.com/search");
-    assert.equal(tavilyRequest.init.headers.Authorization, "Bearer mock-secret");
-    assert.equal(JSON.parse(tavilyRequest.init.body).search_depth, "advanced");
-    assert.equal(tvResult.results[0].content, "Full");
-    assert.equal(tvResult.results[0].provider, "tavily");
-    assert.equal(tvResult.credits, 2);
-
     let sxUrl;
     const sx = new SearXNGProvider({ env: { SEARXNG_BASE_URL: "https://search.example/base" }, fetchImpl: async url => {
         sxUrl = new URL(url); return response({ results: [{ title: "S", url: "https://example.org/s", content: "text", score: 1 }] });
@@ -88,7 +74,7 @@ async function testProviderNormalization() {
 }
 
 async function testNoProviderAndValidation() {
-    const router = makeRouter({ tavily: provider("tavily", async () => ({ results: [] }), false), searxng: provider("searxng", async () => ({ results: [] }), false), serper: provider("serper", async () => ({ results: [] }), false) });
+    const router = makeRouter({ serper: provider("serper", async () => ({ results: [] }), false), searxng: provider("searxng", async () => ({ results: [] }), false), serper: provider("serper", async () => ({ results: [] }), false) });
     await assert.rejects(router.web_search("hello"), e => e.code === "NO_SEARCH_PROVIDER");
     await assert.rejects(router.web_search(" "), e => e.statusCode === 400);
     await assert.rejects(router.web_search("hello", { freshness: "hour" }), e => e.statusCode === 400);
@@ -100,7 +86,7 @@ async function testNoProviderAndValidation() {
 async function testFallbackAndStatusHandling() {
     let primaryCalls = 0, fallbackCalls = 0;
     const router = makeRouter({
-        tavily: provider("tavily", async () => { primaryCalls++; throw Object.assign(new Error("down"), { status: 503, kind: "http" }); }),
+        serper: provider("serper", async () => { primaryCalls++; throw Object.assign(new Error("down"), { status: 503, kind: "http" }); }),
         searxng: provider("searxng", async () => { fallbackCalls++; return { results: [result("https://example.org/ok", "searxng")] }; }),
         serper: provider("serper", async () => ({ results: [] }))
     });
@@ -111,33 +97,33 @@ async function testFallbackAndStatusHandling() {
 
     for (const status of [401, 403]) {
         const authRouter = makeRouter({
-            tavily: provider("tavily", async () => { throw Object.assign(new Error("auth"), { status }); }),
+            serper: provider("serper", async () => { throw Object.assign(new Error("auth"), { status }); }),
             searxng: provider("searxng", async () => ({ results: [result("https://example.org/auth-fallback", "searxng")] })),
             serper: provider("serper", async () => ({ results: [] }))
         });
         const fallback = await authRouter.web_search("q");
         assert.equal(fallback.providers_used[0], "searxng");
-        assert.equal(authRouter.getStatus().providers.find(p => p.name === "tavily").eligible, false);
+        assert.equal(authRouter.getStatus().providers.find(p => p.name === "serper").eligible, false);
     }
     for (const status of [429, 500, 502, 503]) {
         const rateRouter = makeRouter({
-            tavily: provider("tavily", async () => { throw Object.assign(new Error("status"), { status, retryAfter: "30" }); }),
+            serper: provider("serper", async () => { throw Object.assign(new Error("status"), { status, retryAfter: "30" }); }),
             searxng: provider("searxng", async () => ({ results: [result("https://example.org/fallback", "searxng")] })),
             serper: provider("serper", async () => ({ results: [] }))
         });
         await rateRouter.web_search("q");
-        const tavily = rateRouter.getStatus().providers.find(p => p.name === "tavily");
-        if (status === 429) { assert.equal(tavily.rate_limit_events, 1); assert.ok(Date.parse(tavily.rate_limited_until) > now); }
+        const serper = rateRouter.getStatus().providers.find(p => p.name === "serper");
+        if (status === 429) { assert.equal(serper.rate_limit_events, 1); assert.ok(Date.parse(serper.rate_limited_until) > now); }
     }
     const timeoutRouter = makeRouter({
-        tavily: provider("tavily", async () => { throw Object.assign(new Error("timeout"), { kind: "timeout" }); }),
+        serper: provider("serper", async () => { throw Object.assign(new Error("timeout"), { kind: "timeout" }); }),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/timeout", "searxng")] })),
         serper: provider("serper", async () => ({ results: [] }))
     });
     assert.equal((await timeoutRouter.web_search("q")).providers_used[0], "searxng");
 
     const invalidRouter = makeRouter({
-        tavily: provider("tavily", async () => { throw Object.assign(new Error("bad payload"), { kind: "invalid_response" }); }),
+        serper: provider("serper", async () => { throw Object.assign(new Error("bad payload"), { kind: "invalid_response" }); }),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/valid", "searxng")] })),
         serper: provider("serper", async () => ({ results: [] }))
     });
@@ -147,20 +133,20 @@ async function testFallbackAndStatusHandling() {
 async function testCircuitQuotaAndRecovery() {
     let attempts = 0;
     const circuit = makeRouter({
-        tavily: provider("tavily", async () => { attempts++; throw Object.assign(new Error("server"), { status: 500 }); }),
+        serper: provider("serper", async () => { attempts++; throw Object.assign(new Error("server"), { status: 500 }); }),
         searxng: provider("searxng", async () => ({ results: [] }), false),
         serper: provider("serper", async () => ({ results: [] }), false)
     }, { SEARCH_MAX_FALLBACKS: "0" });
     for (let i = 0; i < 3; i++) await assert.rejects(circuit.web_search("q"), e => e.code === "SEARCH_FAILED");
     assert.equal(circuit.getStatus().providers[0].circuit_breaker, "open");
     now += 6000;
-    circuit.providers.tavily.search = async () => ({ results: [result("https://example.org/recovered", "tavily")] });
+    circuit.providers.serper.search = async () => ({ results: [result("https://example.org/recovered", "serper")] });
     assert.equal((await circuit.web_search("q")).results.length, 1);
     assert.equal(circuit.getStatus().providers[0].circuit_breaker, "closed");
     assert.equal(attempts, 3);
 
     const quota = makeRouter({
-        tavily: provider("tavily", async () => ({ results: [result("https://example.org/quota", "tavily")] })),
+        serper: provider("serper", async () => ({ results: [result("https://example.org/quota", "serper")] })),
         searxng: provider("searxng", async () => ({ results: [] }), false),
         serper: provider("serper", async () => ({ results: [] }), false)
     }, { SEARCH_MONTHLY_SOFT_LIMIT: "1" });
@@ -170,11 +156,11 @@ async function testCircuitQuotaAndRecovery() {
 
     const monthState = {
         month: "2026-10", requests: 7, successes: 6, failures: 1, credits: 4,
-        providers: { tavily: { month: "2026-10", requests: 7, successes: 6, failures: 1, credits: 4, observations: [] } }
+        providers: { serper: { month: "2026-10", requests: 7, successes: 6, failures: 1, credits: 4, observations: [] } }
     };
     const monthly = new SearchRouter({
-        env: { SEARCH_ENABLED: "true", SEARCH_PROVIDER_ORDER: "tavily" },
-        providers: { tavily: provider("tavily", async () => ({ results: [] })) },
+        env: { SEARCH_ENABLED: "true", SEARCH_PROVIDER_ORDER: "serper" },
+        providers: { serper: provider("serper", async () => ({ results: [] })) },
         state: monthState, stateFile, clock: () => now
     });
     assert.equal(monthly.getStatus().month_utc, "2026-11");
@@ -184,31 +170,31 @@ async function testCircuitQuotaAndRecovery() {
 async function testCanonicalDedupAndResearchMode() {
     assert.equal(canonicalUrl("HTTPS://Example.org:443/a/?utm_source=x&keep=1#part"), "https://example.org/a?keep=1");
     const unique = deduplicate([
-        result("https://example.org/a?utm_source=x#one", "tavily"),
+        result("https://example.org/a?utm_source=x#one", "serper"),
         result("https://EXAMPLE.org/a#two", "serper")
     ]);
     assert.equal(unique.length, 1);
     assert.equal(unique[0].url, "https://example.org/a?utm_source=x#one");
 
     const research = makeRouter({
-        tavily: provider("tavily", async () => ({ results: [result("https://example.org/shared?utm_medium=a", "tavily", { score: 0.9 }), result("https://example.org/one", "tavily")] })),
+        serper: provider("serper", async () => ({ results: [result("https://example.org/shared?utm_medium=a", "serper", { score: 0.9 }), result("https://example.org/one", "serper")] })),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/shared#top", "searxng"), result("https://example.org/two", "searxng")] })),
         serper: provider("serper", async () => ({ results: [] }))
     });
     const output = await research.web_search("q", { research_mode: true });
-    assert.deepEqual(new Set(output.providers_used), new Set(["tavily", "searxng"]));
+    assert.deepEqual(new Set(output.providers_used), new Set(["serper", "searxng"]));
     assert.equal(output.research_mode, true); assert.equal(output.results.length, 3);
-    await assert.rejects(makeRouter({ tavily: provider("tavily", async () => ({ results: [] })) }, { SEARCH_RESEARCH_MODE: "false" })
+    await assert.rejects(makeRouter({ serper: provider("serper", async () => ({ results: [] })) }, { SEARCH_RESEARCH_MODE: "false" })
         .web_search("q", { research_mode: true }), e => e.code === "RESEARCH_MODE_DISABLED");
 
     const researchFallback = makeRouter({
-        tavily: provider("tavily", async () => { throw Object.assign(new Error("down"), { status: 503 }); }),
+        serper: provider("serper", async () => { throw Object.assign(new Error("down"), { status: 503 }); }),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/second", "searxng")] })),
         serper: provider("serper", async () => ({ results: [result("https://example.org/third", "serper")] }))
     });
     const recovered = await researchFallback.web_search("q", { research_mode: true });
-    assert.equal(recovered.providers_used.length, 2);
-    assert.ok(recovered.providers_used.includes("serper"));
+    assert.equal(recovered.providers_used.length, 1);
+    assert.ok(recovered.providers_used.includes("searxng"));
 }
 
 async function testPageExtractionAndSsrF() {
