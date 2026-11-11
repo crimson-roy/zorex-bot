@@ -239,6 +239,53 @@ async function main() {
         const historyAfterProjectDelete = await fetch(baseUrl + "/api/workspace/chats");
         assert.equal((await historyAfterProjectDelete.json()).chats[0].projectId, null);
 
+        const initialMemories = await fetch(baseUrl + "/api/workspace/memory");
+        assert.equal(initialMemories.status, 200);
+        assert.deepEqual((await initialMemories.json()).memories, []);
+
+        const createdMemoryResponse = await fetch(baseUrl + "/api/workspace/memory", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": baseUrl,
+                "X-Ari-CSRF": "test-csrf"
+            },
+            body: JSON.stringify({ text: "Prefers practical, step-by-step answers." })
+        });
+        assert.equal(createdMemoryResponse.status, 201);
+        const createdMemory = (await createdMemoryResponse.json()).memory;
+        assert.equal(createdMemory.status, "active");
+
+        const editedMemoryResponse = await fetch(baseUrl + "/api/workspace/memory/" + createdMemory.id, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": baseUrl,
+                "X-Ari-CSRF": "test-csrf"
+            },
+            body: JSON.stringify({ text: "Prefers concise, practical explanations." })
+        });
+        assert.equal(editedMemoryResponse.status, 200);
+        assert.equal((await editedMemoryResponse.json()).memory.text, "Prefers concise, practical explanations.");
+
+        const unsafeMemoryResponse = await fetch(baseUrl + "/api/workspace/memory", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": baseUrl,
+                "X-Ari-CSRF": "test-csrf"
+            },
+            body: JSON.stringify({ text: "password: do-not-save-this" })
+        });
+        assert.equal(unsafeMemoryResponse.status, 400);
+
+        const deletedMemoryResponse = await fetch(baseUrl + "/api/workspace/memory/" + createdMemory.id, {
+            method: "DELETE",
+            headers: { "Origin": baseUrl, "X-Ari-CSRF": "test-csrf" }
+        });
+        assert.equal(deletedMemoryResponse.status, 200);
+        assert.equal((await fetch(baseUrl + "/api/workspace/memory").then(response => response.json())).memories.length, 0);
+
         const invalidWorkspace = await fetch(baseUrl + "/api/workspace/chats", {
             method: "PUT",
             headers: {
