@@ -26,6 +26,7 @@ groupGreetings.json
 afk.json
 raffles.json
 chloePriorities.json
+data/searchRouterUsage.json
 
 # Baileys/session runtime
 auth/
