@@ -1198,8 +1198,10 @@
       activeWorkspaceView = "chat";
       chatStage.hidden = false;
       workspaceScreen.hidden = true;
+      const selectedChat = currentChat();
+      if (!activeProjectId && selectedChat?.projectId) activeProjectId = selectedChat.projectId;
       const activeProject = projects.find(project => project.id === activeProjectId) || null;
-      topbarSubtitle.textContent = activeProject ? "Project · " + activeProject.name : "Ari workspace";
+      topbarSubtitle.textContent = activeProject ? "Project · " + activeProject.name : activeProjectId ? "Project workspace" : "Ari workspace";
       topbarHeading.textContent = currentChat()?.title || "New chat";
       libraryNav.classList.remove("active");
       projectsNav.classList.toggle("active", Boolean(activeProject));
