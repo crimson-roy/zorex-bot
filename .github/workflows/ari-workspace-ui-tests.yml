@@ -39,5 +39,7 @@ jobs:
           NODE
       - name: Test persistent sessions and auth
         run: node test/ariDeveloperAccess.test.js
+      - name: Test account-scoped conversation storage
+        run: node test/ariWorkspaceStore.test.js
       - name: Test Ari chat server and page routes
         run: node test/ariChatServer.test.js
