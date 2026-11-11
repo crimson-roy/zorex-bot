@@ -40,6 +40,8 @@ function setupAccess(overrides = {}, now = () => 1_900_000_000_000) {
             if (credential === "bad") throw new Error("invalid token");
             return claims;
         }),
+        sendEmail: overrides.sendEmail,
+        sendSms: overrides.sendSms,
         isProduction: overrides.isProduction,
     });
     return { access, env };
@@ -267,9 +269,18 @@ async function main() {
     assert.doesNotMatch(pageSource, /localStorage\.(?:getItem|setItem)\(["'](?:ari-playground-chats-v1|google-id-token)/);
 
     const authDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ari-auth-http-"));
+    const httpOtpEmails = [];
+    const httpAuth = setupAccess({
+        env: {
+            ARI_OTP_SECRET: "http-test-otp-secret-that-is-at-least-32-bytes",
+            RESEND_API_KEY: "test-resend-key",
+            ARI_EMAIL_FROM: "Ari <verify@example.test>"
+        },
+        sendEmail: async (destination, code) => httpOtpEmails.push({ destination, code })
+    }).access;
     const server = createServer({
         env: { NODE_ENV: "test", GOOGLE_CLIENT_ID: CLIENT_ID, ARI_ALLOWED_EMAILS: "dev@example.com", ARI_DATA_DIR: authDataDir },
-        authService: setupAccess().access,
+        authService: httpAuth,
         usageStore: createAriDeveloperUsage({ dataDir: authDataDir, dailyLimit: 1, perMinuteLimit: 10 }),
     });
     await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, HOST, resolve); });
@@ -287,6 +298,37 @@ async function main() {
         const csrfData = await csrfResponseHttp.json();
         const csrfSetCookie = csrfResponseHttp.headers.getSetCookie();
         const csrfCookieHttp = csrfSetCookie.find(value => value.startsWith(`${CSRF_COOKIE}=`)).split(";", 1)[0];
+        const authConfigHttp = await fetch(baseUrl + "/api/auth/config");
+        const authConfigData = await authConfigHttp.json();
+        assert.equal(authConfigData.methods.emailOtp, true);
+        assert.equal(authConfigData.methods.smsOtp, false);
+        const otpRequestHttp = await fetch(baseUrl + "/api/auth/otp/request", {
+            method: "POST",
+            headers: {
+                Origin: baseUrl,
+                Cookie: csrfCookieHttp,
+                "X-Ari-CSRF": csrfData.csrfToken,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ method: "email", destination: "dev@example.com", mode: "login" }),
+        });
+        assert.equal(otpRequestHttp.status, 200);
+        assert.equal(httpOtpEmails.length, 1);
+        assert.equal(httpOtpEmails[0].destination, "dev@example.com");
+        const otpVerifyHttp = await fetch(baseUrl + "/api/auth/otp/verify", {
+            method: "POST",
+            headers: {
+                Origin: baseUrl,
+                Cookie: csrfCookieHttp,
+                "X-Ari-CSRF": csrfData.csrfToken,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ method: "email", destination: "dev@example.com", code: httpOtpEmails[0].code }),
+        });
+        assert.equal(otpVerifyHttp.status, 200);
+        const otpVerifyData = await otpVerifyHttp.json();
+        assert.equal(otpVerifyData.authenticated, true);
+        assert.equal(otpVerifyData.user.email, "dev@example.com");
         const loginHttp = await fetch(baseUrl + "/api/auth/google", {
             method: "POST",
             headers: {
