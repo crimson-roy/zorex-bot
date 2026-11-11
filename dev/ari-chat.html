@@ -806,6 +806,7 @@
         select.addEventListener("click", () => {
           showChatView();
           currentChatId = chat.id;
+          topbarHeading.textContent = chat.title || "New chat";
           renderConversation(chat);
           renderHistory();
           sidebar.classList.remove("open");
