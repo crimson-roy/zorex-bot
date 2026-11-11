@@ -150,7 +150,7 @@ function shouldSearchWeb(message) {
 
 function buildSearchQuery(message) {
     let query = String(message || "").trim();
-    query = query.replace(/^(?:please\\s+)?(?:search\\s+(?:the\\s+)?(?:web|internet|online)(?:\\s+for)?|search\\s+for|look\\s+up|find\\s+online)\\s*/i, "");
+    query = query.replace(/^(?:please\s+)?(?:search\s+(?:the\s+)?(?:web|internet|online)(?:\s+for)?|search\s+for|look\s+up|find\s+online)\s*/i, "");
     return query.slice(0, 1000).trim();
 }
 
