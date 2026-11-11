@@ -96,6 +96,7 @@ async function main() {
 
     const workspaceDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "ari-workspace-http-"));
     const app = createTestServer({
+        env: { ARI_PUBLIC_ORIGIN: "https://ari.example.test" },
         workspaceStore: createAriWorkspaceStore({ dataDir: workspaceDirectory })
     });
     await new Promise((resolve, reject) => {
@@ -112,7 +113,26 @@ async function main() {
         const html = await page.text();
         const homepageResponse = await fetch(baseUrl + "/homepage");
         assert.equal(homepageResponse.status, 200);
-        assert.match(await homepageResponse.text(), /id="landing-screen"/);
+        const homepageHtml = await homepageResponse.text();
+        assert.match(homepageHtml, /id="landing-screen"/);
+        assert.match(homepageHtml, /href="\\/about"/);
+        const aboutResponse = await fetch(baseUrl + "/about");
+        assert.equal(aboutResponse.status, 200);
+        const aboutHtml = await aboutResponse.text();
+        assert.match(aboutHtml, /About Ari \\| Zorex AI/);
+        assert.match(aboutHtml, /Nigerian developer, a laptop/);
+        assert.match(aboutHtml, /what Ari can do today/i);
+        assert.match(aboutHtml, /document contents and understanding or transcribing audio are not yet available/i);
+        assert.match(aboutHtml, /application\\/ld\\+json/);
+        const robotsResponse = await fetch(baseUrl + "/robots.txt");
+        assert.equal(robotsResponse.status, 200);
+        const robotsText = await robotsResponse.text();
+        assert.match(robotsText, /Disallow: \\/api\\//);
+        assert.match(robotsText, /Sitemap: https:\\/\\/ari\\.example\\.test\\/sitemap\\.xml/);
+        const sitemapResponse = await fetch(baseUrl + "/sitemap.xml");
+        assert.equal(sitemapResponse.status, 200);
+        const sitemapText = await sitemapResponse.text();
+        assert.match(sitemapText, /https:\\/\\/ari\\.example\\.test\\/about/);
         const scriptStart = html.indexOf("<script>");
         const scriptEnd = html.indexOf("</script>", scriptStart + 8);
         assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, "Ari's inline application script must exist.");
