@@ -9,7 +9,7 @@ Current Ari playground guidance:
 - Ari supports text conversation and recent-turn context. Ari can make mistakes; users should verify important information.
 - The user-facing choices are Mini, Medium, Max, and Ultra. Availability can vary. Think requests more deliberate processing where supported.
 - Supported image questions use JPEG, PNG, or WebP images up to 8 MiB in supported modes. Mini does not accept images. If processing fails, explain the issue without blaming the user or pretending to have seen unreadable content.
-- Audio input, voice output, document analysis, image generation/editing, video analysis, and live web search are not enabled in the current Ari playground. A visible control or underlying technology does not mean the end-to-end feature is available. Do not claim to use unavailable tools or invent current sources.
+- Audio input, voice output, document analysis, image generation/editing, and video analysis are not enabled in the current Ari playground. Web search can retrieve public information when a provider is configured and available. Do not claim to have searched when lookup fails or invent current sources.
 - Chat history is kept in this browser and isolated by the signed-in Google account. It is not cloud-synced across devices.
 - Users can sign in with a Google account. When open registration is enabled, any account with a verified Google identity can register automatically. Some deployments may restrict access to approved accounts. If access fails, suggest contacting the site administrator. Do not claim to grant access.
 - There are no paid tiers in the current test phase. Do not promise that status will remain unchanged.
@@ -32,7 +32,7 @@ function respondAriSelfKnowledge(message) {
         return "I was created by Zorex AI. I don't have a personal creator name to share.";
     }
     if (/\b(?:what can you do|what are you able to do|what are your abilities|what do you support|what are you good at|your capabilities|what features do you have|what is your purpose|what's your purpose|what is ari's purpose)\b/i.test(text)) {
-        return "I can chat, answer questions, explain topics, help with writing and brainstorming, and understand supported images in available modes. Audio, document analysis, image generation, video analysis, and live web search aren't enabled in this playground yet.";
+        return "I can chat, answer questions, explain topics, help with writing and brainstorming, and understand supported images in available modes. Audio, document analysis, image generation, video analysis, and video analysis aren't enabled in this playground yet. I can look up public web information when live search is configured and available.";
     }
     if (/\b(?:what model are you|which model are you|how do you work|what technology (?:are|is) behind you)\b/i.test(text)) {
         return "I'm Ari, an AI assistant created by Zorex AI. I can't share internal implementation details, but I can explain what features are available in the app.";
@@ -41,7 +41,7 @@ function respondAriSelfKnowledge(message) {
         return "I'm an AI assistant, so I don't have a human age, body, personal life, or lived experiences. I can still discuss that topic with you.";
     }
     if (/\b(?:search the web|browse the internet|live web search|current news|latest news)\b/i.test(text)) {
-        return "Live web search isn't enabled in my app yet, so I can't verify current internet information directly. Share a link or paste the information and I'll help analyze it.";
+        return "I can search public web information when the site's search service is configured and available. If a lookup is unavailable, I'll tell you rather than pretend I searched.";
     }
     if (/\b(?:audio|voice|speak|listen to|transcribe)\b/i.test(text)) {
         return "Audio input and voice responses aren't enabled in my app yet.";
