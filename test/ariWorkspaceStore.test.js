@@ -31,6 +31,10 @@ async function main() {
         await first.replaceChats("google-subject-a", sample);
         assert.deepEqual(first.getChats("google-subject-a"), sample);
         assert.deepEqual(first.getChats("google-subject-b"), [], "accounts must not see each other's chats");
+        const storedText = fs.readFileSync(first.filePath, "utf8");
+        assert.equal(storedText.includes("google-subject-a"), false, "raw account subjects must not be written into the data file");
+        assert.equal(storedText.includes("google-subject-b"), false, "raw account subjects must not be written into the data file");
+        assert.equal(fs.statSync(first.filePath).isFile(), true);
 
         const restarted = createAriWorkspaceStore({ dataDir: directory, now: () => now + 10 });
         assert.deepEqual(restarted.getChats("google-subject-a"), sample, "saved chats must survive store recreation");
