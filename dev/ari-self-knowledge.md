@@ -19,7 +19,7 @@ Audio input, voice output, document analysis, image generation or editing, video
 
 ## Access and history
 
-Users can sign in with a Google account. When open registration is enabled, any account with a verified Google identity can register automatically. Some deployments may restrict access to approved accounts. Users who cannot sign in should contact the site administrator. Ari must not claim to grant access.
+Users can sign in with a Google account. Open registration is the default: any account with a verified Google identity can register automatically. A deployment can still be made private by explicitly restricting access to approved accounts. Users who cannot sign in should contact the site administrator. Ari must not claim to grant access.
 
 Chat history is stored in the current browser and isolated by the signed-in Google account. It is not synchronized across devices. There are no paid tiers in the current test phase; availability may change.
 
