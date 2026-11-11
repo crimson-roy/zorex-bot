@@ -1096,7 +1096,7 @@
 
     function appendMessageText(container, value) {
       const source = String(value || "");
-      const imagePattern = /!\\[([^\\]]*)\\]\\((https:\\/\\/[^)\\s]+)\\)/g;
+      const imagePattern = /!\[([^\]]*)\]\((https:\/\/[^)\s]+)\)/g;
       let cursor = 0;
       let match;
       while ((match = imagePattern.exec(source)) !== null) {
