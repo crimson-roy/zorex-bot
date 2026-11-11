@@ -143,10 +143,10 @@ function isExplicitWebSearchRequest(message) {
 function isRestrictedSearchIntent(message) {
     const value = String(message || "").trim();
     if (!value) return false;
-    const target = /\\b(?:dangerous products?|regulated weapons?|controlled substances?|intoxicants?|gambling services?|adult content|self-harm materials|dangerous challenges?)\\b/i;
-    const accessIntent = /\\b(?:buy|purchase|order|shop|supplier|vendor|where can i (?:buy|get|find)|where to (?:buy|get)|link to|links to|website for|sites for|download|access|obtain|acquire|offers? for|how to (?:make|use)|how do i use|best (?:site|place|service))\\b/i;
-    const supportContext = /\\b(?:help|support|safety|prevention|treatment|recovery|understand|what is|explain|avoid)\\b/i;
-    const explicitProcurement = /\\b(?:buy|purchase|order|supplier|vendor|shop|download|obtain|acquire|how to make|how to use|how do i use)\\b/i;
+    const target = /\b(?:dangerous products?|regulated weapons?|controlled substances?|intoxicants?|gambling services?|adult content|self-harm materials|dangerous challenges?)\b/i;
+    const accessIntent = /\b(?:buy|purchase|order|shop|supplier|vendor|where can i (?:buy|get|find)|where to (?:buy|get)|link to|links to|website for|sites for|download|access|obtain|acquire|offers? for|how to (?:make|use)|how do i use|best (?:site|place|service))\b/i;
+    const supportContext = /\b(?:help|support|safety|prevention|treatment|recovery|understand|what is|explain|avoid)\b/i;
+    const explicitProcurement = /\b(?:buy|purchase|order|supplier|vendor|shop|download|obtain|acquire|how to make|how to use|how do i use)\b/i;
     if (supportContext.test(value) && !explicitProcurement.test(value)) return false;
     return target.test(value) && accessIntent.test(value);
 }
@@ -1034,18 +1034,18 @@ function createServer(options = {}) {
                     image = normalizeImagePayload(body.image);
                     generationOptions = normalizeGpuOptions(body.options);
                 }
+                if (isRestrictedSearchIntent(body.message)) {
+                    sendJson(response, 200, {
+                        reply: "I can't help find or access restricted or dangerous products, services, or activities. I can help with general safety-focused information instead.",
+                        mode: "Safety"
+                    });
+                    return;
+                }
                 const quota = await usage.consumeAcceptedMessage(session.sub);
                 if (!quota.allowed) {
                     const retryAfter = quota.reason === "daily" ? quota.dayResetSeconds : quota.retryAfterSeconds;
                     sendAuthJson(response, 429, { error: "Ari's usage limit has been reached. Please try again later." }, {
                         "Retry-After": String(retryAfter)
-                    });
-                    return;
-                }
-                if (isRestrictedSearchIntent(body.message)) {
-                    sendJson(response, 200, {
-                        reply: "I can't help find or access restricted or dangerous products, services, or activities. I can help with general safety-focused information instead.",
-                        mode: "Safety"
                     });
                     return;
                 }
