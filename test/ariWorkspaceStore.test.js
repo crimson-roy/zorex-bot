@@ -52,7 +52,7 @@ async function main() {
         const fileData = JSON.parse(fs.readFileSync(accountFile, "utf8"));
         assert.equal(fileData.version, 1);
         assert.equal(fileData.chats.length, 2);
-        assert.match(path.basename(accountFile), /^[a-f0-9]{64}\\.json$/,
+        assert.match(path.basename(accountFile), /^[a-f0-9]{64}\.json$/,
             "account storage filenames should use a one-way subject hash");
         assert.equal(JSON.stringify(fileData).includes("google-subject-one"), false,
             "the raw Google subject must not be written into account storage");
