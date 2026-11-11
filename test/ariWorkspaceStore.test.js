@@ -25,7 +25,8 @@ async function main() {
             ],
             createdAt: now,
             updatedAt: now + 1,
-            pinned: true
+            pinned: true,
+            projectId: null
         }];
 
         await first.replaceChats("google-subject-a", sample);
