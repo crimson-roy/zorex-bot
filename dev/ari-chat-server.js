@@ -13,8 +13,6 @@ const { createAriWorkspaceStore } = require("./ariWorkspaceStore");
 const { createAriLibraryStore } = require("./ariLibraryStore");
 const { respondAriSelfKnowledge } = require("./ariSelfKnowledge");
 const { callAI: callZorexTextAI } = require("../lib/textAIClient");
-const { SearchRouter } = require("../lib/searchRouter");
-const { openWebpage } = require("../lib/searchRouter/openWebpage");
 
 const wordNet = new WordNetDictionary();
 
@@ -543,11 +541,21 @@ function createServer(options = {}) {
         ...(options.now ? { now: options.now } : {})
     });
     const searchDataDirectory = env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data");
-    const searchRouter = options.searchRouter || new SearchRouter({
-        env,
-        stateFile: options.searchStateFile || path.join(searchDataDirectory, "searchRouterUsage.json")
-    });
-    const webpageReader = options.webpageReader || openWebpage;
+    let searchRouter = options.searchRouter || null;
+    if (!searchRouter) {
+        try {
+            const { SearchRouter } = require("../lib/searchRouter");
+            searchRouter = new SearchRouter({
+                env,
+                stateFile: options.searchStateFile || path.join(searchDataDirectory, "searchRouterUsage.json")
+            });
+        } catch (error) {
+            // Core chat remains available in minimal environments without optional search packages.
+            searchRouter = { config: { enabled: false }, loadError: error };
+        }
+    }
+    const webpageReader = options.webpageReader || ((...args) =>
+        require("../lib/searchRouter/openWebpage").openWebpage(...args));
     const server = http.createServer(async (request, response) => {
         const url = new URL(request.url, "http://" + HOST);
 
