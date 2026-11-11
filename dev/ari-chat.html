@@ -1221,9 +1221,9 @@
           eyebrow: "Your workspace",
           title: "Projects",
           description: "Keep related conversations together in focused workspaces.",
-          status: "Project workspaces in progress",
-          heading: "A place for work that continues",
-          copy: "Projects will group conversations, instructions and related files without duplicating project chats in Recent Chats. Persistent project records and project-aware chat routing are not connected yet."
+          status: "Your project spaces",
+          heading: "Keep related work together",
+          copy: "Create a project for each ongoing area of work. Its conversations stay inside the project instead of appearing in Recent Chats."
         },
         profile: {
           eyebrow: "Your account",
@@ -1261,6 +1261,7 @@
       const page = pages[view];
       if (!page) return;
       activeWorkspaceView = view;
+      activeProjectId = null;
       chatStage.hidden = true;
       workspaceScreen.hidden = false;
       workspaceEyebrow.textContent = page.eyebrow;
@@ -1307,6 +1308,7 @@
       }
       workspaceContent.appendChild(panel);
       if (view === "library") void loadLibraryView();
+      if (view === "projects") void loadProjectsView();
     }
 
     libraryNav.addEventListener("click", () => showWorkspaceView("library"));
