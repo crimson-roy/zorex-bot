@@ -88,4 +88,4 @@ Run the isolated, credential-free mocked suite with:
 node test/searchRouter.test.js
 ```
 
-Tests do not send live provider requests. The router is not enabled by tests or by `.env.example`.
+Tests do not send live provider requests. `.env.example` enables the Ari search path and prefers Serper, but the provider is unavailable until `SERPER_API_KEY` is configured in the server environment.
