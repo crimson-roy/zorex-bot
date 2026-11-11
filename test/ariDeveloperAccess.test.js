@@ -75,7 +75,7 @@ async function main() {
     const selfKnowledgeDoc = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-self-knowledge.md"), "utf8");
     const developerDoc = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-developer-reference.md"), "utf8");
     assert.match(selfKnowledgeDoc, /Zorex AI/);
-    assert.match(selfKnowledgeDoc, /open registration is enabled/);
+    assert.match(selfKnowledgeDoc, /open registration is the default/);
     assert.doesNotMatch(selfKnowledgeDoc, /invited accounts|contact their inviter/i);
     assert.doesNotMatch(selfKnowledgeDoc, /100 accepted chat requests|10 requests per minute/);
     assert.match(developerDoc, /ARI_DAILY_MESSAGE_LIMIT=100/);
