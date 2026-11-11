@@ -10,8 +10,8 @@ Current Ari playground guidance:
 - The user-facing choices are Mini, Medium, Max, and Ultra. Availability can vary. Think requests more deliberate processing where supported.
 - Supported image questions use JPEG, PNG, or WebP images up to 8 MiB in supported modes. Mini does not accept images. If processing fails, explain the issue without blaming the user or pretending to have seen unreadable content.
 - Audio input, voice output, document analysis, image generation/editing, and video analysis are not enabled in the current Ari playground. Web search can retrieve public information when a provider is configured and available. Do not claim to have searched when lookup fails or invent current sources.
-- Chat history is kept in this browser and isolated by the signed-in Google account. It is not cloud-synced across devices.
-- Users can sign in with a Google account. When open registration is enabled, any account with a verified Google identity can register automatically. Some deployments may restrict access to approved accounts. If access fails, suggest contacting the site administrator. Do not claim to grant access.
+- Chat history is kept in this browser and isolated by the signed-in Ari account. It is not cloud-synced across devices.
+- Users can sign in with a verified Google account or, when configured, a one-time code sent to their email address or phone number. Open registration lets a user create an account after verifying one of these methods. Some deployments may restrict access to approved contacts. If access fails, suggest contacting the site administrator. Do not claim to grant access.
 - There are no paid tiers in the current test phase. Do not promise that status will remain unchanged.
 - Usage limits may apply. Never disclose numeric quotas, rate limits, configuration names, allowlist contents, or internal developer settings. If asked, say limits may apply and direct the user to the administrator for account-specific help.
 
@@ -59,19 +59,19 @@ function respondAriSelfKnowledge(message) {
         return "I can discuss supported images you upload, but image generation and editing aren't enabled in my app yet.";
     }
     if (/\b(?:remember|save|sync|synchronize|synchronise)\b.*\b(?:chat|conversation|history)\b|\b(?:chat|conversation) history\b/i.test(text)) {
-        return "Chat history is kept in this browser and separated by signed-in Google account. It doesn't sync across devices, and clearing browser storage can remove it.";
+        return "Chat history is kept in this browser and separated by signed-in Ari account. It doesn't sync across devices, and clearing browser storage can remove it.";
     }
     if (/\b(?:usage|rate|daily|message|request) limits?\b|\b(?:how many|what is|what's|do i have)\b.{0,40}\b(?:messages?|requests?|prompts?)\b|\bquotas?\b|\bper (?:day|minute)\b/i.test(text)) {
         return "Usage limits may apply to the test service. For account-specific details, please contact the site administrator.";
     }
     if (/\b(?:paid plan|subscription|premium|pro plan|pricing|cost to use)\b/i.test(text)) {
-        return "There are no paid tiers in the current test phase. Google-account registration may be open or restricted depending on the site, and availability may change.";
+        return "There are no paid tiers in the current test phase. Ari registration may be open or restricted depending on the site, and available verification methods may vary.";
     }
     if (/\b(?:sign in|log in|access ari|invited|invite|approved account)\b/i.test(text)) {
-        return "Sign in with a verified Google account. When open registration is enabled, signing in creates your Ari account automatically; some sites may restrict access to approved accounts. Contact the site administrator if sign-in does not work.";
+        return "Sign in with a verified Google account or, when configured, use a one-time code sent to your email address or phone number. Open registration lets you create an account after verifying one of these methods; some sites may restrict access to approved contacts. Contact the site administrator if sign-in does not work.";
     }
     if (/\b(?:register|sign up|create (?:an? )?(?:ari )?account)\b/i.test(text)) {
-        return "Use a verified Google account. When open registration is enabled, signing in creates your Ari account automatically; some sites may restrict access to approved accounts.";
+        return "Use a verified Google account or, when configured, a one-time code sent to your email address or phone number. Open registration lets you create an account after verifying one of these methods; some sites may restrict access to approved contacts.";
     }
     return null;
 }
