@@ -151,6 +151,9 @@ async function main() {
         assert.match(html, /id="attachment-preview"/);
         assert.match(html, /id="paste-card"/);
         assert.match(html, /Copy response/);
+        assert.match(html, /function renderAriContent/);
+        assert.match(html, /message-code-copy/);
+        assert.match(html, /navigator\.clipboard\.writeText\(codeText\)/);
         assert.match(html, /function showWorkspaceView/);
         assert.match(html, /async function loadProjectsView/);
         assert.match(html, /function openProjectDetail/);
