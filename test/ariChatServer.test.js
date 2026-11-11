@@ -74,6 +74,9 @@ async function main() {
         const page = await fetch(baseUrl + "/");
         assert.equal(page.status, 200);
         const html = await page.text();
+        const homepageResponse = await fetch(baseUrl + "/homepage");
+        assert.equal(homepageResponse.status, 200);
+        assert.match(await homepageResponse.text(), /id="landing-screen"/);
         const scriptStart = html.indexOf("<script>");
         const scriptEnd = html.indexOf("</script>", scriptStart + 8);
         assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, "Ari's inline application script must exist.");
@@ -81,6 +84,14 @@ async function main() {
         const htmlIds = html.split(' id="').slice(1).map(part => part.split('"', 1)[0]);
         assert.equal(new Set(htmlIds).size, htmlIds.length, "Ari's page must not contain duplicate element IDs.");
         assert.match(html, /Welcome back/);
+        assert.match(html, /id="landing-screen"/);
+        assert.match(html, /A calmer space for thinking, creating and getting things done/);
+        assert.match(html, /id="auth-tabs" data-mode="login"/);
+        assert.match(html, /id="login-tab"/);
+        assert.match(html, /id="signup-tab"/);
+        assert.match(html, /auth-tabs\[data-mode="signup"\]/);
+        assert.match(html, /window.location.pathname === "\/homepage"/);
+        assert.match(html, /registrationMode !== "open"/);
         assert.match(html, /Google sign-in is currently enabled/);
         assert.match(html, /Other account methods will appear when their verification service is ready/);
         assert.doesNotMatch(html, /invited developers only|invited Google account/i);
