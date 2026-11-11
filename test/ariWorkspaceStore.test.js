@@ -115,7 +115,36 @@ async function main() {
             "deleting a project must preserve its conversations in general history");
         await assert.rejects(restarted.deleteProject("google-subject-a", project.id), { statusCode: 404 });
 
-        console.log("ariWorkspaceStore.test.js: persistence, account isolation, projects and validation passed");
+        const memory = await restarted.createMemory("google-subject-a", {
+            text: "Prefers clear, step-by-step technical explanations."
+        });
+        assert.equal(memory.status, "active");
+        assert.equal(memory.source, "user");
+        assert.equal(restarted.listMemories("google-subject-a").length, 1);
+        assert.deepEqual(restarted.listMemories("google-subject-b"), []);
+        await assert.rejects(
+            restarted.createMemory("google-subject-a", { text: "password: example-secret" }),
+            { statusCode: 400 }
+        );
+        const suggestedMemory = await restarted.createMemory("google-subject-a", {
+            text: "Ari development is an ongoing project."
+        }, { status: "pending", source: "ari" });
+        assert.equal(suggestedMemory.status, "pending");
+        const approvedMemory = await restarted.updateMemory("google-subject-a", suggestedMemory.id, {
+            status: "active",
+            text: "Ari development is an ongoing project."
+        });
+        assert.equal(approvedMemory.status, "active");
+        assert.equal(approvedMemory.source, "ari");
+        const editedMemory = await restarted.updateMemory("google-subject-a", memory.id, {
+            text: "Prefers short, practical technical explanations."
+        });
+        assert.equal(editedMemory.text, "Prefers short, practical technical explanations.");
+        await restarted.deleteMemory("google-subject-a", suggestedMemory.id);
+        assert.equal(restarted.listMemories("google-subject-a").length, 1);
+        assert.deepEqual(restarted.listMemories("google-subject-b"), []);
+
+        console.log("ariWorkspaceStore.test.js: persistence, projects, review memories, account isolation and validation passed");
     } finally {
         fs.rmSync(directory, { recursive: true, force: true });
     }
