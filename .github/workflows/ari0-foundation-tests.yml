@@ -1,0 +1,53 @@
+name: Ari-0 foundation tests
+
+on:
+  push:
+    branches:
+      - feature/ari-local-math-v1
+    paths:
+      - "training/ari0/**"
+      - "scripts/prepare-ari0-corpus.js"
+      - "test/ari0Corpus.test.js"
+      - "test/ariChatServer.test.js"
+      - "package.json"
+      - ".github/workflows/ari0-foundation-tests.yml"
+  pull_request:
+    paths:
+      - "training/ari0/**"
+      - "scripts/prepare-ari0-corpus.js"
+      - "test/ari0Corpus.test.js"
+      - "package.json"
+      - ".github/workflows/ari0-foundation-tests.yml"
+
+jobs:
+  tokenizer-and-corpus:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install CPU PyTorch
+        run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Install Ari-0 v3 data dependencies
+        run: python -m pip install pyarrow tokenizers
+      - name: Test hybrid tokenizer
+        run: python -m unittest discover -s training/ari0 -p test_tokenizer.py -v
+      - name: Test fixed evaluation and history
+        run: python -m unittest discover -s training/ari0 -p test_training.py -v
+      - name: Test v3 data preparation and assistant masks
+        run: python -m unittest discover -s training/ari0 -p test_v3.py -v
+      - name: Test inference prompt builder
+        run: python -m unittest discover -s training/ari0 -p test_serve.py -v
+      - name: Check Python syntax
+        run: python -m py_compile training/ari0/tokenizer.py training/ari0/train.py training/ari0/generate.py training/ari0/model.py training/ari0/serve.py training/ari0/prepare_v3.py training/ari0/train_v3.py training/ari0/test_v3.py
+      - name: Test conversation corpus formatting
+        run: node test/ari0Corpus.test.js
+      - name: Test local chat server and model routing
+        run: node test/ariChatServer.test.js

@@ -40,6 +40,49 @@ jobs:
           node --check lib/sharedWorldStore.js
           node --check lib/relationshipStore.js
           node --check lib/commandRegistry.js
+          node --check lib/localMath.js
+          node --check lib/textTokenizer.js
+          node --check lib/wordNet.js
+          node --check lib/localLanguage.js
+          node --check lib/oasst1.js
+          node --check dev/ari-chat-server.js
+          node --check scripts/prepare-oasst1.js
+          node --check scripts/prepare-ari0-corpus.js
+          node --check test/ari0Corpus.test.js
+          node --check scripts/check-wordnet.js
+          node --check test/textTokenizer.test.js
+          node --check test/wordNet.test.js
+          node --check test/wordNetCli.test.js
+          node --check test/localLanguage.test.js
+          node --check test/oasst1.test.js
+          node --check test/ariChatServer.test.js
+
+      - name: Test Ari local arithmetic
+        run: node test/localMath.test.js
+
+      - name: Test Ari local text tokenizer
+        run: node test/textTokenizer.test.js
+
+      - name: Test Ari WordNet dictionary reader
+        run: node test/wordNet.test.js
+
+      - name: Test Ari WordNet diagnostic
+        run: node test/wordNetCli.test.js
+
+      - name: Test Ari local language intents
+        run: node test/localLanguage.test.js
+
+      - name: Test Ari OASST1 dataset preparation
+        run: node test/oasst1.test.js
+
+      - name: Test Ari-0 corpus preparation
+        run: node test/ari0Corpus.test.js
+
+      - name: Check Ari-0 Python syntax
+        run: python -m py_compile training/ari0/model.py training/ari0/train.py training/ari0/generate.py
+
+      - name: Test Ari local chat HTTP API
+        run: node test/ariChatServer.test.js
 
       - name: Test AI PIN persistence and auth request resumption
         run: node test/aiAuth.test.js

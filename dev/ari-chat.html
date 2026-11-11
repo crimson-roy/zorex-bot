@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="/ari-favicon.png">
+  <title>Ari — Local Playground</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body { font: 15px system-ui, sans-serif; color: #171717; background: #fff; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { display: flex; height: 100%; width: 100%; }
+    .sidebar {
+      display: flex; flex-direction: column; flex: 0 0 250px; min-width: 0;
+      border-right: 1px solid #e5e5e5; background: #fafafa;
+    }
+    .sidebar-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 12px; border-bottom: 1px solid #e5e5e5;
+    }
+    .sidebar-header strong { font-size: 15px; font-weight: 600; }
+    .new-chat {
+      padding: 7px 10px; border: 1px solid #bbb; border-radius: 7px;
+      background: #fff; color: #222;
+    }
+    .history-label { padding: 14px 12px 7px; color: #777; font-size: 12px; }
+    #chat-list { display: flex; flex: 1; flex-direction: column; gap: 4px; overflow-y: auto; padding: 4px 8px 12px; }
+    .history-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .history-row.pinned::before { content: "◆"; flex: 0 0 auto; padding: 0 2px 0 4px; color: #aaa; font-size: 10px; }
+    .history-select {
+      flex: 1; min-width: 0; overflow: hidden; padding: 9px 10px; border: 0;
+      border-radius: 7px; background: transparent; color: #333; text-align: left;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .history-select:hover, .history-select.active { background: #ededed; }
+    .history-actions { position: fixed; z-index: 10; display: flex; min-width: 130px; flex-direction: column; padding: 4px; border: 1px solid #454545; border-radius: 9px; background: #222; box-shadow: 0 8px 25px #0008; }
+    .history-actions[hidden] { display: none; }
+    .history-action { padding: 8px 10px; border: 0; border-radius: 6px; color: #eee; background: transparent; text-align: left; }
+    .history-action:hover, .history-action:focus-visible { background: #3a3a3a; }
+    .history-action.delete { color: #ffb4ab; }
+    .history-empty { padding: 8px 10px; color: #888; font-size: 13px; }
+    .main { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+    .topbar {
+      display: flex; align-items: center; gap: 10px; min-height: 54px;
+      padding: 10px 16px; border-bottom: 1px solid #e5e5e5;
+    }
+    .topbar h1 { margin: 0; font-size: 17px; font-weight: 600; }
+    #sidebar-toggle { display: grid; flex: 0 0 auto; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid #444; border-radius: 10px; color: #eee; background: #222; }
+    #conversation { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 22px 16px; }
+    #empty-state { position: absolute; inset: 0; display: grid; place-items: center; color: #888; pointer-events: none; }
+    #empty-state[hidden] { display: none; }
+    #messages { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 760px; margin: 0 auto; }
+    .message {
+      max-width: 85%; padding: 10px 12px; border: 1px solid #e0e0e0;
+      border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5;
+    }
+    .message.user { align-self: flex-end; background: #f4f4f4; }
+    .message.ari { align-self: flex-start; }
+    .message small { display: block; margin-top: 6px; color: #777; font-size: 11px; }
+    #tier-select { max-width: 100%; }
+    #message-input {
+      flex: 1; min-width: 0; padding: 11px 12px; border: 1px solid #aaa;
+      border-radius: 8px; outline-offset: 2px;
+    }
+    #send { padding: 0 16px; border: 1px solid #333; border-radius: 8px; background: #222; color: #fff; }
+    #send:disabled { opacity: .5; cursor: wait; }
+    @media (max-width: 680px) {
+      .sidebar { position: fixed; z-index: 5; inset: 0 auto 0 0; width: min(280px, 84vw); box-shadow: 8px 0 24px rgba(0,0,0,.08); transform: translateX(-105%); transition: transform .16s ease; }
+      .sidebar.open { transform: translateX(0); }
+      .app.sidebar-collapsed .sidebar { display: flex; }
+      .message { max-width: 94%; }
+    }
+
+    /* Integrated composer and low-noise dark theme inspired by the supplied references. */
+    body { color: #ececec; background: #212121; }
+    .sidebar { border-color: #303030; background: #171717; }
+    .sidebar-header, .topbar { border-color: #303030; }
+    .new-chat, #sidebar-toggle { color: #eee; border-color: #444; background: #222; }
+    .history-select { color: #ddd; }
+    .history-select:hover, .history-select.active { background: #2b2b2b; }
+    .history-delete { color: #999; }
+    .history-delete:hover { color: #fff; background: #333; }
+    .history-empty, .history-label { color: #929292; }
+    #conversation { padding-bottom: 16px; }
+    .message { border-color: #383838; border-radius: 16px; }
+    .message.user { background: #303030; }
+    .message.ari { border-color: transparent; }
+    #composer-wrap { width: min(100%, 820px); margin: 0 auto; padding: 10px 16px 12px; }
+    #chat-form { display: flex; align-items: flex-end; gap: 10px; padding: 10px; border: 1px solid #484848; border-top: 1px solid #484848; border-radius: 26px; background: #303030; box-shadow: 0 4px 18px rgba(0,0,0,.16); }
+    #attach-button, #send { display: grid; flex: 0 0 auto; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; }
+    #attach-button { color: #eee; background: transparent; }
+    #attach-button:hover, #attach-button:focus-visible { background: #454545; }
+    #compose-center { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 7px; }
+    #message-input { display: block; flex: 0 0 auto; width: 100%; min-height: 34px; max-height: 180px; resize: none; overflow-y: auto; padding: 7px 2px 2px; border: 0; border-radius: 0; outline: 0; color: #f5f5f5; background: transparent; line-height: 1.45; }
+    #message-input::placeholder { color: #aaa; }
+    #composer-bottom { display: flex; align-items: center; gap: 7px; min-width: 0; }
+    #composer-spacer { flex: 1; }
+    #think-toggle, #tier-select { min-height: 32px; border: 1px solid transparent; border-radius: 16px; color: #ddd; background: transparent; }
+    #think-toggle { padding: 0 11px; }
+    #think-toggle:hover, #think-toggle[aria-pressed="true"] { color: #fff; background: #454545; }
+    #think-toggle[aria-pressed="true"] { border-color: #686868; }
+    #tier-select { width: 112px; max-width: 112px; padding: 0 22px 0 10px; outline-offset: 2px; }
+    #tier-select:hover, #tier-select:focus { background: #454545; }
+    #tier-select option { color: #eee; background: #303030; }
+    #send { width: 38px; height: 38px; color: #fff; background: #f5f5f5; }
+    #send svg { color: #202020; }
+    #send:disabled { opacity: .48; cursor: wait; }
+    #image-input, #audio-input, #file-input { display: none; }
+    .attach-wrap { position: relative; flex: 0 0 auto; }
+    #attach-menu { position: absolute; z-index: 8; bottom: calc(100% + 10px); left: 0; display: flex; width: 165px; flex-direction: column; gap: 2px; padding: 5px; border: 1px solid #484848; border-radius: 12px; background: #292929; box-shadow: 0 8px 24px #0008; }
+    #attach-menu[hidden] { display: none; }
+    .attach-option { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: 8px; color: #eee; background: transparent; text-align: left; }
+    .attach-option:hover, .attach-option:focus-visible { background: #414141; }
+    .attach-option svg { width: 18px; height: 18px; }
+    .app.sidebar-collapsed .sidebar { display: none; }
+    #attachment-chip { display: flex; align-items: center; align-self: flex-start; gap: 8px; max-width: 100%; padding: 5px 8px 5px 11px; border: 1px solid #505050; border-radius: 14px; color: #ddd; background: #272727; font-size: 12px; }
+    #attachment-chip[hidden] { display: none; }
+    #attachment-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #remove-attachment { border: 0; border-radius: 50%; color: #ddd; background: transparent; font-size: 16px; line-height: 1; }
+    #composer-disclaimer { margin: 8px 4px 0; color: #929292; font-size: 11px; text-align: center; }
+    #composer-notice { margin: 8px 4px 0; color: #f0b8b8; font-size: 12px; text-align: center; }
+    @media (max-width: 680px) {
+      #composer-wrap { padding: 8px 10px max(10px, env(safe-area-inset-bottom)); }
+      #chat-form { gap: 5px; padding: 8px; border-radius: 23px; }
+      #attach-button { width: 36px; height: 36px; }
+      #tier-select { width: 112px; max-width: 112px; padding-right: 18px; }
+      #think-toggle { padding: 0 8px; }
+      #composer-bottom { gap: 3px; }
+    }
+    #auth-screen { display: grid; min-height: 100%; place-items: center; padding: 24px; background: #212121; }
+    #auth-screen[hidden] { display: none; }
+    .app[hidden] { display: none; }
+    .auth-card { width: min(100%, 420px); padding: 32px; border: 1px solid #383838; border-radius: 20px; background: #252525; box-shadow: 0 16px 44px #0005; text-align: center; }
+    .auth-card h1 { margin: 0 0 10px; font-size: 25px; font-weight: 600; }
+    .auth-card p { color: #b8b8b8; line-height: 1.55; }
+    #google-sign-in { display: flex; justify-content: center; min-height: 44px; margin-top: 22px; }
+    #auth-error { min-height: 20px; color: #ffb4ab !important; font-size: 13px; }
+    #account-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; min-width: 0; }
+    #account-controls[hidden] { display: none; }
+    #account-email { overflow: hidden; color: #aaa; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    #sign-out { padding: 6px 10px; border: 1px solid #484848; border-radius: 14px; color: #ddd; background: #292929; font-size: 12px; }
+    #sign-out:hover { background: #3b3b3b; }
+    @media (max-width: 480px) { .auth-card { padding: 26px 20px; } #account-email { display: none; } }
+  </style>
+</head>
+<body>
+  <section id="auth-screen" aria-labelledby="auth-title" hidden>
+    <div class="auth-card">
+      <h1 id="auth-title">Ari Developer Playground</h1>
+      <p>Sign in with your Google account to use Ari. When open registration is enabled, your Ari account is created automatically.</p>
+      <div id="google-sign-in"></div>
+      <p id="auth-error" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+  <div class="app" id="ari-app" hidden>
+    <aside class="sidebar" id="sidebar" aria-label="Chat history">
+      <div class="sidebar-header">
+        <strong>Chats</strong>
+        <button class="new-chat" id="new-chat" type="button">+ New chat</button>
+      </div>
+      <div class="history-label">Recent</div>
+      <nav id="chat-list" aria-label="Previous chats">
+        <div class="history-empty">No previous chats yet.</div>
+      </nav>
+    </aside>
+
+    <section class="main">
+      <header class="topbar">
+        <button id="sidebar-toggle" type="button" aria-label="Collapse chat sidebar" title="Collapse chat sidebar" aria-expanded="true">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M14 9l-3 3 3 3"/></svg>
+        </button>
+        <h1>Ari</h1>
+        <div id="account-controls" hidden>
+          <span id="account-email"></span>
+          <button id="sign-out" type="button">Sign out</button>
+        </div>
+      </header>
+
+      <main id="conversation" aria-live="polite">
+        <div id="empty-state">Type to get started with Ari</div>
+        <div id="messages"></div>
+      </main>
+
+      <div id="composer-wrap">
+        <form id="chat-form" aria-label="Message Ari">
+          <div class="attach-wrap">
+          <button id="attach-button" type="button" aria-label="Add an attachment" title="Add an attachment" aria-haspopup="menu" aria-expanded="false">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <div id="attach-menu" role="menu" hidden>
+            <button class="attach-option" type="button" role="menuitem" data-picker="image-input">Images</button>
+            <button class="attach-option" type="button" role="menuitem" data-picker="audio-input">Audio</button>
+            <button class="attach-option" type="button" role="menuitem" data-picker="file-input">Files</button>
+          </div>
+          </div>
+          <input id="image-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose an image">
+          <input id="audio-input" type="file" accept="audio/*" aria-label="Choose audio">
+          <input id="file-input" type="file" aria-label="Choose a file">
+          <div id="compose-center">
+            <div id="attachment-chip" hidden>
+              <span id="attachment-name"></span>
+              <button id="remove-attachment" type="button" aria-label="Remove attached image">×</button>
+            </div>
+            <textarea id="message-input" placeholder="Message Ari..." rows="1" maxlength="2000" required aria-label="Message Ari"></textarea>
+            <div id="composer-bottom">
+              <button id="think-toggle" type="button" aria-pressed="false" title="Enable deeper reasoning">Think</button>
+              <span id="composer-spacer"></span>
+              <select id="tier-select" aria-label="Choose Ari model">
+                <option value="mini">Mini</option>
+                <option value="medium">Medium</option>
+                <option value="max">Max</option>
+                <option value="ultra">Ultra</option>
+              </select>
+              <button id="send" type="submit" aria-label="Send message" title="Send message">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+              </button>
+            </div>
+          </div>
+        </form>
+        <p id="composer-notice" role="status" hidden></p>
+        <p id="composer-disclaimer">Ari is AI and can make mistakes. Please double-check important information.</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    "use strict";
+
+    const STORAGE_KEY_PREFIX = "ari-playground-chats-v1:";
+    const appElement = document.getElementById("ari-app");
+    const authScreen = document.getElementById("auth-screen");
+    const authError = document.getElementById("auth-error");
+    const googleSignIn = document.getElementById("google-sign-in");
+    const accountControls = document.getElementById("account-controls");
+    const accountEmail = document.getElementById("account-email");
+    const signOutButton = document.getElementById("sign-out");
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("message-input");
+    const sendButton = document.getElementById("send");
+    const newChatButton = document.getElementById("new-chat");
+    const messagesElement = document.getElementById("messages");
+    const emptyState = document.getElementById("empty-state");
+    const chatList = document.getElementById("chat-list");
+    const conversation = document.getElementById("conversation");
+    const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebar-toggle");
+    const app = document.querySelector(".app");
+    const tierSelect = document.getElementById("tier-select");
+    const imageInput = document.getElementById("image-input");
+    const attachButton = document.getElementById("attach-button");
+    const attachMenu = document.getElementById("attach-menu");
+    const attachmentInputs = [document.getElementById("image-input"), document.getElementById("audio-input"), document.getElementById("file-input")];
+    const attachmentChip = document.getElementById("attachment-chip");
+    const attachmentName = document.getElementById("attachment-name");
+    const removeAttachmentButton = document.getElementById("remove-attachment");
+    const thinkToggle = document.getElementById("think-toggle");
+    const composerNotice = document.getElementById("composer-notice");
+    let activeAttachmentInput = imageInput;
+
+    let storageKey = null;
+    let chats = [];
+    let currentChatId = null;
+    let thinkEnabled = false;
+    let csrfToken = "";
+    let authenticatedUser = null;
+
+    function historyStorageKey(sub) {
+      return STORAGE_KEY_PREFIX + encodeURIComponent(String(sub));
+    }
+
+    function setAuthVisible(visible) {
+      authScreen.hidden = !visible;
+      appElement.hidden = visible;
+      accountControls.hidden = visible;
+    }
+
+    function clearAccountMemory() {
+      chats = [];
+      currentChatId = null;
+      thinkEnabled = false;
+      authenticatedUser = null;
+      storageKey = null;
+      input.value = "";
+      sendButton.disabled = false;
+      imageInput.value = "";
+      for (const attachmentInput of attachmentInputs) attachmentInput.value = "";
+      activeAttachmentInput = imageInput;
+      updateAttachmentChip();
+      composerNotice.textContent = "";
+      composerNotice.hidden = true;
+      thinkToggle.setAttribute("aria-pressed", "false");
+      renderConversation(null);
+      renderHistory();
+      accountEmail.textContent = "";
+    }
+
+    function restoreAccount(user) {
+      authenticatedUser = user;
+      storageKey = historyStorageKey(user.sub);
+      chats = loadChats();
+      currentChatId = null;
+      const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+      if (mostRecent) currentChatId = mostRecent.id;
+      accountEmail.textContent = user.email || "";
+      renderHistory();
+      renderConversation(mostRecent || null);
+      setAuthVisible(false);
+      resizeComposer();
+      input.focus();
+    }
+
+    async function fetchCsrf() {
+      const response = await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" });
+      const data = await response.json();
+      csrfToken = typeof data.csrfToken === "string" ? data.csrfToken : "";
+      return data;
+    }
+
+    function csrfHeaders(extra = {}) {
+      return { ...extra, "X-Ari-CSRF": csrfToken };
+    }
+
+    async function onGoogleCredential(credentialResponse) {
+      authError.textContent = "";
+      try {
+        const response = await fetch("/api/auth/google", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: csrfHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ credential: credentialResponse.credential })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          authError.textContent = response.status === 403
+            ? "This Google account cannot access Ari in the current setup. Contact the site administrator if you think this is a mistake."
+            : response.status === 503
+              ? "Google sign-in is temporarily unavailable. Please try again later."
+              : "Google couldn't verify your sign-in. Please try again.";
+          return;
+        }
+        csrfToken = result.csrfToken || csrfToken;
+        restoreAccount(result.user);
+      } catch (_) {
+        authError.textContent = "Google sign-in could not be completed. Please try again.";
+      }
+    }
+
+    function loadGoogleIdentity(clientId) {
+      if (!clientId) return;
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        if (!window.google?.accounts?.id) {
+          authError.textContent = "Google sign-in is temporarily unavailable. Please try again later.";
+          return;
+        }
+        window.google.accounts.id.initialize({ client_id: clientId, callback: onGoogleCredential });
+        window.google.accounts.id.renderButton(googleSignIn, {
+          type: "standard", theme: "filled_black", size: "large", shape: "pill", text: "signin_with"
+        });
+      };
+      script.onerror = () => { authError.textContent = "Google sign-in is temporarily unavailable. Please try again later."; };
+      document.head.appendChild(script);
+    }
+
+    async function initializeAuthentication() {
+      setAuthVisible(true);
+      authError.textContent = "";
+      try {
+        const configResponse = await fetch("/api/auth/config", { credentials: "same-origin", cache: "no-store" });
+        const config = await configResponse.json();
+        await fetchCsrf();
+        const meResponse = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
+        const me = await meResponse.json();
+        if (me.authenticated && me.user) {
+          restoreAccount(me.user);
+          return;
+        }
+        if (!config.configured) {
+          authError.textContent = config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.";
+          return;
+        }
+        loadGoogleIdentity(config.clientId);
+      } catch (_) {
+        authError.textContent = "Ari sign-in is temporarily unavailable. Refresh the page to try again.";
+      }
+    }
+
+    function createId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+      return "chat-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
+    }
+
+    function loadChats() {
+      if (!storageKey) return [];
+      try {
+        const raw = localStorage.getItem(storageKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(chat =>
+          chat && typeof chat.id === "string" &&
+          Array.isArray(chat.messages) &&
+          chat.messages.every(message =>
+            message && ["user", "ari"].includes(message.role) &&
+            typeof message.text === "string"
+          )
+        );
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveChats() {
+      if (!storageKey) return false;
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(chats));
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function currentChat() {
+      return chats.find(chat => chat.id === currentChatId) || null;
+    }
+
+    function makeTitle(text) {
+      const cleaned = String(text || "").replace(/\s+/g, " ").trim()
+        .replace(/^(?:hey ari[,!:\s]*|ari[,!:\s]*|can you\s+|could you\s+|please\s+|tell me\s+|explain\s+|what is\s+)/i, "")
+        .replace(/[?.!]+$/g, "");
+      const words = cleaned.split(" ").filter(Boolean);
+      if (!words.length) return "New chat";
+      const concise = words.slice(0, 6).join(" ");
+      const title = concise.charAt(0).toUpperCase() + concise.slice(1);
+      return words.length > 6 || title.length > 38 ? title.slice(0, 35).trimEnd() + "…" : title;
+    }
+
+    async function generateChatTitle(tier, userText, ariText) {
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: csrfHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({
+            message: "Create a short chat-list title from this exchange. Summarize the topic in your own words from Ari's perspective; do not copy the user's wording. Return only a 2–6 word title, with no quotes or punctuation.",
+            messages: [{ role: "user", content: "User asked: " + userText }, { role: "assistant", content: ariText }],
+            tier,
+            options: { thinking: false, max_new_tokens: 32 }
+          })
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        const title = String(data.reply || "").replace(/[\r\n"'`]+/g, " ").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
+        return title && title.length <= 48 ? title : title.slice(0, 45).trimEnd() + "...";
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function addMessage(text, speaker, imageName) {
+      const bubble = document.createElement("div");
+      bubble.className = "message " + speaker;
+      bubble.textContent = text;
+
+      if (imageName) {
+        const meta = document.createElement("small");
+        meta.textContent = "Image attached: " + imageName;
+        bubble.appendChild(meta);
+      }
+
+      messagesElement.appendChild(bubble);
+      conversation.scrollTop = conversation.scrollHeight;
+      return bubble;
+    }
+
+    function renderConversation(chat) {
+      messagesElement.replaceChildren();
+      const started = Boolean(chat && chat.messages.length);
+      emptyState.hidden = started;
+      if (chat) {
+        for (const message of chat.messages) {
+          addMessage(message.text, message.role, message.imageName);
+        }
+      }
+    }
+
+    function renderHistory() {
+      chatList.replaceChildren();
+      const sorted = [...chats].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || (b.updatedAt || 0) - (a.updatedAt || 0));
+
+      if (!sorted.length) {
+        const empty = document.createElement("div");
+        empty.className = "history-empty";
+        empty.textContent = "No previous chats yet.";
+        chatList.appendChild(empty);
+        return;
+      }
+
+      for (const chat of sorted) {
+        const row = document.createElement("div");
+        row.className = "history-row" + (chat.pinned ? " pinned" : "");
+
+        const select = document.createElement("button");
+        select.type = "button";
+        select.className = "history-select" + (chat.id === currentChatId ? " active" : "");
+        select.textContent = chat.title || "New chat";
+        select.title = chat.title || "New chat";
+        select.addEventListener("click", () => {
+          currentChatId = chat.id;
+          renderConversation(chat);
+          renderHistory();
+          sidebar.classList.remove("open");
+          input.focus();
+        });
+
+        row.append(select);
+        row.addEventListener("contextmenu", event => {
+          event.preventDefault();
+          showHistoryActions(chat, event.clientX, event.clientY);
+        });
+        let pressTimer = null;
+        let longPressHandled = false;
+        row.addEventListener("pointerdown", event => {
+          if (event.pointerType !== "touch") return;
+          longPressHandled = false;
+          pressTimer = window.setTimeout(() => {
+            longPressHandled = true;
+            showHistoryActions(chat, Math.min(event.clientX, window.innerWidth - 150), Math.min(event.clientY, window.innerHeight - 110));
+          }, 550);
+        });
+        for (const type of ["pointerup", "pointercancel", "pointerleave"]) row.addEventListener(type, () => window.clearTimeout(pressTimer));
+        row.addEventListener("click", event => {
+          if (!longPressHandled) return;
+          event.preventDefault();
+          event.stopPropagation();
+          longPressHandled = false;
+        }, true);
+        chatList.appendChild(row);
+      }
+    }
+
+    function ensureHistoryActions() {
+      let menu = document.getElementById("history-actions");
+      if (menu) return menu;
+      menu = document.createElement("div");
+      menu.id = "history-actions";
+      menu.className = "history-actions";
+      menu.setAttribute("role", "menu");
+      menu.hidden = true;
+      const pin = document.createElement("button");
+      pin.className = "history-action";
+      pin.type = "button";
+      pin.setAttribute("role", "menuitem");
+      pin.dataset.action = "pin";
+      const remove = document.createElement("button");
+      remove.className = "history-action delete";
+      remove.type = "button";
+      remove.setAttribute("role", "menuitem");
+      remove.dataset.action = "delete";
+      menu.append(pin, remove);
+      document.body.appendChild(menu);
+      menu.addEventListener("click", event => {
+        const action = event.target.closest("button")?.dataset.action;
+        const target = chats.find(item => item.id === menu.dataset.chatId);
+        if (!target || !action) return;
+        if (action === "pin") {
+          target.pinned = !target.pinned;
+          target.updatedAt = Date.now();
+          saveChats();
+          renderHistory();
+        } else if (action === "delete" && window.confirm("Delete this conversation from this browser?")) {
+          chats = chats.filter(item => item.id !== target.id);
+          if (currentChatId === target.id) {
+            currentChatId = null;
+            renderConversation(null);
+          }
+          saveChats();
+          renderHistory();
+        }
+        hideHistoryActions();
+      });
+      return menu;
+    }
+
+    function showHistoryActions(chat, x, y) {
+      const menu = ensureHistoryActions();
+      menu.dataset.chatId = chat.id;
+      menu.querySelector('[data-action="pin"]').textContent = chat.pinned ? "Unpin chat" : "Pin chat";
+      menu.querySelector('[data-action="delete"]').textContent = "Delete chat";
+      menu.style.left = Math.max(8, Math.min(x, window.innerWidth - 150)) + "px";
+      menu.style.top = Math.max(8, Math.min(y, window.innerHeight - 90)) + "px";
+      menu.hidden = false;
+    }
+
+    function hideHistoryActions() {
+      const menu = document.getElementById("history-actions");
+      if (menu) menu.hidden = true;
+    }
+
+    document.addEventListener("click", event => {
+      if (!event.target.closest(".history-actions")) hideHistoryActions();
+      if (!event.target.closest(".attach-wrap")) setAttachMenuOpen(false);
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") { hideHistoryActions(); setAttachMenuOpen(false); }
+    });
+
+    function createChat() {
+      currentChatId = null;
+      renderConversation(null);
+      renderHistory();
+      sidebar.classList.remove("open");
+      input.value = "";
+      resizeComposer();
+      input.focus();
+    }
+
+    function resizeComposer() {
+      input.style.height = "auto";
+      input.style.height = Math.min(input.scrollHeight, 180) + "px";
+    }
+
+    function updateAttachmentChip() {
+      const file = activeAttachmentInput.files && activeAttachmentInput.files[0];
+      attachmentChip.hidden = !file;
+      attachmentName.textContent = file ? file.name : "";
+    }
+
+    function setAttachMenuOpen(open) {
+      attachMenu.hidden = !open;
+      attachButton.setAttribute("aria-expanded", String(open));
+    }
+
+    function showComposerMessage(message) {
+      composerNotice.textContent = message;
+      composerNotice.hidden = false;
+    }
+
+    attachButton.addEventListener("click", () => setAttachMenuOpen(attachMenu.hidden));
+    attachMenu.addEventListener("click", event => {
+      const pickerId = event.target.closest("[data-picker]")?.dataset.picker;
+      if (!pickerId) return;
+      activeAttachmentInput = document.getElementById(pickerId);
+      setAttachMenuOpen(false);
+      activeAttachmentInput.click();
+    });
+    for (const attachmentInput of attachmentInputs) attachmentInput.addEventListener("change", () => {
+      for (const other of attachmentInputs) if (other !== attachmentInput) other.value = "";
+      activeAttachmentInput = attachmentInput;
+      updateAttachmentChip();
+    });
+    removeAttachmentButton.addEventListener("click", () => {
+      activeAttachmentInput.value = "";
+      updateAttachmentChip();
+    });
+    thinkToggle.addEventListener("click", () => {
+      thinkEnabled = !thinkEnabled;
+      thinkToggle.setAttribute("aria-pressed", String(thinkEnabled));
+      thinkToggle.title = thinkEnabled ? "Deeper reasoning is on" : "Enable deeper reasoning";
+    });
+    input.addEventListener("input", resizeComposer);
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        if (form.reportValidity()) form.requestSubmit();
+      }
+    });
+
+    function ensureChat(firstMessage) {
+      let chat = currentChat();
+      if (!chat) {
+        chat = {
+          id: createId(),
+          title: makeTitle(firstMessage),
+          messages: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+        chats.push(chat);
+        currentChatId = chat.id;
+      }
+      if (!chat.messages.length) chat.title = makeTitle(firstMessage);
+      return chat;
+    }
+
+    function encodeImage(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("The selected image could not be read."));
+        reader.onload = () => {
+          const result = String(reader.result || "");
+          const comma = result.indexOf(",");
+          if (comma < 0) return reject(new Error("The selected image could not be encoded."));
+          resolve({ mime_type: file.type, data_base64: result.slice(comma + 1) });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const prompt = input.value.trim();
+      if (!prompt || sendButton.disabled) return;
+
+      const tier = tierSelect.value;
+      const selectedFile = activeAttachmentInput.files && activeAttachmentInput.files[0] ? activeAttachmentInput.files[0] : null;
+      if (selectedFile && activeAttachmentInput !== imageInput) {
+        showComposerMessage("Audio and file uploads will be available after Ari's server supports them. Image uploads are ready now.");
+        return;
+      }
+      const selectedImage = selectedFile;
+      if (selectedImage) {
+        if (tier === "mini") {
+          showComposerMessage("Choose Medium, Max, or Ultra to ask about an image.");
+          return;
+        }
+        if (!["image/jpeg", "image/png", "image/webp"].includes(selectedImage.type)) {
+          showComposerMessage("That image type isn't supported. Choose another image.");
+          return;
+        }
+        if (selectedImage.size > 8 * 1024 * 1024) {
+          showComposerMessage("Choose an image smaller than 8 MiB.");
+          return;
+        }
+      }
+
+      const chat = ensureChat(prompt);
+      composerNotice.textContent = "";
+      composerNotice.hidden = true;
+      const chatId = chat.id;
+      const userMessage = {
+        role: "user",
+        text: prompt,
+        ...(selectedImage ? { imageName: selectedImage.name || "uploaded image", tier } : {}),
+        createdAt: Date.now()
+      };
+      chat.messages.push(userMessage);
+      chat.updatedAt = Date.now();
+      saveChats();
+      renderConversation(chat);
+      renderHistory();
+
+      input.value = "";
+      resizeComposer();
+      sendButton.disabled = true;
+      const waiting = addMessage("Thinking…", "ari");
+
+      try {
+        const image = selectedImage ? await encodeImage(selectedImage) : null;
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: csrfHeaders({ "Content-Type": "application/json" }),
+          signal: AbortSignal.timeout(190000),
+          body: JSON.stringify({
+            message: prompt,
+            messages: chat.messages.slice(-8).map(message => ({
+              role: message.role === "ari" ? "assistant" : "user",
+              content: message.text
+            })),
+            tier,
+            image,
+            options: { thinking: thinkEnabled, max_new_tokens: thinkEnabled ? 1024 : 512 }
+          })
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          if (response.status === 401) {
+            clearAccountMemory();
+            setAuthVisible(true);
+          }
+          throw new Error(data.error || "The local Ari server returned an error.");
+        }
+
+        const reply = data.reply || "Ari did not return a response.";
+        const assistantMessage = {
+          role: "ari",
+          text: reply,
+          createdAt: Date.now()
+        };
+        const targetChat = chats.find(item => item.id === chatId);
+        if (targetChat) {
+          targetChat.messages.push(assistantMessage);
+          targetChat.updatedAt = Date.now();
+          saveChats();
+        }
+        if (currentChatId === chatId) {
+          waiting.textContent = reply;
+          renderHistory();
+        }
+
+        if (targetChat && targetChat.messages.filter(message => message.role === "user").length === 1) {
+          void generateChatTitle(tier, prompt, reply).then(generatedTitle => {
+          if (generatedTitle && chats.includes(targetChat)) {
+            targetChat.title = generatedTitle;
+            targetChat.updatedAt = Date.now();
+            saveChats();
+            renderHistory();
+          }
+          });
+        }
+      } catch (error) {
+        const safeMessage = typeof error.message === "string" && error.message.startsWith("Ari ")
+          ? error.message
+          : error.message === "Failed to fetch"
+            ? "Couldn't reach Ari right now. Please try again in a moment."
+            : "Ari couldn't answer just now. Please try again.";
+        const errorText = safeMessage;
+        const targetChat = chats.find(item => item.id === chatId);
+        if (targetChat) {
+          targetChat.messages.push({ role: "ari", text: errorText, createdAt: Date.now() });
+          targetChat.updatedAt = Date.now();
+          saveChats();
+        }
+        if (currentChatId === chatId) waiting.textContent = errorText;
+      } finally {
+        activeAttachmentInput.value = "";
+        activeAttachmentInput = imageInput;
+        updateAttachmentChip();
+        sendButton.disabled = false;
+        input.focus();
+      }
+    });
+
+    newChatButton.addEventListener("click", createChat);
+    signOutButton.addEventListener("click", async () => {
+      signOutButton.disabled = true;
+      try {
+        const response = await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: csrfHeaders()
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error("Ari could not sign out safely. Refresh the page and try again.");
+        csrfToken = result.csrfToken || csrfToken;
+        clearAccountMemory();
+        setAuthVisible(true);
+        authError.textContent = "";
+      } catch (error) {
+        composerNotice.textContent = error.message;
+        composerNotice.hidden = false;
+      } finally {
+        signOutButton.disabled = false;
+      }
+    });
+    sidebarToggle.addEventListener("click", () => {
+      if (window.matchMedia("(max-width: 680px)").matches) {
+        const open = !sidebar.classList.contains("open");
+        sidebar.classList.toggle("open", open);
+        sidebarToggle.setAttribute("aria-expanded", String(open));
+        sidebarToggle.setAttribute("aria-label", open ? "Close chat sidebar" : "Open chat sidebar");
+      } else {
+        const collapsed = !app.classList.contains("sidebar-collapsed");
+        app.classList.toggle("sidebar-collapsed", collapsed);
+        sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+        sidebarToggle.setAttribute("aria-label", collapsed ? "Show chat sidebar" : "Collapse chat sidebar");
+        sidebarToggle.title = collapsed ? "Show chat sidebar" : "Collapse chat sidebar";
+      }
+    });
+
+    renderHistory();
+    renderConversation(null);
+    initializeAuthentication();
+  </script>
+</body>
+</html>

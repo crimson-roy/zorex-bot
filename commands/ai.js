@@ -24,6 +24,7 @@ async function getDownloadMediaMessage() {
 }
 
 const { callAI } = require("../lib/textAIClient");
+const { evaluateMathPrompt } = require("../lib/localMath");
 const { callVision } = require("../lib/visionClient");
 const { readDocument } = require("../lib/documentReader");
 const { extractDocumentPages } = require("./teach"); // requires the teach.js export change above
@@ -2048,6 +2049,37 @@ async function aiCommand(sock, msg, text) {
             }
             : null
         );
+
+        // Handle straightforward arithmetic locally, before the Azure classifier
+        // or answer model is called. Media/document requests remain on their
+        // existing paths and are never intercepted by this fast path.
+        if (!media) {
+            const localMath = evaluateMathPrompt(body);
+
+            if (localMath.matched) {
+                const answer = localMath.error
+                    ? `⚠️ ${localMath.error}`
+                    : localMath.display;
+
+                await sock.sendMessage(
+                    chatId,
+                    { text: answer },
+                    { quoted: msg }
+                );
+
+                appendHistory(
+                    profileId,
+                    {
+                        type: "local_math",
+                        user: body,
+                        assistant: answer
+                    }
+                );
+
+                await progress.succeed("✅ Calculated locally");
+                return;
+            }
+        }
 
         const mediaDescription =
             media?.type === "video"
