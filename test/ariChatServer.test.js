@@ -121,6 +121,9 @@ async function main() {
         assert.match(html, /filter\(chat => !chat\.projectId\)/);
         assert.match(html, /projectId: activeProjectId \|\| null/);
         assert.match(html, /Create project/);
+        assert.match(html, /async function loadMemoryView/);
+        assert.match(html, /Review mode is active/);
+        assert.match(html, /automatic suggestions from Ari's model are not connected yet/);
         assert.match(html, /Ari does not yet have the verification and account-data deletion endpoint/);
         assert.match(html, /Delete this conversation from this browser/);
         assert.doesNotMatch(html, /class="history-delete"|textContent = "×"/);
