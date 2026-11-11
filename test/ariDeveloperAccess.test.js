@@ -82,6 +82,23 @@ async function main() {
     assert.match(developerDoc, /ARI_MESSAGES_PER_MINUTE=10/);
 
     let current = 1_900_000_000_000;
+    const defaultOpenAccess = createAriDeveloperAccess({
+        env: { GOOGLE_CLIENT_ID: CLIENT_ID, ARI_ALLOWED_EMAILS: "" },
+        now: () => current,
+        verifyIdToken: async () => ({ ...BASE_CLAIMS, email: "public.user@example.com" }),
+    });
+    assert.equal(defaultOpenAccess.config().configured, true);
+    assert.equal(defaultOpenAccess.registrationMode, "open");
+    const defaultOpenCsrfResponse = responseStub();
+    const defaultOpenCsrf = defaultOpenAccess.issueCsrf(request(), defaultOpenCsrfResponse).csrfToken;
+    const defaultOpenLogin = await defaultOpenAccess.authenticateCredential(
+        request({ cookie: `${CSRF_COOKIE}=${defaultOpenCsrf}`, csrf: defaultOpenCsrf }),
+        responseStub(),
+        { credential: "valid" }
+    );
+    assert.equal(defaultOpenLogin.authenticated, true);
+    assert.equal(defaultOpenLogin.user.email, "public.user@example.com");
+
     const { access } = setupAccess({}, () => current);
     assert.equal(access.config().configured, true);
     assert.equal(access.registrationMode, "restricted");
