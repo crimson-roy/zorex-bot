@@ -54,7 +54,7 @@ async function testProviderNormalization() {
     assert.equal(tvResult.credits, 2);
 
     let sxUrl;
-    const sx = new SearXNGProvider({ env: { SEARXNG_BASE_URL: "https://search.example/base", SEARXNG_API_KEY: "not-sent" }, fetchImpl: async url => {
+    const sx = new SearXNGProvider({ env: { SEARXNG_BASE_URL: "https://search.example/base" }, fetchImpl: async url => {
         sxUrl = new URL(url); return response({ results: [{ title: "S", url: "https://example.org/s", content: "text", score: 1 }] });
     } });
     const sxResult = await sx.search({ query: "query", limit: 4, language: "en", freshness: "month" }, { timeoutMs: 1000 });
