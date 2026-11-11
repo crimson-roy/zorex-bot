@@ -48,12 +48,15 @@ async function main() {
             messages: [{ role: "user", text: "This belongs to account two.", createdAt: currentTime }]
         }]);
 
-        const fileData = JSON.parse(fs.readFileSync(store.filePath, "utf8"));
+        const accountFile = store.filePathFor("google-subject-one");
+        const fileData = JSON.parse(fs.readFileSync(accountFile, "utf8"));
         assert.equal(fileData.version, 1);
-        assert.ok(fileData.accounts[crypto.createHash("sha256").update("google-subject-one").digest("hex")]);
+        assert.equal(fileData.chats.length, 2);
+        assert.match(path.basename(accountFile), /^[a-f0-9]{64}\\.json$/,
+            "account storage filenames should use a one-way subject hash");
         assert.equal(JSON.stringify(fileData).includes("google-subject-one"), false,
-            "the raw Google subject must not be written as an account key");
-        assert.equal((fs.statSync(store.filePath).mode & 0o777), 0o600,
+            "the raw Google subject must not be written into account storage");
+        assert.equal((fs.statSync(accountFile).mode & 0o777), 0o600,
             "workspace data should have owner-only file permissions");
 
         const restarted = createAriWorkspaceStore({ dataDir, now: () => currentTime });
