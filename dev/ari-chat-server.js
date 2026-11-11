@@ -34,7 +34,7 @@ const ARI_TEXT_FALLBACK_PROMPT = [
     "Do not execute or claim to execute WhatsApp bot commands, account actions, purchases, moderation, or other external actions.",
     "If asked to analyse media that is not represented as text in the conversation, explain that media understanding is temporarily unavailable.",
     "Be transparent when uncertain. Never mention internal model names, provider names, credentials, endpoints, or server configuration."
-].join("\\n");
+].join("\n");
 
 function sendJson(response, statusCode, payload) {
     response.writeHead(statusCode, {
@@ -198,11 +198,6 @@ async function respondWithGpuModel(message, messages, options = {}) {
     const mode = String(localLanguage?.mode || "");
     const completedLocalTool = /^(?:WordNet (?:word search|dictionary)|Local character analysis|Local capability summary)/.test(mode);
     if (completedLocalTool) return localLanguage;
-    if (!options.gpuClient) {
-        throw new AriGpuClientError("Kaggle GPU inference is unavailable. Configure ARI_GPU_BASE_URL and ARI_GPU_API_KEY on the local Ari server.", {
-            statusCode: 503, code: "GPU_NOT_CONFIGURED"
-        });
-    }
     try {
         if (!options.gpuClient) {
             throw new AriGpuClientError("Ari's primary model service is not configured.", {
@@ -230,22 +225,29 @@ async function respondWithGpuModel(message, messages, options = {}) {
             });
         }
 
-        try {
-            const fallback = options.textFallbackClient
-                ? await options.textFallbackClient(messages, { tier: options.tier })
-                : await callZorexTextAI(ARI_TEXT_FALLBACK_PROMPT, messages, {
-                    timeoutMs: 20000,
-                    maxRetries: 0,
-                    maxCompletionTokens: 1200
-                });
-            const reply = typeof fallback === "string" ? fallback : fallback?.reply;
-            if (typeof reply !== "string" || !reply.trim()) throw new Error("The text fallback returned an empty response.");
-            return { reply: reply.trim(), mode: "Text-only backup" };
-        } catch (_) {
-            throw new AriGpuClientError("Ari's primary model and text-only backup are both unavailable. Please try again shortly.", {
-                statusCode: 503, code: "GPU_AND_FALLBACK_UNAVAILABLE", retryable: true
+        const fallback = await getAriTextFallback(messages, options);
+        if (fallback) return fallback;
+        throw new AriGpuClientError("Ari's primary model and text-only backup are both unavailable. Please try again shortly.", {
+            statusCode: 503, code: "GPU_AND_FALLBACK_UNAVAILABLE", retryable: true
+        });
+    }
+}
+
+async function getAriTextFallback(messages, options = {}) {
+    if (options.textFallbackEnabled === false) return null;
+    try {
+        const fallback = options.textFallbackClient
+            ? await options.textFallbackClient(messages, { tier: options.tier })
+            : await callZorexTextAI(ARI_TEXT_FALLBACK_PROMPT, messages, {
+                timeoutMs: 20000,
+                maxRetries: 0,
+                maxCompletionTokens: 1200
             });
-        }
+        const reply = typeof fallback === "string" ? fallback : fallback?.reply;
+        if (typeof reply !== "string" || !reply.trim()) return null;
+        return { reply: reply.trim(), mode: "Text-only backup" };
+    } catch (_) {
+        return null;
     }
 }
 
@@ -374,8 +376,9 @@ async function respondWithModel(message, messages, options = {}) {
         } catch (error) {
             console.error("[Ari playground] Local model request failed.");
             if (!localLanguage) {
-                return {
-                    reply: "Ari couldn't answer right now. Please try again in a moment.",
+                const fallback = await getAriTextFallback(messages, options);
+                return fallback || {
+                    reply: "Ari's local model and text-only backup are unavailable right now. Please try again shortly.",
                     mode: "Mini unavailable"
                 };
             }
@@ -383,8 +386,9 @@ async function respondWithModel(message, messages, options = {}) {
     }
 
     if (localLanguage) return localLanguage;
-    return {
-        reply: "I'm not able to answer that right now. Please try again in a moment.",
+    const fallback = await getAriTextFallback(messages, options);
+    return fallback || {
+        reply: "Ari's local model and text-only backup are unavailable right now. Please try again shortly.",
         mode: "Mini unavailable"
     };
 }
@@ -875,7 +879,9 @@ function createServer(options = {}) {
                 if (tier === "mini") {
                     result = await respondWithModel(body.message, messages, {
                         dictionary: wordNet,
-                        modelClient: options.modelClient
+                        modelClient: options.modelClient,
+                        textFallbackClient: options.textFallbackClient,
+                        textFallbackEnabled: String(env.ARI_TEXT_FALLBACK_ENABLED || "true").trim().toLowerCase() !== "false"
                     });
                 } else {
                     result = await respondWithGpuModel(body.message, messages, {
