@@ -573,7 +573,7 @@ async function main() {
                 })
             });
             assert.equal(response.status, 503);
-            assert.match((await response.json()).error, /temporarily unavailable for that model/i);
+            assert.match((await response.json()).error, /primary model and text backup are both unavailable/i);
         } finally {
             await new Promise(resolve => noGpuApp.close(resolve));
         }
@@ -602,8 +602,8 @@ async function main() {
                 body: JSON.stringify({ message: "hello", tier: "medium" })
             });
             const failure = await response.json();
-            assert.equal(response.status, 502);
-            assert.match(failure.error, /Ari couldn't complete that answer/);
+            assert.equal(response.status, 503);
+            assert.match(failure.error, /primary model and text backup are both unavailable/i);
             assert.equal(JSON.stringify(failure).includes("Qwen"), false);
             assert.equal(JSON.stringify(failure).includes("trycloudflare"), false);
         } finally {
