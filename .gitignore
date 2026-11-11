@@ -41,6 +41,8 @@ npm-debug.log*
 # data/
 
 # Ari private runtime session store (hashes only; never commit live session data)
+data/ariWorkspace.json
+data/ariWorkspace.json.tmp-*
 data/ariSessions.json
 data/ariSessions.json.tmp-*
 
