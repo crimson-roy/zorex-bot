@@ -76,10 +76,11 @@ async function main() {
     assert.match(sentEmails[0].code, /^\d{6}$/);
 
     const wrongResponse = responseStub();
+    const firstWrongCode = sentEmails[0].code === "000000" ? "000001" : "000000";
     await assert.rejects(() => access.authenticateOtp(request(csrfToken), wrongResponse, {
         method: "email",
         destination: emailDestination,
-        code: "000000"
+        code: firstWrongCode
     }), error => error.statusCode === 401);
     const emailLoginResponse = responseStub();
     const emailLogin = await access.authenticateOtp(request(csrfToken), emailLoginResponse, {
@@ -121,11 +122,12 @@ async function main() {
     const attemptsAddress = "attempts@example.com";
     await access.requestOtp(request(csrfToken), { method: "email", destination: attemptsAddress });
     const attemptsCode = sentEmails.at(-1).code;
+    const attemptsWrongCode = attemptsCode === "000000" ? "000001" : "000000";
     for (let index = 0; index < 5; index += 1) {
         await assert.rejects(() => access.authenticateOtp(request(csrfToken), responseStub(), {
             method: "email",
             destination: attemptsAddress,
-            code: "999999"
+            code: attemptsWrongCode
         }), error => error.statusCode === 401);
     }
     await assert.rejects(() => access.authenticateOtp(request(csrfToken), responseStub(), {
