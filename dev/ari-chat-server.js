@@ -404,7 +404,7 @@ function createServer(options = {}) {
             return;
         }
 
-        if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
+        if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html" || url.pathname === "/homepage")) {
             try {
                 const html = fs.readFileSync(HTML_PATH);
                 response.writeHead(200, {
