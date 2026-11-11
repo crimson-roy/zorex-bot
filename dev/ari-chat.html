@@ -4,7 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/ari-favicon.png">
-  <title>Ari — Local Playground</title>
+  <title>Ari by Zorex AI | AI workspace for conversations and projects</title>
+  <meta name="description" content="Meet Ari, an AI assistant and personal workspace by Zorex AI for conversations, projects, personal file storage, memory review and supported image understanding.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="{{ARI_ORIGIN}}/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Zorex AI">
+  <meta property="og:title" content="Ari by Zorex AI | AI workspace">
+  <meta property="og:description" content="A thoughtful AI workspace for questions, ideas, projects and ongoing work.">
+  <meta property="og:url" content="{{ARI_ORIGIN}}/">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap');
     :root {
@@ -283,6 +291,11 @@
     .landing-description { max-width: 560px; margin: 23px 0 30px; color: #aab8ae; font-size: 14px; line-height: 1.85; }
     .landing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 11px; }
     .landing-note { margin: 16px 0 0; color: var(--muted-soft); font-size: 10px; }
+    .landing-about { width:min(100%,1320px); margin:0 auto 46px; padding:24px clamp(18px,3vw,30px); border:1px solid #39473e; border-radius:18px; background:rgba(29,36,31,.72); }
+    .landing-about h2 { margin:7px 0 8px; color:#e7eee9; font:400 clamp(24px,3vw,35px)/1.2 var(--serif); }
+    .landing-about p { max-width:850px; margin:0 0 12px; color:#aab8ae; font-size:13px; line-height:1.8; }
+    .landing-about a { display:inline-flex; margin-top:3px; color:var(--accent-strong); font-size:12px; font-weight:600; text-decoration:none; }
+    .landing-about a:hover { text-decoration:underline; }
     .landing-preview { position: relative; max-width: 470px; justify-self: end; padding: 15px; border: 1px solid #3b4840; border-radius: 24px; background: rgba(29,36,31,.86); box-shadow: 0 26px 80px #0005; transform: rotate(1.2deg); }
     .landing-preview-bar { display: flex; align-items: center; gap: 6px; padding: 1px 3px 13px; border-bottom: 1px solid var(--line); }
     .landing-preview-dot { width: 6px; height: 6px; border-radius: 50%; background: #617166; }
@@ -424,7 +437,7 @@
   </style>
 </head>
 <body>
-  <section id="landing-screen" aria-labelledby="landing-title" hidden>
+  <section id="landing-screen" aria-labelledby="landing-title">
     <nav class="landing-nav" aria-label="Ari homepage">
       <span class="brand-mark">A</span>
       <span class="brand-name">Ari</span>
@@ -460,6 +473,12 @@
         </div>
       </div>
     </main>
+    <section class="landing-about" aria-labelledby="landing-about-title">
+      <p class="landing-eyebrow">About Ari by Zorex AI</p>
+      <h2 id="landing-about-title">Built with curiosity, persistence and a practical purpose.</h2>
+      <p>Ari is an AI assistant created by Zorex AI. It is an independently developed project with roots in Nigeria, built by a Nigerian developer with a laptop and years of accumulated learning, experimentation and problem-solving. Ari brings conversations and personal work organization together in one accessible workspace.</p>
+      <a href="/about">Discover more about Ari ↗</a>
+    </section>
     <footer class="landing-footer">
       <span>© Zorex AI · Ari</span>
       <a href="/about">About Ari</a>
