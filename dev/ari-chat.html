@@ -2065,7 +2065,10 @@
     loginTab.addEventListener("click", () => setAuthMode("login"));
     signupTab.addEventListener("click", () => setAuthMode("signup"));
 
-    newChatButton.addEventListener("click", createChat);
+    newChatButton.addEventListener("click", () => {
+      activeProjectId = null;
+      createChat();
+    });
     signOutButton.addEventListener("click", async () => {
       signOutButton.disabled = true;
       try {
