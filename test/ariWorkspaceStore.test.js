@@ -68,7 +68,49 @@ async function main() {
         assert.equal(sanitized[0].messages[0].createdAt, now);
         assert.equal(sanitized[0].pinned, false);
 
-        console.log("ariWorkspaceStore.test.js: all persistence, isolation and validation tests passed");
+        const project = await restarted.createProject("google-subject-a", {
+            name: "Ari website",
+            description: "Build the Ari workspace."
+        });
+        assert.match(project.id, /^[0-9a-f-]{36}$/i);
+        assert.equal(restarted.listProjects("google-subject-a").length, 1);
+        assert.deepEqual(restarted.listProjects("google-subject-b"), []);
+        assert.equal(restarted.listProjects("google-subject-a")[0].name, "Ari website");
+
+        const projectChat = {
+            id: "project-chat-1",
+            title: "Library implementation",
+            messages: [{ role: "user", text: "Build the Library.", createdAt: now }],
+            createdAt: now,
+            updatedAt: now,
+            pinned: false,
+            projectId: project.id
+        };
+        await restarted.replaceChats("google-subject-a", [projectChat]);
+        assert.equal(restarted.getChats("google-subject-a")[0].projectId, project.id);
+        assert.equal(restarted.getChats("google-subject-b").length, 0);
+        assert.throws(() => normalizeChats([{ ...projectChat, projectId: "not-a-uuid" }]), { statusCode: 400 });
+
+        await assert.rejects(
+            restarted.replaceChats("google-subject-a", [{ ...projectChat, projectId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }]),
+            { statusCode: 400 }
+        );
+        const renamed = await restarted.updateProject("google-subject-a", project.id, {
+            name: "Ari workspace",
+            description: "Updated project description."
+        });
+        assert.equal(renamed.name, "Ari workspace");
+        assert.equal(restarted.listProjects("google-subject-a")[0].description, "Updated project description.");
+
+        const deleted = await restarted.deleteProject("google-subject-a", project.id);
+        assert.equal(deleted.project.id, project.id);
+        assert.equal(deleted.unassignedChats, 1);
+        assert.equal(restarted.listProjects("google-subject-a").length, 0);
+        assert.equal(restarted.getChats("google-subject-a")[0].projectId, null,
+            "deleting a project must preserve its conversations in general history");
+        await assert.rejects(restarted.deleteProject("google-subject-a", project.id), { statusCode: 404 });
+
+        console.log("ariWorkspaceStore.test.js: persistence, account isolation, projects and validation passed");
     } finally {
         fs.rmSync(directory, { recursive: true, force: true });
     }
