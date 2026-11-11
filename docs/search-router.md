@@ -25,14 +25,12 @@ const page = await open_webpage("https://example.org/article");
 
 The common adapter interface is `configured` plus `search(normalizedOptions, config)`. Add a provider by implementing this interface, registering it in `lib/searchRouter/index.js`, adding a normalized response adapter and mocked tests, then adding its name and environment variables to this document and `.env.example`.
 
-- **Tavily**: official `POST https://api.tavily.com/search`, bearer authentication, `TAVILY_API_KEY`. Credits are recorded only when the response reports `usage.credits` (or `credits`). Research mode requests advanced search and raw text, so it can cost more.
 - **SearXNG**: only the operator-configured `SEARXNG_BASE_URL` is used. The adapter requests `/search?format=json`; the configured instance must enable JSON. The documented search API has no standard API-key requirement. For Ari, use a private self-hosted instance; no public instance is selected automatically.
 - **Serper**: official `POST https://google.serper.dev/search`, authenticated with `X-API-KEY`, configured by `SERPER_API_KEY`. Country and language options map to `gl` and `hl`; freshness filtering is not currently passed through.
-- **Tavily**: official `POST https://api.tavily.com/search`, bearer authentication, configured by `TAVILY_API_KEY`. Before configuring an account, the account owner must meet Tavily's current age and contracting requirements.
 
 An adapter is eligible only when its configuration is valid and it is not in cooldown, over its soft limit, blocked by the global cap, or open in the circuit breaker. There is no startup probe that spends provider quota. Recent requests update its observed success rate and EWMA latency; weighted selection combines those measures with the configured provider order.
 
-Official API references: [SearXNG Search API](https://docs.searxng.org/dev/search_api.html), [Serper](https://serper.dev/playground), [Tavily Search](https://docs.tavily.com/documentation/api-reference/endpoint/search).
+Official API references: [SearXNG Search API](https://docs.searxng.org/dev/search_api.html), [Serper](https://serper.dev/playground).
 
 ## Configuration
 
@@ -40,13 +38,13 @@ Copy the search variables from `.env.example` into the deployment's secret/confi
 
 Important settings:
 
-- `SEARCH_PROVIDER_ORDER`: deterministic preference weights; defaults to configured SearXNG, Serper, then Tavily.
+- `SEARCH_PROVIDER_ORDER`: deterministic preference weights; defaults to configured SearXNG, then Serper.
 - `SEARCH_TIMEOUT_MS`: provider request deadline.
 - `SEARCH_MAX_RESULTS`: default result count (1–20).
 - `SEARCH_MAX_FALLBACKS`: maximum additional providers after the first failure.
 - `SEARCH_RESEARCH_MODE`: must be explicitly enabled before callers can request two-provider research.
 - `SEARCH_MONTHLY_SOFT_LIMIT`: global monthly provider-attempt cap; zero disables the cap.
-- `SEARXNG_MONTHLY_SOFT_LIMIT`, `SERPER_MONTHLY_SOFT_LIMIT`, `TAVILY_MONTHLY_SOFT_LIMIT`: optional per-provider caps; zero disables that provider cap.
+- `SEARXNG_MONTHLY_SOFT_LIMIT`, `SERPER_MONTHLY_SOFT_LIMIT`: optional per-provider caps; zero disables that provider cap.
 - `SEARCH_CIRCUIT_FAILURES`, `SEARCH_CIRCUIT_COOLDOWN_MS`: circuit threshold and recovery delay.
 
 Usage counters persist in `data/searchRouterUsage.json` through the existing `dataPath` helper. Month boundaries use UTC `YYYY-MM`. The service records provider attempts, successful attempts, failures, response latency, 429 events, circuit state and only exact credits disclosed by the provider. This is local tracking, not provider-side quota telemetry. `getStatus()` returns a secret-free diagnostic snapshot; the current branch does not expose it as a WhatsApp command because that would require changing the message dispatcher.
