@@ -14,7 +14,7 @@ const MAX_MESSAGE_CHARS = 50000;
 const MAX_TOTAL_CHARS = 1_500_000;
 const PROJECT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MEMORY_ID_PATTERN = PROJECT_ID_PATTERN;
-const CREDENTIAL_PATTERN = /\\b(?:password|passwd|passphrase|api[ _-]?key|access[ _-]?token|refresh[ _-]?token|private[ _-]?key|secret)\\b\\s*[:=]/i;
+const CREDENTIAL_PATTERN = /\b(?:password|passwd|passphrase|api[ _-]?key|access[ _-]?token|refresh[ _-]?token|private[ _-]?key|secret)\b\s*[:=]/i;
 
 function accountKey(subject) {
     return crypto.createHash("sha256").update(String(subject)).digest("hex");
