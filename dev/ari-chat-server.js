@@ -490,6 +490,72 @@ function createServer(options = {}) {
         }
 
 
+
+        if (request.method === "GET" && url.pathname === "/api/workspace/projects") {
+            const session = auth.requireSession(request);
+            if (!session) {
+                sendAuthJson(response, 401, { error: "Sign in to access your projects." });
+                return;
+            }
+            try {
+                sendAuthJson(response, 200, { projects: workspace.listProjects(session.sub) });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not load your projects." });
+            }
+            return;
+        }
+
+        if (request.method === "POST" && url.pathname === "/api/workspace/projects") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to create a project." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const body = await readJsonBody(request, 16 * 1024);
+                const project = await workspace.createProject(session.sub, body?.project || body);
+                sendAuthJson(response, 201, { created: true, project });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not create this project." });
+            }
+            return;
+        }
+
+        const projectMatch = url.pathname.match(/^\/api\/workspace\/projects\/([0-9a-f-]{36})$/i);
+        if (projectMatch && request.method === "PATCH") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to edit your projects." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const body = await readJsonBody(request, 16 * 1024);
+                const project = await workspace.updateProject(session.sub, projectMatch[1], body?.project || body);
+                sendAuthJson(response, 200, { updated: true, project });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not update this project." });
+            }
+            return;
+        }
+
+        if (projectMatch && request.method === "DELETE") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to delete your projects." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const result = await workspace.deleteProject(session.sub, projectMatch[1]);
+                sendAuthJson(response, 200, { deleted: true, project: result.project, unassignedChats: result.unassignedChats });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not delete this project." });
+            }
+            return;
+        }
+
         if (request.method === "GET" && url.pathname === "/api/library/files") {
             const session = auth.requireSession(request);
             if (!session) {
