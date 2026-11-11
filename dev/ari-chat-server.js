@@ -148,6 +148,12 @@ function shouldSearchWeb(message) {
     return /\b(?:latest|current|currently|today|tonight|this week|this month|this year|recent|recently|upcoming|right now|as of|price|pricing|cost|exchange rate|weather|forecast|schedule|standings|live score|news|release date|new version|available now)\b/i.test(value);
 }
 
+function buildSearchQuery(message) {
+    let query = String(message || "").trim();
+    query = query.replace(/^(?:please\\s+)?(?:search\\s+(?:the\\s+)?(?:web|internet|online)(?:\\s+for)?|search\\s+for|look\\s+up|find\\s+online)\\s*/i, "");
+    return query.slice(0, 1000).trim();
+}
+
 function buildSearchResearchMessage(query, searchResult, pageResults = []) {
     const pageByUrl = new Map(pageResults.filter(Boolean).map(page => [page.source_url || page.url, page]));
     const rows = [];
@@ -191,7 +197,7 @@ async function prepareSearchMessages(message, messages, options = {}) {
         return { messages, searched: false, error: "disabled" };
     }
     try {
-        const searchResult = await router.web_search(message, { limit: 4, research_mode: false });
+        const searchResult = await router.web_search(buildSearchQuery(message) || String(message).slice(0, 1000), { limit: 4, research_mode: false });
         const results = Array.isArray(searchResult?.results) ? searchResult.results.slice(0, 4) : [];
         if (!results.length) return { messages, searched: false, error: "empty" };
         const reader = options.webpageReader || openWebpage;
@@ -1123,6 +1129,7 @@ module.exports = {
     normalizeMessages,
     shouldSearchWeb,
     isExplicitWebSearchRequest,
+    buildSearchQuery,
     buildSearchResearchMessage,
     prepareSearchMessages,
     createLocalModelClient,
