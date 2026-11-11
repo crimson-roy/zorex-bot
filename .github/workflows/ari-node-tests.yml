@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - feature/ari-local-math-v1
-  push:
-    branches:
-      - feature/ari-search-integration
 
 jobs:
   node-tests:
