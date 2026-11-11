@@ -376,11 +376,16 @@ function startInferenceBridge(options = {}) {
 }
 
 function createServer(options = {}) {
-    const auth = options.authService || createAriDeveloperAccess({ env: options.env || process.env, port: options.port || DEFAULT_PORT });
     const env = options.env || process.env;
+    const dataDir = path.resolve(env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data"));
+    const auth = options.authService || createAriDeveloperAccess({
+        env,
+        port: options.port || DEFAULT_PORT,
+        sessionFile: path.join(dataDir, "ariSessions.json")
+    });
     const limits = developerUsageSettings(env);
     const usage = options.usageStore || createAriDeveloperUsage({
-        dataDir: env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data"),
+        dataDir,
         ...limits,
         ...(options.now ? { now: options.now } : {})
     });
