@@ -135,7 +135,6 @@ async function testCircuitQuotaAndRecovery() {
     const circuit = makeRouter({
         serper: provider("serper", async () => { attempts++; throw Object.assign(new Error("server"), { status: 500 }); }),
         searxng: provider("searxng", async () => ({ results: [] }), false),
-        serper: provider("serper", async () => ({ results: [] }), false)
     }, { SEARCH_MAX_FALLBACKS: "0" });
     for (let i = 0; i < 3; i++) await assert.rejects(circuit.web_search("q"), e => e.code === "SEARCH_FAILED");
     assert.equal(circuit.getStatus().providers[0].circuit_breaker, "open");
@@ -148,7 +147,6 @@ async function testCircuitQuotaAndRecovery() {
     const quota = makeRouter({
         serper: provider("serper", async () => ({ results: [result("https://example.org/quota", "serper")] })),
         searxng: provider("searxng", async () => ({ results: [] }), false),
-        serper: provider("serper", async () => ({ results: [] }), false)
     }, { SEARCH_MONTHLY_SOFT_LIMIT: "1" });
     await quota.web_search("first");
     await assert.rejects(quota.web_search("second"), e => e.code === "NO_SEARCH_PROVIDER");
@@ -190,7 +188,6 @@ async function testCanonicalDedupAndResearchMode() {
     const researchFallback = makeRouter({
         serper: provider("serper", async () => { throw Object.assign(new Error("down"), { status: 503 }); }),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/second", "searxng")] })),
-        serper: provider("serper", async () => ({ results: [result("https://example.org/third", "serper")] }))
     });
     const recovered = await researchFallback.web_search("q", { research_mode: true });
     assert.equal(recovered.providers_used.length, 1);
