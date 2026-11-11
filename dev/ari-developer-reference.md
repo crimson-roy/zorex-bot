@@ -12,9 +12,9 @@ This document contains operational details for developers. Do not copy this sect
 ## Access configuration
 
 - `GOOGLE_CLIENT_ID`: public Google Identity Services client ID.
-- `ARI_REGISTRATION_MODE`: `restricted` by default; `open` enables automatic registration for any Google account with a verified identity token.
-- `ARI_ALLOWED_EMAILS`: comma-separated approved developer addresses, required only in restricted mode.
-- In restricted mode, add the exact Google sign-in email for each authorized person to this variable. For a private single-owner deployment, include only the owner's Google email; add more addresses only when access is intentionally granted. Restart the Ari service after changing the environment. Do not switch to `open` just to fix an account mismatch.
+- `ARI_REGISTRATION_MODE`: `open` by default; any Google account with a verified identity token can register and sign in. Set to `restricted` only for a private allowlisted deployment.
+- `ARI_ALLOWED_EMAILS`: comma-separated approved addresses, required only in restricted mode.
+- To make a deployment public, set `ARI_REGISTRATION_MODE=open` in its runtime environment and restart the Ari service. To keep a deployment private, set `ARI_REGISTRATION_MODE=restricted` and list the exact authorized Google emails in `ARI_ALLOWED_EMAILS`.
 - `ARI_SESSION_TTL_SECONDS`: absolute session lifetime; default 28,800 seconds.
 - `ARI_PUBLIC_ORIGIN`: exact public HTTPS origin in production.
 - `NODE_ENV=production`: required for Secure production cookies and production-origin validation.
