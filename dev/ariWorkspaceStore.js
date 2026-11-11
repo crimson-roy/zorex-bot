@@ -8,13 +8,12 @@ const MAX_CHATS_PER_ACCOUNT = 200;
 const MAX_MESSAGES_PER_CHAT = 300;
 const MAX_MESSAGE_CHARACTERS = 12_000;
 const MAX_CHAT_CHARACTERS = 600_000;
-const MAX_STORE_BYTES = 8 * 1024 * 1024;
+const MAX_ACCOUNT_STORE_BYTES = 8 * 1024 * 1024;
 
 function createAriWorkspaceStore(options = {}) {
     const fsImpl = options.fs || fs;
     const now = options.now || (() => Date.now());
-    const dataDir = path.resolve(options.dataDir || path.join(__dirname, "..", "data"));
-    const filePath = path.join(dataDir, "ariWorkspace.json");
+    const storageDir = path.resolve(options.dataDir || path.join(__dirname, "..", "data"), "ariWorkspace");
     let queue = Promise.resolve();
 
     function accountKey(subject) {
@@ -24,25 +23,27 @@ function createAriWorkspaceStore(options = {}) {
         return crypto.createHash("sha256").update(subject).digest("hex");
     }
 
-    function readStore() {
+    function filePathFor(subject) {
+        return path.join(storageDir, accountKey(subject) + ".json");
+    }
+
+    function readStore(filePath) {
         try {
             const parsed = JSON.parse(fsImpl.readFileSync(filePath, "utf8"));
-            if (parsed && parsed.version === 1 && parsed.accounts && typeof parsed.accounts === "object" && !Array.isArray(parsed.accounts)) {
-                return parsed;
-            }
-            throw new Error("Ari workspace storage has an unsupported format.");
+            if (parsed && parsed.version === 1 && Array.isArray(parsed.chats)) return parsed;
+            throw new Error("Unsupported store format.");
         } catch (error) {
-            if (error.code === "ENOENT") return { version: 1, accounts: {} };
+            if (error.code === "ENOENT") return { version: 1, chats: [] };
             throw new Error("Ari workspace data could not be read safely.");
         }
     }
 
-    function writeStore(store) {
+    function writeStore(filePath, store) {
         const serialized = JSON.stringify(store);
-        if (Buffer.byteLength(serialized, "utf8") > MAX_STORE_BYTES) {
-            throw Object.assign(new Error("Ari workspace storage has reached its current size limit."), { statusCode: 413 });
+        if (Buffer.byteLength(serialized, "utf8") > MAX_ACCOUNT_STORE_BYTES) {
+            throw Object.assign(new Error("This account's saved conversations have reached the current storage limit."), { statusCode: 413 });
         }
-        fsImpl.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+        fsImpl.mkdirSync(storageDir, { recursive: true, mode: 0o700 });
         const temporary = filePath + ".tmp-" + process.pid + "-" + crypto.randomBytes(8).toString("hex");
         try {
             fsImpl.writeFileSync(temporary, serialized, { encoding: "utf8", mode: 0o600, flag: "wx" });
@@ -110,21 +111,20 @@ function createAriWorkspaceStore(options = {}) {
         return result;
     }
 
+    function sortChats(chats) {
+        return chats.slice().sort((a, b) =>
+            Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
+            (b.updatedAt || 0) - (a.updatedAt || 0)
+        );
+    }
+
     function listChats(subject) {
-        const key = accountKey(subject);
-        return enqueue(() => {
-            const store = readStore();
-            const account = store.accounts[key];
-            const chats = account && Array.isArray(account.chats) ? account.chats : [];
-            return JSON.parse(JSON.stringify(chats.slice().sort((a, b) =>
-                Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
-                (b.updatedAt || 0) - (a.updatedAt || 0)
-            )));
-        });
+        const filePath = filePathFor(subject);
+        return enqueue(() => JSON.parse(JSON.stringify(sortChats(readStore(filePath).chats))));
     }
 
     function replaceChats(subject, suppliedChats) {
-        const key = accountKey(subject);
+        const filePath = filePathFor(subject);
         return enqueue(() => {
             if (!Array.isArray(suppliedChats) || suppliedChats.length > MAX_CHATS_PER_ACCOUNT) {
                 throw Object.assign(new Error("The chat list is invalid or exceeds the current account limit."), { statusCode: 400 });
@@ -137,26 +137,26 @@ function createAriWorkspaceStore(options = {}) {
                 }
                 identifiers.add(chat.id);
             }
-            const store = readStore();
-            if (!chats.length) delete store.accounts[key];
-            else store.accounts[key] = { chats };
-            writeStore(store);
-            return JSON.parse(JSON.stringify(chats.slice().sort((a, b) =>
-                Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
-                (b.updatedAt || 0) - (a.updatedAt || 0)
-            )));
+            if (!chats.length) {
+                try { fsImpl.rmSync(filePath, { force: true }); } catch {
+                    throw new Error("Ari workspace data could not be cleared safely.");
+                }
+                return [];
+            }
+            writeStore(filePath, { version: 1, chats });
+            return JSON.parse(JSON.stringify(sortChats(chats)));
         });
     }
 
     return {
         listChats,
         replaceChats,
-        filePath,
+        filePathFor,
         limits: {
             maxChatsPerAccount: MAX_CHATS_PER_ACCOUNT,
             maxMessagesPerChat: MAX_MESSAGES_PER_CHAT,
             maxMessageCharacters: MAX_MESSAGE_CHARACTERS,
-            maxStoreBytes: MAX_STORE_BYTES
+            maxAccountStoreBytes: MAX_ACCOUNT_STORE_BYTES
         }
     };
 }
