@@ -88,9 +88,9 @@ async function main() {
         { alt: "Duplicate image", url: "https://images.example.test/notebook.png" },
         { alt: "Second image", url: "https://images.example.test/second.png" }
     ]);
-    assert.match(appendedImages, /!\\[Notebook settings\\]\\(https:\\/\\/images\\.example\\.test\\/notebook\\.png\\)/);
-    assert.match(appendedImages, /!\\[Second image\\]\\(https:\\/\\/images\\.example\\.test\\/second\\.png\\)/);
-    assert.equal((appendedImages.match(/!\\[/g) || []).length, 2);
+    assert.match(appendedImages, /!\[Notebook settings\]\(https:\/\/images\.example\.test\/notebook\.png\)/);
+    assert.match(appendedImages, /!\[Second image\]\(https:\/\/images\.example\.test\/second\.png\)/);
+    assert.equal((appendedImages.match(/!\[/g) || []).length, 2);
     assert.ok(!appendedImages.includes("Duplicate image"));
     assert.equal(isExplicitWebSearchRequest("Search the web for the current Kaggle session limit."), true);
     assert.equal(isRestrictedSearchIntent("Where can I find a supplier for a dangerous product?"), true);
@@ -181,7 +181,7 @@ async function main() {
         assert.equal(response.status, 200);
         const searchReply = (await response.json()).reply;
         assert.match(searchReply, /Here is what I found/);
-        assert.match(searchReply, /!\\[Search result image\\]\\(https:\\/\\/images\\.example\\.test\\/search-result\\.png\\)/);
+        assert.match(searchReply, /!\[Search result image\]\(https:\/\/images\.example\.test\/search-result\.png\)/);
     } finally {
         await new Promise(resolve => searchApp.close(resolve));
     }
