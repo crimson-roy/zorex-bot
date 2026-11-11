@@ -10,6 +10,7 @@ const { respondToLocalLanguage } = require("../lib/localLanguage");
 const { createAriGpuClient, AriGpuClientError, REMOTE_TIERS } = require("./ariGpuClient");
 const { createAriDeveloperAccess, createAriDeveloperUsage } = require("./ariDeveloperAccess");
 const { createAriWorkspaceStore } = require("./ariWorkspaceStore");
+const { createAriLibraryStore } = require("./ariLibraryStore");
 const { respondAriSelfKnowledge } = require("./ariSelfKnowledge");
 
 const wordNet = new WordNetDictionary();
@@ -389,6 +390,13 @@ function createServer(options = {}) {
         dataDir: env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data"),
         ...(options.now ? { now: options.now } : {})
     });
+    const library = options.libraryStore || createAriLibraryStore({
+        dataDir: env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data"),
+        maxFileBytes: env.ARI_LIBRARY_MAX_FILE_BYTES,
+        quotaBytes: env.ARI_LIBRARY_QUOTA_BYTES,
+        globalQuotaBytes: env.ARI_LIBRARY_GLOBAL_QUOTA_BYTES,
+        ...(options.now ? { now: options.now } : {})
+    });
     const server = http.createServer(async (request, response) => {
         const url = new URL(request.url, "http://" + HOST);
 
@@ -477,6 +485,115 @@ function createServer(options = {}) {
                 sendAuthJson(response, error.statusCode || 500, {
                     error: error.message || "Ari could not save your conversations."
                 });
+            }
+            return;
+        }
+
+
+        if (request.method === "GET" && url.pathname === "/api/library/files") {
+            const session = auth.requireSession(request);
+            if (!session) {
+                sendAuthJson(response, 401, { error: "Sign in to access your Library." });
+                return;
+            }
+            try {
+                sendAuthJson(response, 200, library.listFiles(session.sub));
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not load your Library." });
+            }
+            return;
+        }
+
+        if (request.method === "POST" && url.pathname === "/api/library/files") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    request.resume();
+                    sendAuthJson(response, 401, { error: "Sign in to upload files to your Library." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const rawName = request.headers["x-ari-filename"];
+                const contentLength = Number(request.headers["content-length"]);
+                if (typeof rawName !== "string" || !rawName.trim() || rawName.length > 512) {
+                    request.resume();
+                    sendAuthJson(response, 400, { error: "A valid file name is required." });
+                    return;
+                }
+                if (!Number.isSafeInteger(contentLength) || contentLength <= 0) {
+                    request.resume();
+                    sendAuthJson(response, 411, { error: "The upload must include a valid file size." });
+                    return;
+                }
+                if (contentLength > library.maxFileBytes) {
+                    request.resume();
+                    sendAuthJson(response, 413, { error: "This file exceeds Ari's configured per-file limit." });
+                    return;
+                }
+                const file = await library.saveFile(session.sub, {
+                    name: rawName,
+                    mimeType: request.headers["content-type"]
+                }, request, contentLength);
+                sendAuthJson(response, 201, { saved: true, file, storage: library.listFiles(session.sub) });
+            } catch (error) {
+                if (!response.headersSent && !response.destroyed) {
+                    request.resume();
+                    sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not save this file." });
+                }
+            }
+            return;
+        }
+
+        const libraryFileMatch = url.pathname.match(/^\/api\/library\/files\/([0-9a-f-]{36})(?:\/(download|preview))?$/i);
+        if (libraryFileMatch && request.method === "GET") {
+            const session = auth.requireSession(request);
+            if (!session) {
+                sendAuthJson(response, 401, { error: "Sign in to access your Library files." });
+                return;
+            }
+            const file = library.getFile(session.sub, libraryFileMatch[1]);
+            if (!file) {
+                sendAuthJson(response, 404, { error: "That Library file could not be found." });
+                return;
+            }
+            const mode = libraryFileMatch[2] || "download";
+            if (mode === "preview" && !file.previewable) {
+                sendAuthJson(response, 415, { error: "This file type cannot be previewed here." });
+                return;
+            }
+            const fallbackName = file.name.replace(/["\\]/g, "_").replace(/[^\x20-\x7e]/g, "_");
+            const disposition = mode === "preview"
+                ? "inline"
+                : "attachment; filename=\"" + fallbackName + "\"; filename*=UTF-8''" + encodeURIComponent(file.name);
+            const stream = fs.createReadStream(file.filePath);
+            stream.once("error", () => {
+                if (!response.headersSent) sendAuthJson(response, 404, { error: "That Library file is no longer available." });
+                else response.destroy();
+            });
+            response.writeHead(200, {
+                "Content-Type": mode === "preview" ? file.mimeType : "application/octet-stream",
+                "Content-Length": String(file.size),
+                "Content-Disposition": disposition,
+                "Cache-Control": "private, no-store",
+                "X-Content-Type-Options": "nosniff",
+                "Content-Security-Policy": "default-src 'none'; sandbox"
+            });
+            stream.pipe(response);
+            return;
+        }
+
+        if (libraryFileMatch && request.method === "DELETE" && !libraryFileMatch[2]) {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to manage your Library." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                await library.deleteFile(session.sub, libraryFileMatch[1]);
+                sendAuthJson(response, 200, { deleted: true, storage: library.listFiles(session.sub) });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, { error: error.message || "Ari could not delete this file." });
             }
             return;
         }
@@ -612,7 +729,7 @@ function createServer(options = {}) {
 
         sendJson(response, 404, { error: "Not found." });
     });
-    server.requestTimeout = 30_000;
+    server.requestTimeout = 120_000;
     server.headersTimeout = 15_000;
     server.keepAliveTimeout = 5_000;
     return server;

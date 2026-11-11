@@ -137,7 +137,7 @@ async function main() {
         assert.match(html, /<span>Audio<\/span>/);
         assert.match(html, /data-picker="file-input"/);
         assert.match(html, /Documents and files/);
-        assert.match(html, /Audio and file uploads will be available after Ari's server supports them/);
+        assert.match(html, /This file is saved in your Library, but Ari cannot analyse documents or audio yet/);
         assert.ok(html.includes("localStorage.setItem"));
         assert.doesNotMatch(html, /id="model-status"|id="chat-controls"|Kaggle|Cloudflare|Checking Ari-0/);
         assert.match(html, /id="attach-button"/);
