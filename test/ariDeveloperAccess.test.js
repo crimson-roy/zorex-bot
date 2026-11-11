@@ -70,6 +70,7 @@ async function main() {
     assert.match(respondAriSelfKnowledge("What are your usage limits?"), /contact the site administrator/i);
     assert.doesNotMatch(respondAriSelfKnowledge("What are your usage limits?"), /\b(?:100|10)\b/);
     assert.match(respondAriSelfKnowledge("How do I register?"), /verified Google account.*automatically/i);
+    assert.match(respondAriSelfKnowledge("Can you search the web?"), /search public web information.*configured and available/i);
     assert.doesNotMatch(respondAriSelfKnowledge("How do I get an invite?"), /invited accounts/i);
     assert.match(ARI_SELF_KNOWLEDGE_POLICY, /never disclose numeric quotas/i);
     const selfKnowledgeDoc = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-self-knowledge.md"), "utf8");
