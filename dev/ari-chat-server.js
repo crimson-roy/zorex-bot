@@ -532,7 +532,13 @@ function createServer(options = {}) {
 
         if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html" || url.pathname === "/homepage")) {
             try {
-                const html = fs.readFileSync(HTML_PATH);
+                const configuredOrigin = String(env.ARI_PUBLIC_ORIGIN || "").trim().replace(/\/$/, "");
+                let canonicalOrigin = "";
+                try {
+                    const parsed = new URL(configuredOrigin);
+                    if (parsed.origin === configuredOrigin && parsed.protocol === "https:") canonicalOrigin = parsed.origin;
+                } catch { /* Omit canonical origin until configured. */ }
+                const html = fs.readFileSync(HTML_PATH, "utf8").replaceAll("{{ARI_ORIGIN}}", canonicalOrigin);
                 response.writeHead(200, {
                     "Content-Type": "text/html; charset=utf-8",
                     "Cache-Control": "no-store",
