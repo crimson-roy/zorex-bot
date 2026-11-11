@@ -245,6 +245,63 @@
     .workspace-stat strong { display: block; margin-bottom: 4px; color: var(--text); font: 400 21px var(--serif); }
     .workspace-stat span { color: var(--muted); font-size: 11px; }
     .app.sidebar-collapsed .sidebar { display: none; }
+    #landing-screen {
+      display: flex; min-height: 100%; flex-direction: column; overflow-y: auto;
+      padding: 0 clamp(20px, 6vw, 88px) 40px;
+      background: radial-gradient(ellipse at 72% 18%, rgba(76,105,83,.22), transparent 38%), #191e1b;
+    }
+    #landing-screen[hidden] { display: none; }
+    .landing-nav { display: flex; min-height: 82px; align-items: center; gap: 12px; border-bottom: 1px solid rgba(63,75,67,.5); }
+    .landing-nav .brand-name { font-size: 24px; }
+    .landing-nav-spacer { flex: 1; }
+    .landing-nav-button, .landing-primary, .landing-secondary {
+      min-height: 40px; padding: 0 17px; border: 1px solid var(--line-strong); border-radius: 999px;
+      color: var(--text); background: transparent; font-size: 12px; font-weight: 600;
+    }
+    .landing-nav-button:hover, .landing-secondary:hover { background: var(--surface); }
+    .landing-primary { border-color: var(--accent); color: #17221b; background: var(--accent); }
+    .landing-primary:hover { background: var(--accent-strong); }
+    .landing-main { display: grid; flex: 1; grid-template-columns: minmax(0,1.2fr) minmax(280px,.8fr); align-items: center; gap: clamp(35px,7vw,110px); width: min(100%,1320px); margin: 0 auto; padding: clamp(62px,10vh,112px) 0 75px; }
+    .landing-copy { max-width: 730px; }
+    .landing-eyebrow { display: flex; align-items: center; gap: 9px; margin: 0 0 23px; color: var(--accent); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+    .landing-eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--accent); }
+    .landing-title { margin: 0; color: #e7eee9; font: 400 clamp(43px,6.6vw,76px)/1.02 var(--serif); letter-spacing: -1.7px; }
+    .landing-description { max-width: 560px; margin: 23px 0 30px; color: #aab8ae; font-size: 14px; line-height: 1.85; }
+    .landing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 11px; }
+    .landing-note { margin: 16px 0 0; color: var(--muted-soft); font-size: 10px; }
+    .landing-preview { position: relative; max-width: 470px; justify-self: end; padding: 15px; border: 1px solid #3b4840; border-radius: 24px; background: rgba(29,36,31,.86); box-shadow: 0 26px 80px #0005; transform: rotate(1.2deg); }
+    .landing-preview-bar { display: flex; align-items: center; gap: 6px; padding: 1px 3px 13px; border-bottom: 1px solid var(--line); }
+    .landing-preview-dot { width: 6px; height: 6px; border-radius: 50%; background: #617166; }
+    .landing-preview-label { margin-left: 6px; color: var(--muted-soft); font-size: 10px; }
+    .landing-preview-chat { display: flex; flex-direction: column; gap: 18px; padding: 25px 8px 13px; }
+    .landing-preview-user { align-self: flex-end; max-width: 88%; padding: 10px 13px; border: 1px solid #3b4a40; border-radius: 14px 14px 4px 14px; color: #d9e5dc; background: #29362e; font-size: 11px; }
+    .landing-preview-ari { display: flex; gap: 10px; color: #e1eae3; font: 400 16px/1.55 var(--serif); }
+    .landing-preview-mark { display: grid; width: 25px; height: 25px; flex: 0 0 auto; place-items: center; border-radius: 8px; color: #18221c; background: var(--accent); font: 500 15px var(--serif); }
+    .landing-preview-composer { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; padding: 11px 12px; border: 1px solid #4b5b50; border-radius: 16px; color: var(--muted); background: #252e29; font-size: 10px; }
+    .landing-preview-send { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 50%; color: #18221c; background: var(--accent); font-size: 16px; }
+    .landing-footer { display: flex; justify-content: space-between; gap: 15px; padding-top: 17px; border-top: 1px solid rgba(63,75,67,.45); color: var(--muted-soft); font-size: 10px; }
+    .auth-back { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 18px; padding: 6px 0; border: 0; color: var(--muted); background: transparent; font-size: 11px; }
+    .auth-back:hover { color: var(--text); }
+    .auth-tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 22px 0 19px; padding: 4px; border: 1px solid var(--line); border-radius: 13px; background: #171d19; }
+    .auth-tabs::before { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border: 1px solid #526457; border-radius: 9px; background: #2b3830; content: ""; transition: transform .22s ease; }
+    .auth-tabs[data-mode="signup"]::before { transform: translateX(100%); }
+    .auth-tab { position: relative; z-index: 1; min-height: 36px; border: 0; border-radius: 9px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 600; }
+    .auth-tab[aria-selected="true"] { color: var(--text); }
+    .auth-card .auth-divider { margin-top: 20px; }
+    @media (max-width: 840px) {
+      .landing-main { grid-template-columns: 1fr; gap: 48px; padding-top: 65px; }
+      .landing-preview { width: min(100%,520px); justify-self: start; transform: none; }
+    }
+    @media (max-width: 480px) {
+      #landing-screen { padding: 0 19px 25px; }
+      .landing-nav { min-height: 69px; }
+      .landing-nav .brand-name { font-size: 22px; }
+      .landing-nav-button { min-height: 36px; padding: 0 12px; font-size: 11px; }
+      .landing-main { padding: 64px 0 50px; }
+      .landing-title { font-size: clamp(42px,12vw,55px); }
+      .landing-description { font-size: 13px; }
+      .landing-footer { flex-direction: column; gap: 5px; }
+    }
     #auth-screen { display: grid; width: 100%; min-height: 100%; place-items: center; overflow-y: auto; padding: 28px 20px; background: radial-gradient(ellipse at 50% 20%, #29362e 0%, #1b211d 45%, #161b18 100%); }
     #auth-screen[hidden] { display: none; }
     .app[hidden] { display: none; }
@@ -291,17 +348,64 @@
   </style>
 </head>
 <body>
+  <section id="landing-screen" aria-labelledby="landing-title" hidden>
+    <nav class="landing-nav" aria-label="Ari homepage">
+      <span class="brand-mark">A</span>
+      <span class="brand-name">Ari</span>
+      <span class="landing-nav-spacer"></span>
+      <button class="landing-nav-button" id="landing-login" type="button">Log in</button>
+      <button class="landing-primary" id="landing-signup" type="button">Get started</button>
+    </nav>
+    <main class="landing-main">
+      <div class="landing-copy">
+        <p class="landing-eyebrow">A personal workspace by Zorex AI</p>
+        <h1 class="landing-title" id="landing-title">A calmer space for thinking, creating and getting things done.</h1>
+        <p class="landing-description">Ari is being built as a thoughtful AI workspace for conversations, ideas and the projects that grow from them. Bring your questions, explore a problem and keep your work moving in one place.</p>
+        <div class="landing-actions">
+          <button class="landing-primary" id="landing-primary" type="button">Get started <span aria-hidden="true">↗</span></button>
+          <button class="landing-secondary" id="landing-secondary" type="button">I already have an account</button>
+        </div>
+        <p class="landing-note" id="landing-note">Google sign-in is currently the available account method. Email verification is not active yet.</p>
+      </div>
+      <div class="landing-preview" aria-label="Illustrative preview of the Ari chat workspace">
+        <div class="landing-preview-bar">
+          <span class="landing-preview-dot"></span><span class="landing-preview-dot"></span><span class="landing-preview-dot"></span>
+          <span class="landing-preview-label">Ari workspace</span>
+        </div>
+        <div class="landing-preview-chat">
+          <div class="landing-preview-user">Help me make sense of this idea.</div>
+          <div class="landing-preview-ari">
+            <span class="landing-preview-mark">A</span>
+            <span>Let's break it into parts, look at what matters and work through it clearly.</span>
+          </div>
+          <div class="landing-preview-composer">
+            <span>Message Ari...</span><span class="landing-preview-send">↑</span>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer class="landing-footer">
+      <span>© Zorex AI · Ari</span>
+      <span>A workspace for the way ideas develop.</span>
+    </footer>
+  </section>
+
   <section id="auth-screen" aria-labelledby="auth-title" hidden>
     <div class="auth-shell">
+      <button class="auth-back" id="auth-back" type="button"><span aria-hidden="true">←</span> Back to Ari</button>
       <div class="auth-brand"><span class="brand-mark">A</span><span>Ari</span></div>
       <div class="auth-card">
         <p class="auth-eyebrow">Your personal AI workspace</p>
         <h1 id="auth-title">Welcome back.</h1>
-        <p>Sign in to continue to your conversations, projects and workspace.</p>
+        <p id="auth-description">Sign in to continue to your conversations, projects and workspace.</p>
+        <div class="auth-tabs" id="auth-tabs" data-mode="login" role="tablist" aria-label="Account access">
+          <button class="auth-tab" id="login-tab" type="button" role="tab" aria-selected="true">Log in</button>
+          <button class="auth-tab" id="signup-tab" type="button" role="tab" aria-selected="false">Sign up</button>
+        </div>
         <div class="auth-divider">Continue with</div>
         <div id="google-sign-in"></div>
         <p id="auth-error" role="status" aria-live="polite"></p>
-        <p class="auth-footnote">Google sign-in is currently enabled for this Ari environment. Other account methods will appear when their verification service is ready.</p>
+        <p class="auth-footnote">Google is the only active sign-in method in this version. Email OTP and phone verification are not connected yet.</p>
       </div>
     </div>
   </section>
@@ -478,6 +582,18 @@
     const STORAGE_KEY_PREFIX = "ari-playground-chats-v1:";
     const appElement = document.getElementById("ari-app");
     const authScreen = document.getElementById("auth-screen");
+    const landingScreen = document.getElementById("landing-screen");
+    const landingLoginButton = document.getElementById("landing-login");
+    const landingSignupButton = document.getElementById("landing-signup");
+    const landingPrimaryButton = document.getElementById("landing-primary");
+    const landingSecondaryButton = document.getElementById("landing-secondary");
+    const landingNote = document.getElementById("landing-note");
+    const authBackButton = document.getElementById("auth-back");
+    const authTabs = document.getElementById("auth-tabs");
+    const loginTab = document.getElementById("login-tab");
+    const signupTab = document.getElementById("signup-tab");
+    const authTitle = document.getElementById("auth-title");
+    const authDescription = document.getElementById("auth-description");
     const authError = document.getElementById("auth-error");
     const googleSignIn = document.getElementById("google-sign-in");
     const accountControls = document.getElementById("account-controls");
@@ -533,6 +649,12 @@
     let thinkEnabled = false;
     let csrfToken = "";
     let authenticatedUser = null;
+    let registrationMode = "restricted";
+    let authConfigurationError = "";
+    let googleClientId = "";
+    let googleScriptLoading = false;
+    let googleScriptLoaded = false;
+    let authMode = "login";
     let workspaceSyncReady = false;
     let chatSyncQueue = Promise.resolve();
 
@@ -542,8 +664,54 @@
 
     function setAuthVisible(visible) {
       authScreen.hidden = !visible;
+      landingScreen.hidden = true;
       appElement.hidden = visible;
       accountControls.hidden = visible;
+    }
+
+    function showLanding() {
+      landingScreen.hidden = false;
+      authScreen.hidden = true;
+      appElement.hidden = true;
+      accountControls.hidden = true;
+      if (authenticatedUser) {
+        landingPrimaryButton.textContent = "Open Ari workspace ↗";
+        landingSecondaryButton.hidden = true;
+        landingNote.textContent = "You're signed in. Open your workspace to continue.";
+      } else {
+        landingPrimaryButton.textContent = "Get started ↗";
+        landingSecondaryButton.hidden = false;
+        landingNote.textContent = "Google sign-in is currently the available account method. Email verification is not active yet.";
+      }
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode === "signup" ? "signup" : "login";
+      const signingUp = authMode === "signup";
+      authTabs.dataset.mode = authMode;
+      loginTab.setAttribute("aria-selected", String(!signingUp));
+      signupTab.setAttribute("aria-selected", String(signingUp));
+      authTitle.textContent = signingUp ? "Create your Ari account." : "Welcome back.";
+      authDescription.textContent = signingUp
+        ? "Start your workspace with the account method currently available."
+        : "Sign in to continue to your conversations, projects and workspace.";
+      authError.textContent = "";
+      if (signingUp && registrationMode !== "open") {
+        authError.textContent = "New account registration is currently restricted in this Ari environment. You can still log in with an approved Google account.";
+        googleSignIn.replaceChildren();
+        return;
+      }
+      if (!googleClientId || authConfigurationError) {
+        authError.textContent = authConfigurationError || "Google sign-in is not configured yet. Please contact Ari's administrator.";
+        googleSignIn.replaceChildren();
+        return;
+      }
+      renderGoogleIdentityButton();
+    }
+
+    function openAuthScreen(mode = "login") {
+      setAuthVisible(true);
+      setAuthMode(mode);
     }
 
     function clearAccountMemory() {
@@ -626,46 +794,71 @@
       }
     }
 
+    function renderGoogleIdentityButton() {
+      if (!googleScriptLoaded || !window.google?.accounts?.id || !googleClientId) return;
+      if (authMode === "signup" && registrationMode !== "open") return;
+      googleSignIn.replaceChildren();
+      window.google.accounts.id.initialize({ client_id: googleClientId, callback: onGoogleCredential });
+      window.google.accounts.id.renderButton(googleSignIn, {
+        type: "standard", theme: "filled_black", size: "large", shape: "pill",
+        text: authMode === "signup" ? "signup_with" : "signin_with"
+      });
+    }
+
     function loadGoogleIdentity(clientId) {
       if (!clientId) return;
+      googleClientId = clientId;
+      if (window.google?.accounts?.id) {
+        googleScriptLoaded = true;
+        renderGoogleIdentityButton();
+        return;
+      }
+      if (googleScriptLoading) return;
+      googleScriptLoading = true;
       const script = document.createElement("script");
       script.src = "https://accounts.google.com/gsi/client";
       script.async = true;
       script.defer = true;
       script.onload = () => {
+        googleScriptLoading = false;
         if (!window.google?.accounts?.id) {
           authError.textContent = "Google sign-in is temporarily unavailable. Please try again later.";
           return;
         }
-        window.google.accounts.id.initialize({ client_id: clientId, callback: onGoogleCredential });
-        window.google.accounts.id.renderButton(googleSignIn, {
-          type: "standard", theme: "filled_black", size: "large", shape: "pill", text: "signin_with"
-        });
+        googleScriptLoaded = true;
+        renderGoogleIdentityButton();
       };
-      script.onerror = () => { authError.textContent = "Google sign-in is temporarily unavailable. Please try again later."; };
+      script.onerror = () => {
+        googleScriptLoading = false;
+        authError.textContent = "Google sign-in is temporarily unavailable. Please try again later.";
+      };
       document.head.appendChild(script);
     }
 
     async function initializeAuthentication() {
-      setAuthVisible(true);
-      authError.textContent = "";
+      showLanding();
       try {
         const configResponse = await fetch("/api/auth/config", { credentials: "same-origin", cache: "no-store" });
         const config = await configResponse.json();
+        registrationMode = config.registrationMode === "open" ? "open" : "restricted";
+        authConfigurationError = config.configured
+          ? ""
+          : (config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.");
+        googleClientId = typeof config.clientId === "string" ? config.clientId : "";
         await fetchCsrf();
         const meResponse = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
         const me = await meResponse.json();
         if (me.authenticated && me.user) {
           restoreAccount(me.user);
+          if (window.location.pathname === "/homepage") showLanding();
           return;
         }
-        if (!config.configured) {
-          authError.textContent = config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.";
-          return;
-        }
-        loadGoogleIdentity(config.clientId);
+        showLanding();
+        if (!config.configured) landingNote.textContent = authConfigurationError;
       } catch (_) {
-        authError.textContent = "Ari sign-in is temporarily unavailable. Refresh the page to try again.";
+        showLanding();
+        landingNote.textContent = "Ari sign-in is temporarily unavailable. Please refresh the page to try again.";
+        authConfigurationError = "Ari sign-in is temporarily unavailable. Please refresh the page to try again.";
       }
     }
 
@@ -1307,7 +1500,7 @@
         if (!response.ok) {
           if (response.status === 401) {
             clearAccountMemory();
-            setAuthVisible(true);
+            showLanding();
           }
           throw new Error(data.error || "The local Ari server returned an error.");
         }
@@ -1363,6 +1556,21 @@
       }
     });
 
+    landingLoginButton.addEventListener("click", () => openAuthScreen("login"));
+    landingSignupButton.addEventListener("click", () => openAuthScreen("signup"));
+    landingSecondaryButton.addEventListener("click", () => openAuthScreen("login"));
+    landingPrimaryButton.addEventListener("click", () => {
+      if (authenticatedUser) {
+        setAuthVisible(false);
+        showChatView();
+      } else {
+        openAuthScreen("signup");
+      }
+    });
+    authBackButton.addEventListener("click", showLanding);
+    loginTab.addEventListener("click", () => setAuthMode("login"));
+    signupTab.addEventListener("click", () => setAuthMode("signup"));
+
     newChatButton.addEventListener("click", createChat);
     signOutButton.addEventListener("click", async () => {
       signOutButton.disabled = true;
@@ -1376,7 +1584,7 @@
         if (!response.ok) throw new Error("Ari could not sign out safely. Refresh the page and try again.");
         csrfToken = result.csrfToken || csrfToken;
         clearAccountMemory();
-        setAuthVisible(true);
+        showLanding();
         authError.textContent = "";
       } catch (error) {
         composerNotice.textContent = error.message;
