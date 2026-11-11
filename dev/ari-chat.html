@@ -151,6 +151,14 @@
     .message.user { align-self: flex-end; max-width: min(84%, 760px); border-color: #344239; color: #e5eee8; background: #26312b; }
     .message.ari { align-self: flex-start; width: 100%; max-width: 100%; padding: 1px 42px 3px 1px; border: 0; color: #e2eae4; background: transparent; font: 400 18px/1.68 var(--serif); }
     .message-content { min-width: 0; }
+    .message-content .message-paragraph { margin: 0 0 .78em; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .message-content .message-paragraph:last-child { margin-bottom: 0; }
+    .message-code { margin: 13px 0; overflow: hidden; border: 1px solid #46554b; border-radius: 13px; background: #151b17; font-family: var(--sans); }
+    .message-code-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 11px; border-bottom:1px solid #354139; color:var(--muted); background:#202722; font:600 10px/1.3 var(--sans); letter-spacing:.06em; text-transform:uppercase; }
+    .message-code-copy { min-height:27px; padding:5px 9px; border:1px solid #46554b; border-radius:7px; color:var(--text); background:#29332d; font:500 10px var(--sans); cursor:pointer; }
+    .message-code-copy:hover { border-color:var(--accent); color:var(--accent-strong); }
+    .message-code pre { max-width:100%; margin:0; padding:13px 14px; overflow:auto; color:#e4eee7; font:12px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; tab-size:2; }
+    .message-code code { color:inherit; white-space:pre; font:inherit; }
     .message small { display: block; margin-top: 7px; color: var(--muted); font: 11px/1.4 var(--sans); }
     .message-copy {
       display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; padding: 5px 8px;
@@ -1069,12 +1077,64 @@
       }
     }
 
+    function appendMessageText(container, value) {
+      const paragraphs = String(value || "").split(/\n{2,}/);
+      for (const paragraphText of paragraphs) {
+        if (!paragraphText.trim()) continue;
+        const paragraph = document.createElement("p");
+        paragraph.className = "message-paragraph";
+        paragraph.textContent = paragraphText.trim();
+        container.appendChild(paragraph);
+      }
+    }
+
+    function renderAriContent(container, value) {
+      const source = String(value || "");
+      const fence = /```([^\r\n`]{0,32})\r?\n([\s\S]*?)\r?\n?```/g;
+      container.replaceChildren();
+      let cursor = 0;
+      let match;
+      while ((match = fence.exec(source)) !== null) {
+        appendMessageText(container, source.slice(cursor, match.index));
+        const block = document.createElement("section");
+        block.className = "message-code";
+        const header = document.createElement("div");
+        header.className = "message-code-header";
+        const language = document.createElement("span");
+        language.textContent = match[1].trim() || "Code";
+        const copy = document.createElement("button");
+        copy.type = "button";
+        copy.className = "message-code-copy";
+        copy.textContent = "Copy";
+        const codeText = match[2];
+        copy.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(codeText);
+            copy.textContent = "Copied";
+          } catch (_) {
+            copy.textContent = "Copy unavailable";
+          }
+        });
+        header.append(language, copy);
+        const pre = document.createElement("pre");
+        const code = document.createElement("code");
+        code.textContent = codeText;
+        pre.appendChild(code);
+        block.append(header, pre);
+        container.appendChild(block);
+        cursor = fence.lastIndex;
+      }
+      appendMessageText(container, source.slice(cursor));
+      if (!container.childNodes.length) container.textContent = source;
+    }
+
     function addMessage(text, speaker, imageName) {
       const bubble = document.createElement("div");
       bubble.className = "message " + speaker;
       const content = document.createElement("div");
       content.className = "message-content";
-      content.textContent = text;
+      if (speaker === "ari") renderAriContent(content, text);
+      else content.textContent = text;
       bubble.appendChild(content);
 
       if (imageName) {
@@ -2217,7 +2277,7 @@
           saveChats();
         }
         if (currentChatId === chatId) {
-          waiting.querySelector('.message-content').textContent = reply;
+          renderAriContent(waiting.querySelector(".message-content"), reply);
           renderHistory();
         }
 
