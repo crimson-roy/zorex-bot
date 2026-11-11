@@ -115,7 +115,11 @@ async function main() {
         assert.equal(homepageResponse.status, 200);
         const homepageHtml = await homepageResponse.text();
         assert.match(homepageHtml, /id="landing-screen"/);
+        assert.ok(homepageHtml.includes("<title>Ari by Zorex AI | AI workspace for conversations and projects</title>"));
+        assert.ok(homepageHtml.includes("About Ari by Zorex AI"));
+        assert.ok(homepageHtml.includes("Nigerian developer with a laptop"));
         assert.ok(homepageHtml.includes('href="/about"'));
+        assert.ok(homepageHtml.includes('href="https://ari.example.test/"'));
         const aboutResponse = await fetch(baseUrl + "/about");
         assert.equal(aboutResponse.status, 200);
         const aboutHtml = await aboutResponse.text();
@@ -171,6 +175,9 @@ async function main() {
         assert.match(html, /id="attachment-preview"/);
         assert.match(html, /id="paste-card"/);
         assert.match(html, /Copy response/);
+        assert.match(html, /function appendMessageText/);
+        assert.match(html, /message-image/);
+        assert.match(html, /referrerPolicy = "no-referrer"/);
         assert.match(html, /function renderAriContent/);
         assert.match(html, /message-code-copy/);
         assert.match(html, /navigator\.clipboard\.writeText\(codeText\)/);
@@ -197,6 +204,8 @@ async function main() {
         assert.match(html, /id="sidebar-toggle"/);
         assert.match(html, /sidebar-collapsed/);
         assert.match(html, /id="attach-menu" role="menu" hidden/);
+        assert.match(html, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+        assert.match(html, /min-height: 98px/);
         assert.match(html, /data-picker="image-input"/);
         assert.match(html, /Photos and images/);
         assert.match(html, /data-picker="audio-input"/);
