@@ -174,6 +174,14 @@ function createAriOtpAuth(options = {}) {
         for (const [storedKey, timestamp] of sentAt) {
             if (timestamp + 86_400_000 <= currentTime) sentAt.delete(storedKey);
         }
+        for (const [storedKey, timestamps] of sendHistory) {
+            const recent = timestamps.filter(timestamp => timestamp > currentTime - 3_600_000);
+            if (recent.length) sendHistory.set(storedKey, recent);
+            else sendHistory.delete(storedKey);
+        }
+        for (const [storedKey, pending] of challenges) {
+            if (pending.expiresAt <= currentTime) challenges.delete(storedKey);
+        }
         const lastSent = sentAt.get(key) || 0;
         if (lastSent && currentTime - lastSent < resendSeconds * 1000) {
             const retryAfterSeconds = Math.max(1, Math.ceil((lastSent + resendSeconds * 1000 - currentTime) / 1000));
