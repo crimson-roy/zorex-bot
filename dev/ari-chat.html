@@ -366,6 +366,29 @@
     .library-error { color:var(--danger); }
     @media (max-width:600px) { .library-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; } .library-card { padding:9px; } .library-card-actions { flex-wrap:wrap; } }
 
+  
+    .project-create-form { display:grid; gap:11px; margin:18px 0 20px; padding:16px; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
+    .project-create-form input, .project-create-form textarea { width:100%; min-width:0; padding:11px 12px; border:1px solid var(--line); border-radius:10px; color:var(--text); background:var(--surface); font:400 13px var(--sans); outline:none; }
+    .project-create-form textarea { min-height:68px; resize:vertical; }
+    .project-create-form input:focus, .project-create-form textarea:focus { border-color:var(--accent); }
+    .project-create-form button, .project-action { min-height:36px; padding:8px 12px; border:1px solid var(--line); border-radius:9px; color:var(--text); background:var(--surface); font:500 12px var(--sans); cursor:pointer; }
+    .project-create-form button { justify-self:start; border-color:var(--accent); background:var(--accent); color:var(--accent-ink,var(--bg)); }
+    .project-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(245px,1fr)); gap:12px; margin-top:16px; }
+    .project-card { display:flex; min-width:0; flex-direction:column; gap:12px; padding:15px; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
+    .project-card h3 { margin:0; overflow-wrap:anywhere; color:var(--text); font:600 15px var(--sans); }
+    .project-card p { margin:0; min-height:34px; color:var(--muted); font-size:12px; line-height:1.55; }
+    .project-card-meta { color:var(--muted); font-size:11px; }
+    .project-card-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:auto; }
+    .project-action.primary { border-color:var(--accent); color:var(--accent-ink,var(--bg)); background:var(--accent); }
+    .project-action.danger { color:var(--danger); }
+    .project-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
+    .project-chat-list { display:grid; gap:9px; margin-top:15px; }
+    .project-chat-row { display:flex; width:100%; align-items:center; justify-content:space-between; gap:12px; padding:13px 15px; border:1px solid var(--line); border-radius:12px; text-align:left; color:var(--text); background:var(--panel); cursor:pointer; }
+    .project-chat-row:hover, .project-card:hover { border-color:var(--accent); }
+    .project-chat-row span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .project-chat-row span:last-child { flex:none; color:var(--muted); font-size:11px; }
+    @media (max-width:600px) { .project-grid { grid-template-columns:1fr; } }
+
   </style>
 </head>
 <body>
@@ -664,6 +687,9 @@
     let activeAttachmentInput = imageInput;
     let attachmentObjectUrl = null;
     let activeWorkspaceView = "chat";
+    let activeProjectId = null;
+    let projects = [];
+    let projectLoadToken = 0;
     let selectedLibraryFile = null;
     let attachmentUploadError = "";
     let attachmentUploadPromise = Promise.resolve(null);
@@ -747,6 +773,8 @@
 
     function clearAccountMemory() {
       chats = [];
+      projects = [];
+      activeProjectId = null;
       currentChatId = null;
       thinkEnabled = false;
       authenticatedUser = null;
@@ -1067,12 +1095,12 @@
 
     function renderHistory() {
       chatList.replaceChildren();
-      const sorted = [...chats].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || (b.updatedAt || 0) - (a.updatedAt || 0));
+      const sorted = [...chats].filter(chat => !chat.projectId).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || (b.updatedAt || 0) - (a.updatedAt || 0));
 
       if (!sorted.length) {
         const empty = document.createElement("div");
         empty.className = "history-empty";
-        empty.textContent = "No previous chats yet.";
+        empty.textContent = chats.some(chat => chat.projectId) ? "Project chats live inside their projects." : "No previous chats yet.";
         chatList.appendChild(empty);
         return;
       }
@@ -1087,6 +1115,7 @@
         select.textContent = chat.title || "New chat";
         select.title = chat.title || "New chat";
         select.addEventListener("click", () => {
+          activeProjectId = null;
           showChatView();
           currentChatId = chat.id;
           topbarHeading.textContent = chat.title || "New chat";
@@ -1169,10 +1198,11 @@
       activeWorkspaceView = "chat";
       chatStage.hidden = false;
       workspaceScreen.hidden = true;
-      topbarSubtitle.textContent = "Ari workspace";
+      const activeProject = projects.find(project => project.id === activeProjectId) || null;
+      topbarSubtitle.textContent = activeProject ? "Project · " + activeProject.name : "Ari workspace";
       topbarHeading.textContent = currentChat()?.title || "New chat";
       libraryNav.classList.remove("active");
-      projectsNav.classList.remove("active");
+      projectsNav.classList.toggle("active", Boolean(activeProject));
       accountMenu.hidden = true;
       accountMenuToggle.setAttribute("aria-expanded", "false");
     }
@@ -1292,6 +1322,225 @@
       showWorkspaceView(item.dataset.accountView);
     });
 
+
+
+    async function loadProjectsView() {
+      const token = ++projectLoadToken;
+      try {
+        const response = await fetch("/api/workspace/projects", { credentials: "same-origin", cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (token !== projectLoadToken || activeWorkspaceView !== "projects") return;
+        if (response.status === 401) {
+          clearAccountMemory();
+          showLanding();
+          return;
+        }
+        if (!response.ok || !Array.isArray(data.projects)) {
+          throw new Error(data.error || "Ari could not load your projects.");
+        }
+        projects = data.projects;
+        const existingPanel = workspaceContent.querySelector(".workspace-panel");
+        workspaceContent.replaceChildren();
+        if (existingPanel) workspaceContent.appendChild(existingPanel);
+
+        const createForm = document.createElement("form");
+        createForm.className = "project-create-form";
+        const name = document.createElement("input");
+        name.type = "text";
+        name.name = "name";
+        name.maxLength = 80;
+        name.placeholder = "Project name";
+        name.setAttribute("aria-label", "Project name");
+        name.required = true;
+        const description = document.createElement("textarea");
+        description.name = "description";
+        description.maxLength = 500;
+        description.placeholder = "What is this project about? (optional)";
+        description.setAttribute("aria-label", "Project description");
+        const create = document.createElement("button");
+        create.type = "submit";
+        create.textContent = "Create project";
+        createForm.append(name, description, create);
+        createForm.addEventListener("submit", async event => {
+          event.preventDefault();
+          create.disabled = true;
+          try {
+            const result = await fetch("/api/workspace/projects", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: csrfHeaders({ "Content-Type": "application/json" }),
+              body: JSON.stringify({ name: name.value, description: description.value })
+            });
+            const payload = await result.json().catch(() => ({}));
+            if (!result.ok) throw new Error(payload.error || "Ari could not create this project.");
+            name.value = "";
+            description.value = "";
+            await loadProjectsView();
+          } catch (error) {
+            showWorkspaceNotice(error.message);
+          } finally {
+            create.disabled = false;
+          }
+        });
+        workspaceContent.appendChild(createForm);
+
+        if (!projects.length) {
+          const empty = document.createElement("div");
+          empty.className = "library-empty";
+          empty.textContent = "No projects yet. Create one above to keep its conversations together.";
+          workspaceContent.appendChild(empty);
+          return;
+        }
+
+        const grid = document.createElement("div");
+        grid.className = "project-grid";
+        for (const project of projects) {
+          const card = document.createElement("article");
+          card.className = "project-card";
+          const title = document.createElement("h3");
+          title.textContent = project.name;
+          const copy = document.createElement("p");
+          copy.textContent = project.description || "A focused space for related conversations.";
+          const count = document.createElement("div");
+          count.className = "project-card-meta";
+          const chatCount = chats.filter(chat => chat.projectId === project.id).length;
+          count.textContent = chatCount + (chatCount === 1 ? " conversation" : " conversations");
+          const actions = document.createElement("div");
+          actions.className = "project-card-actions";
+          const open = document.createElement("button");
+          open.type = "button";
+          open.className = "project-action primary";
+          open.textContent = "Open project";
+          open.addEventListener("click", () => openProjectDetail(project));
+          const rename = document.createElement("button");
+          rename.type = "button";
+          rename.className = "project-action";
+          rename.textContent = "Rename";
+          rename.addEventListener("click", async () => {
+            const nextName = window.prompt("Project name", project.name);
+            if (nextName === null || !nextName.trim() || nextName.trim() === project.name) return;
+            rename.disabled = true;
+            try {
+              const result = await fetch("/api/workspace/projects/" + encodeURIComponent(project.id), {
+                method: "PATCH",
+                credentials: "same-origin",
+                headers: csrfHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify({ name: nextName.trim() })
+              });
+              const payload = await result.json().catch(() => ({}));
+              if (!result.ok) throw new Error(payload.error || "Ari could not rename this project.");
+              await loadProjectsView();
+            } catch (error) {
+              showWorkspaceNotice(error.message);
+              rename.disabled = false;
+            }
+          });
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "project-action danger";
+          remove.textContent = "Delete";
+          remove.addEventListener("click", async () => {
+            if (!window.confirm("Delete " + project.name + "? Its conversations will be kept in Recent Chats.")) return;
+            remove.disabled = true;
+            try {
+              const result = await fetch("/api/workspace/projects/" + encodeURIComponent(project.id), {
+                method: "DELETE",
+                credentials: "same-origin",
+                headers: csrfHeaders()
+              });
+              const payload = await result.json().catch(() => ({}));
+              if (!result.ok) throw new Error(payload.error || "Ari could not delete this project.");
+              await syncChatsFromServer(authenticatedUser.sub);
+              projects = projects.filter(item => item.id !== project.id);
+              await loadProjectsView();
+            } catch (error) {
+              showWorkspaceNotice(error.message);
+              remove.disabled = false;
+            }
+          });
+          actions.append(open, rename, remove);
+          card.append(title, copy, count, actions);
+          grid.appendChild(card);
+        }
+        workspaceContent.appendChild(grid);
+      } catch (error) {
+        if (token !== projectLoadToken || activeWorkspaceView !== "projects") return;
+        showWorkspaceNotice(error.message || "Ari could not load your projects.");
+      }
+    }
+
+    function showWorkspaceNotice(message) {
+      let notice = workspaceContent.querySelector(".project-notice");
+      if (!notice) {
+        notice = document.createElement("p");
+        notice.className = "library-error project-notice";
+        workspaceContent.prepend(notice);
+      }
+      notice.textContent = message;
+    }
+
+    function openProjectDetail(project) {
+      activeWorkspaceView = "project-detail";
+      activeProjectId = project.id;
+      chatStage.hidden = true;
+      workspaceScreen.hidden = false;
+      workspaceEyebrow.textContent = "Your project";
+      workspaceTitle.textContent = project.name;
+      workspaceDescription.textContent = project.description || "A focused space for related conversations.";
+      topbarHeading.textContent = project.name;
+      topbarSubtitle.textContent = "Project workspace";
+      libraryNav.classList.remove("active");
+      projectsNav.classList.add("active");
+      accountMenu.hidden = true;
+      accountMenuToggle.setAttribute("aria-expanded", "false");
+      workspaceContent.replaceChildren();
+
+      const toolbar = document.createElement("div");
+      toolbar.className = "project-toolbar";
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "project-action";
+      back.textContent = "← All projects";
+      back.addEventListener("click", () => showWorkspaceView("projects"));
+      const create = document.createElement("button");
+      create.type = "button";
+      create.className = "project-action primary";
+      create.textContent = "New project chat";
+      create.addEventListener("click", () => createChat());
+      toolbar.append(back, create);
+
+      const heading = document.createElement("h3");
+      heading.className = "workspace-section-heading";
+      heading.textContent = "Conversations";
+      const list = document.createElement("div");
+      list.className = "project-chat-list";
+      const projectChats = chats.filter(chat => chat.projectId === project.id)
+        .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+      if (!projectChats.length) {
+        const empty = document.createElement("div");
+        empty.className = "library-empty";
+        empty.textContent = "No conversations in this project yet. Start one with New project chat.";
+        list.appendChild(empty);
+      }
+      for (const chat of projectChats) {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "project-chat-row";
+        const title = document.createElement("span");
+        title.textContent = chat.title || "New chat";
+        const date = document.createElement("span");
+        date.textContent = new Date(chat.updatedAt || chat.createdAt || Date.now()).toLocaleDateString();
+        row.append(title, date);
+        row.addEventListener("click", () => {
+          currentChatId = chat.id;
+          showChatView();
+          renderConversation(chat);
+          input.focus();
+        });
+        list.appendChild(row);
+      }
+      workspaceContent.append(toolbar, heading, list);
+    }
 
     async function loadLibraryView() {
       const token = ++libraryLoadToken;
@@ -1632,6 +1881,7 @@
           id: createId(),
           title: makeTitle(firstMessage),
           messages: [],
+          projectId: activeProjectId || null,
           createdAt: Date.now(),
           updatedAt: Date.now()
         };
