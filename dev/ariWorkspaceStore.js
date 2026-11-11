@@ -104,7 +104,7 @@ function normalizeProjectInput(input, existing = {}) {
         throw Object.assign(new Error("Project details are invalid."), { statusCode: 400 });
     }
     const name = input.name === undefined
-        ? existing.name
+        ? boundedText(existing.name, 80, "Project name", true)
         : boundedText(input.name, 80, "Project name", true);
     const description = input.description === undefined
         ? (existing.description || "")
@@ -266,8 +266,9 @@ function createAriWorkspaceStore(options = {}) {
             const projects = Array.isArray(account.projects) ? account.projects : [];
             const project = projects.find(item => item.id === id);
             if (!project) throw Object.assign(new Error("That project could not be found."), { statusCode: 404 });
-            const timestamp = now();
             const chats = Array.isArray(account.chats) ? account.chats : [];
+            const projectChats = chats.filter(chat => chat.projectId === id);
+            const timestamp = Math.max(now(), ...projectChats.map(chat => Number(chat.updatedAt || 0) + 1));
             let unassignedChats = 0;
             const nextChats = chats.map(chat => {
                 if (chat.projectId !== id) return chat;
