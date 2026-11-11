@@ -316,6 +316,13 @@
       .setting-value{text-align:left}
     }
 
+
+    .auth-tabs{position:relative;isolation:isolate}
+    .auth-tabs::before{content:"";position:absolute;z-index:0;inset:4px auto 4px 4px;width:calc(50% - 4px);border-radius:999px;background:var(--ari-accent);transform:translateX(0);transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+    .auth-tabs:has(#auth-signup-tab.active)::before{transform:translateX(100%)}
+    .auth-tabs button{position:relative;z-index:1;transition:color .18s ease}
+    .auth-tabs button.active{background:transparent}
+
   </style>
 </head>
 <body>
@@ -791,9 +798,11 @@
         select.title = chat.title || "New chat";
         select.addEventListener("click", () => {
           currentChatId = chat.id;
+          openChatView();
           renderConversation(chat);
           renderHistory();
           sidebar.classList.remove("open");
+          app.classList.remove("mobile-sidebar-open");
           input.focus();
         });
 
@@ -884,6 +893,7 @@
     document.addEventListener("click", event => {
       if (!event.target.closest(".history-actions")) hideHistoryActions();
       if (!event.target.closest(".attach-wrap")) setAttachMenuOpen(false);
+      if (!event.target.closest("#account-controls")) closeAccountMenu();
     });
     document.addEventListener("keydown", event => {
       if (event.key === "Escape") { hideHistoryActions(); setAttachMenuOpen(false); }
