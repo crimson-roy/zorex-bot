@@ -63,6 +63,7 @@ function createAriOtpAuth(options = {}) {
         validTermiiBase && fetchImpl);
     const challenges = options.challenges || new Map();
     const sentAt = options.sentAt || new Map();
+    const sendHistory = options.sendHistory || new Map();
     const sendEmailOverride = options.sendEmail;
     const sendSmsOverride = options.sendSms;
     const assertOriginAndCsrf = options.assertOriginAndCsrf;
@@ -178,17 +179,22 @@ function createAriOtpAuth(options = {}) {
             const retryAfterSeconds = Math.max(1, Math.ceil((lastSent + resendSeconds * 1000 - currentTime) / 1000));
             throw authError("Please wait " + retryAfterSeconds + " seconds before requesting another code.", 429);
         }
+        const recentSends = (sendHistory.get(key) || []).filter(timestamp => timestamp > currentTime - 3_600_000);
+        if (recentSends.length >= 5) {
+            throw authError("Too many verification codes have been requested for this contact. Try again later.", 429);
+        }
 
         const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
         const challenge = {
             method,
-            destination,
             codeHash: digest(method + ":" + destination + ":" + code),
             expiresAt: currentTime + ttlSeconds * 1000,
             attemptsRemaining: maxAttempts
         };
         challenges.set(key, challenge);
         sentAt.set(key, currentTime);
+        recentSends.push(currentTime);
+        sendHistory.set(key, recentSends);
         try {
             if (method === "email") await sendEmail(destination, code);
             else await sendSms(destination, code);
@@ -246,7 +252,7 @@ function createAriOtpAuth(options = {}) {
         return { emailOtp: emailConfigured, smsOtp: smsConfigured };
     }
 
-    return { methods, requestOtp, authenticateOtp, challenges, sentAt };
+    return { methods, requestOtp, authenticateOtp, challenges, sentAt, sendHistory };
 }
 
 module.exports = { createAriOtpAuth, normalizedPhone, normalizedEmail };
