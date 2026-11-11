@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { WordNetDictionary } = require("../lib/wordNet");
-const { createServer, respondToMessage, HOST } = require("../dev/ari-chat-server");
+const { createServer, respondToMessage, respondWithGpuModel, respondWithModel, HOST } = require("../dev/ari-chat-server");
 const { AriGpuClient } = require("../dev/ariGpuClient");
 const { createAriWorkspaceStore } = require("../dev/ariWorkspaceStore");
 
@@ -42,6 +42,42 @@ async function main() {
 
     const unsupported = respondToMessage("Explain photosynthesis.");
     assert.match(unsupported.reply, /still learning/i);
+
+    const fallbackMessages = [{ role: "user", content: "Explain gradient descent in simple terms." }];
+    const backup = await respondWithGpuModel("Explain gradient descent in simple terms.", fallbackMessages, {
+        tier: "medium",
+        textFallbackClient: async messages => {
+            assert.deepEqual(messages, fallbackMessages);
+            return "This answer came from the text-only backup.";
+        }
+    });
+    assert.equal(backup.reply, "This answer came from the text-only backup.");
+    assert.equal(backup.mode, "Text-only backup");
+
+    const miniBackup = await respondWithModel("Explain gradient descent in simple terms.", fallbackMessages, {
+        modelClient: { async generate() { throw new Error("local model offline"); } },
+        textFallbackClient: async () => "Mini used the text-only backup."
+    });
+    assert.equal(miniBackup.reply, "Mini used the text-only backup.");
+    assert.equal(miniBackup.mode, "Text-only backup");
+
+    let mediaWasSentToBackup = false;
+    await assert.rejects(() => respondWithGpuModel("Describe this image.", fallbackMessages, {
+        tier: "medium",
+        image: { mime_type: "image/png", data_base64: "AA==" },
+        gpuClient: { async chat() {
+            const error = new Error("GPU offline");
+            error.statusCode = 503;
+            error.code = "GPU_DISCONNECTED";
+            error.retryable = true;
+            throw error;
+        } },
+        textFallbackClient: async () => {
+            mediaWasSentToBackup = true;
+            return "This should never be returned.";
+        }
+    }), error => error.code === "GPU_MEDIA_UNAVAILABLE");
+    assert.equal(mediaWasSentToBackup, false, "the text-only backup must never receive a media request.");
 
     const dictionaryDir = fs.mkdtempSync(path.join(os.tmpdir(), "ari-server-wordnet-"));
     try {
