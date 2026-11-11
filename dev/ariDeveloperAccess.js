@@ -217,6 +217,7 @@ function createAriDeveloperAccess(options = {}) {
         sendSms: options.sendSms,
         isProduction,
         validPublicOrigin,
+        sessionTtlSeconds,
         assertOriginAndCsrf,
         createSession,
         isAuthorized: (method, destination) => {
