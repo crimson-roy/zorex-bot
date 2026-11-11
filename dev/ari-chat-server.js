@@ -343,7 +343,8 @@ function appendWebpageImages(reply, images = []) {
     let output = String(reply || "").trim();
     const existing = new Set([...output.matchAll(/!\[([^\]]*)\]\((https:\/\/[^)\s]+)\)/g)].map(match => match[2]));
     const additions = [];
-    for (const image of images.slice(0, 2)) {
+    for (const image of images) {
+        if (additions.length >= 2) break;
         if (!image || typeof image.url !== "string" || !/^https:\/\//i.test(image.url) || existing.has(image.url)) continue;
         const alt = String(image.alt || "Image from webpage").replace(/[\r\n\[\]]/g, " ").slice(0, 140).trim() || "Image from webpage";
         additions.push("![" + alt + "](" + image.url + ")");
