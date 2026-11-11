@@ -12,6 +12,7 @@ const { createAriDeveloperAccess, createAriDeveloperUsage } = require("./ariDeve
 const { createAriWorkspaceStore } = require("./ariWorkspaceStore");
 const { createAriLibraryStore } = require("./ariLibraryStore");
 const { respondAriSelfKnowledge } = require("./ariSelfKnowledge");
+const { callAI: callZorexTextAI } = require("../lib/textAIClient");
 
 const wordNet = new WordNetDictionary();
 
@@ -26,6 +27,14 @@ const HTML_PATH = path.join(__dirname, "ari-chat.html");
 const FAVICON_PATH = path.join(__dirname, "ari-favicon.png");
 const INFERENCE_SCRIPT = path.join(__dirname, "..", "training", "ari0", "serve.py");
 const ROOT = path.resolve(__dirname, "..");
+const ARI_TEXT_FALLBACK_PROMPT = [
+    "You are Ari, an AI assistant created by Zorex AI.",
+    "You are operating in text-only backup mode because Ari's primary model service is unavailable.",
+    "Answer the user's text request naturally and accurately. Do not claim to have viewed images, listened to audio, read attachments, browsed websites, or used tools.",
+    "Do not execute or claim to execute WhatsApp bot commands, account actions, purchases, moderation, or other external actions.",
+    "If asked to analyse media that is not represented as text in the conversation, explain that media understanding is temporarily unavailable.",
+    "Be transparent when uncertain. Never mention internal model names, provider names, credentials, endpoints, or server configuration."
+].join("\\n");
 
 function sendJson(response, statusCode, payload) {
     response.writeHead(statusCode, {
@@ -194,20 +203,56 @@ async function respondWithGpuModel(message, messages, options = {}) {
             statusCode: 503, code: "GPU_NOT_CONFIGURED"
         });
     }
-    const generated = await options.gpuClient.chat({
-        tier: options.tier,
-        messages,
-        image: options.image || null,
-        options: options.generationOptions || { thinking: false, max_new_tokens: 512 }
-    });
-    return {
-        reply: generated.reply,
-        mode: options.tier.charAt(0).toUpperCase() + options.tier.slice(1)
-    };
+    try {
+        if (!options.gpuClient) {
+            throw new AriGpuClientError("Ari's primary model service is not configured.", {
+                statusCode: 503, code: "GPU_NOT_CONFIGURED", retryable: true
+            });
+        }
+        const generated = await options.gpuClient.chat({
+            tier: options.tier,
+            messages,
+            image: options.image || null,
+            options: options.generationOptions || { thinking: false, max_new_tokens: 512 }
+        });
+        return {
+            reply: generated.reply,
+            mode: options.tier.charAt(0).toUpperCase() + options.tier.slice(1)
+        };
+    } catch (error) {
+        const unavailable = Boolean(error && (error.retryable || error.statusCode === 429 || error.statusCode >= 500 ||
+            ["GPU_NOT_CONFIGURED", "GPU_DISCONNECTED", "GPU_TIMEOUT", "GPU_BAD_RESPONSE"].includes(error.code)));
+        if (!unavailable || options.textFallbackEnabled === false) throw error;
+
+        if (options.image) {
+            throw new AriGpuClientError("Ari's image-viewing service is unavailable right now. I can't view that media at the moment.", {
+                statusCode: 503, code: "GPU_MEDIA_UNAVAILABLE", retryable: true
+            });
+        }
+
+        try {
+            const fallback = options.textFallbackClient
+                ? await options.textFallbackClient(messages, { tier: options.tier })
+                : await callZorexTextAI(ARI_TEXT_FALLBACK_PROMPT, messages, {
+                    timeoutMs: 20000,
+                    maxRetries: 0,
+                    maxCompletionTokens: 1200
+                });
+            const reply = typeof fallback === "string" ? fallback : fallback?.reply;
+            if (typeof reply !== "string" || !reply.trim()) throw new Error("The text fallback returned an empty response.");
+            return { reply: reply.trim(), mode: "Text-only backup" };
+        } catch (_) {
+            throw new AriGpuClientError("Ari's primary model and text-only backup are both unavailable. Please try again shortly.", {
+                statusCode: 503, code: "GPU_AND_FALLBACK_UNAVAILABLE", retryable: true
+            });
+        }
+    }
 }
 
 function friendlyGpuError(error) {
     const status = error && error.statusCode;
+    if (error?.code === "GPU_MEDIA_UNAVAILABLE") return "Ari's image-viewing service is unavailable right now. I can't view that media at the moment. Please try again later.";
+    if (error?.code === "GPU_AND_FALLBACK_UNAVAILABLE") return "Ari's primary model and text backup are both unavailable right now. Please try again shortly.";
     if (status === 400) return "That message or option could not be processed. Please check it and try again.";
     if (status === 413) return "That image or message is too large. Try a smaller image or shorter message.";
     if (status === 429) return "Ari is answering another request right now. Please try again shortly.";
@@ -838,7 +883,9 @@ function createServer(options = {}) {
                         gpuClient: options.gpuClient,
                         tier,
                         image,
-                        generationOptions
+                        generationOptions,
+                        textFallbackClient: options.textFallbackClient,
+                        textFallbackEnabled: String(env.ARI_TEXT_FALLBACK_ENABLED || "true").trim().toLowerCase() !== "false"
                     });
                 }
                 sendJson(response, 200, result);
