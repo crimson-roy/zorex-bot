@@ -1,6 +1,12 @@
 # Zorex Search Router
 
-Zorex Search Router is an isolated CommonJS service for provider-independent web search and safe webpage retrieval. It is disabled by default. The Ari web workspace can use this router for current-information queries. The WhatsApp `.ai` command and other bot paths remain separate. `lib/searchRouter/tools.js` exports provider-neutral function schemas for a future model adapter; no tier-specific model tool-calling integration exists in the current WhatsApp code path.
+Zorex Search Router is a CommonJS service for provider-independent web search and safe webpage retrieval. Ari's web workspace now invokes it for explicit web lookups and selected time-sensitive questions. The WhatsApp `.ai` command and other bot paths remain separate. `lib/searchRouter/tools.js` continues to export provider-neutral function schemas for a future native tool-call adapter; the current WhatsApp code path does not use those schemas.
+
+## Ari web workspace integration
+
+The Ari playground calls the router when a user explicitly asks for an online lookup or asks a question that clearly depends on current information. Serper is the preferred provider, with SearXNG as a configured fallback. Search results and selected public-page text are passed into the model as untrusted research material. Relevant page image references may be included so Ari can display them with Markdown image syntax. If search is disabled or unavailable, Ari must say that the information was not verified online rather than claiming a search succeeded.
+
+For deployment, set `SEARCH_ENABLED=true`, `SEARCH_PROVIDER_ORDER=serper,searxng`, and the secret `SERPER_API_KEY` in the server environment. Never commit the key. The checked-in `.env.example` contains the public defaults but leaves the key blank.
 
 ## Public interface
 
