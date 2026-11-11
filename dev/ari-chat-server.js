@@ -143,6 +143,7 @@ function isExplicitWebSearchRequest(message) {
 function shouldSearchWeb(message) {
     const value = String(message || "").trim();
     if (!value) return false;
+    if (/^(?:can|could|do|does|are) you (?:search|browse|look up)|^(?:is|are) (?:live )?web search (?:available|enabled)\b/i.test(value)) return false;
     if (isExplicitWebSearchRequest(value)) return true;
     return /\b(?:latest|current|currently|today|tonight|this week|this month|this year|recent|recently|upcoming|right now|as of|price|pricing|cost|exchange rate|weather|forecast|schedule|standings|live score|news|release date|new version|available now)\b/i.test(value);
 }
@@ -1024,7 +1025,7 @@ function createServer(options = {}) {
                     });
                     return;
                 }
-                const selfKnowledgeReply = respondAriSelfKnowledge(body.message);
+                const selfKnowledgeReply = shouldSearchWeb(body.message) ? null : respondAriSelfKnowledge(body.message);
                 if (selfKnowledgeReply) {
                     sendJson(response, 200, { reply: selfKnowledgeReply, mode: "Ari information" });
                     return;
