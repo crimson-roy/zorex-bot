@@ -216,12 +216,16 @@ async function testSafeRedirectAndContentType() {
         request: async url => {
             calls++;
             if (calls === 1) return { status: 301, headers: { location: "/article" }, body: Buffer.alloc(0) };
-            return { status: 200, headers: { "content-type": "text/html; charset=utf-8" }, body: Buffer.from('<html><head><title>Title</title><meta property="article:published_time" content="2026-01-02"></head><body><nav>ignore</nav><article><h1>Heading</h1><p>Readable content.</p><script>bad</script></article></body></html>') };
+            return { status: 200, headers: { "content-type": "text/html; charset=utf-8" }, body: Buffer.from('<html><head><title>Title</title><meta property="article:published_time" content="2026-01-02"><meta property="og:image" content="https://images.example/hero.jpg"></head><body><nav>ignore</nav><article><h1>Heading</h1><p>Readable content.</p><img src="/body.jpg" alt="Article picture"><script>bad</script></article></body></html>') };
         }
     });
     assert.equal(calls, 2); assert.equal(page.title, "Title");
     assert.match(page.text, /Readable content/); assert.doesNotMatch(page.text, /ignore|bad/);
     assert.equal(page.publication_date, "2026-01-02T00:00:00.000Z");
+    assert.deepEqual(page.images, [
+        { url: "https://images.example/hero.jpg", alt: "Title" },
+        { url: "https://public.example/body.jpg", alt: "Article picture" }
+    ]);
     assert.equal(page.http_status, 200); assert.equal(page.source_url, "https://public.example/start");
 
     await assert.rejects(openWebpage("https://localhost/", {}, { lookup: async () => [] }), e => e.code === "SSRF_BLOCKED");
@@ -231,7 +235,7 @@ async function testSafeRedirectAndContentType() {
         request: async () => ({ status: 200, headers: { "content-type": "application/pdf" }, body: Buffer.from("PDF") })
     }), e => e.code === "INVALID_CONTENT_TYPE");
     const plain = extractPage(Buffer.from("plain\ntext"), "text/plain");
-    assert.equal(plain.text, "plain text"); assert.equal(plain.publicationDate, null);
+    assert.equal(plain.text, "plain text"); assert.equal(plain.publicationDate, null); assert.deepEqual(plain.images, []);
 }
 
 async function testSchemasAndUntrustedBoundary() {
