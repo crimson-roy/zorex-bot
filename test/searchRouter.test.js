@@ -12,7 +12,7 @@ const { searchTools, formatUntrustedToolOutput } = require("../lib/searchRouter/
 const { openWebpage, resolvePublicHost, extractPage } = require("../lib/searchRouter/openWebpage");
 const TavilyProvider = require("../lib/searchRouter/providers/tavily");
 const SearXNGProvider = require("../lib/searchRouter/providers/searxng");
-const BraveProvider = require("../lib/searchRouter/providers/brave");
+const SerperProvider = require("../lib/searchRouter/providers/serper");
 
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "zorex-search-router-"));
 const stateFile = path.join(temp, "usage.json");
@@ -23,7 +23,7 @@ function provider(name, fn, configured = true) {
 }
 function makeRouter(providers, overrides = {}) {
     const env = {
-        SEARCH_ENABLED: "true", SEARCH_PROVIDER_ORDER: "tavily,searxng,brave",
+        SEARCH_ENABLED: "true", SEARCH_PROVIDER_ORDER: "tavily,searxng,serper",
         SEARCH_MAX_FALLBACKS: "2", SEARCH_CIRCUIT_FAILURES: "3",
         SEARCH_CIRCUIT_COOLDOWN_MS: "5000", SEARCH_MONTHLY_SOFT_LIMIT: "900",
         SEARCH_RESEARCH_MODE: "true", ...overrides
@@ -63,15 +63,18 @@ async function testProviderNormalization() {
     assert.equal(sxUrl.searchParams.get("time_range"), "month");
     assert.equal(sxResult.results[0].provider, "searxng");
 
-    let braveRequest;
-    const brave = new BraveProvider({ env: { BRAVE_SEARCH_API_KEY: "mock-brave" }, fetchImpl: async (url, init) => {
-        braveRequest = { url: new URL(url), init }; return response({ web: { results: [{ title: "B", url: "https://example.org/b", description: "desc", page_age: "2026-11-03" }] } });
+    let serperRequest;
+    const serper = new SerperProvider({ env: { SERPER_API_KEY: "mock-serper" }, fetchImpl: async (url, init) => {
+        serperRequest = { url: String(url), init };
+        return response({ organic: [{ title: "S", link: "https://example.org/s", snippet: "Serper result", date: "2026-11-03" }] });
     } });
-    const braveResult = await brave.search({ query: "latest", limit: 5, freshness: "day", country: "ng", language: "en" }, { timeoutMs: 1000 });
-    assert.equal(braveRequest.init.headers["X-Subscription-Token"], "mock-brave");
-    assert.equal(braveRequest.url.searchParams.get("freshness"), "pd");
-    assert.equal(braveRequest.url.searchParams.get("country"), "NG");
-    assert.equal(braveResult.results[0].published_at, "2026-11-03T00:00:00.000Z");
+    const serperResult = await serper.search({ query: "latest", limit: 5, country: "NG", language: "en" }, { timeoutMs: 1000 });
+    assert.equal(serperRequest.url, "https://google.serper.dev/search");
+    assert.equal(serperRequest.init.headers["X-API-KEY"], "mock-serper");
+    assert.deepEqual(JSON.parse(serperRequest.init.body), { q: "latest", num: 5, gl: "ng", hl: "en" });
+    assert.equal(serperResult.results[0].provider, "serper");
+    assert.equal(serperResult.results[0].published_at, "2026-11-03T00:00:00.000Z");
+    assert.equal(serperResult.credits, null);
 
     await assert.rejects(requestJson("https://provider.invalid/search", {}, {
         timeoutMs: 1000, fetchImpl: async () => response({ error: "rate limit" }, 429, { "retry-after": "17" })
@@ -85,7 +88,7 @@ async function testProviderNormalization() {
 }
 
 async function testNoProviderAndValidation() {
-    const router = makeRouter({ tavily: provider("tavily", async () => ({ results: [] }), false), searxng: provider("searxng", async () => ({ results: [] }), false), brave: provider("brave", async () => ({ results: [] }), false) });
+    const router = makeRouter({ tavily: provider("tavily", async () => ({ results: [] }), false), searxng: provider("searxng", async () => ({ results: [] }), false), serper: provider("serper", async () => ({ results: [] }), false) });
     await assert.rejects(router.web_search("hello"), e => e.code === "NO_SEARCH_PROVIDER");
     await assert.rejects(router.web_search(" "), e => e.statusCode === 400);
     await assert.rejects(router.web_search("hello", { freshness: "hour" }), e => e.statusCode === 400);
@@ -99,7 +102,7 @@ async function testFallbackAndStatusHandling() {
     const router = makeRouter({
         tavily: provider("tavily", async () => { primaryCalls++; throw Object.assign(new Error("down"), { status: 503, kind: "http" }); }),
         searxng: provider("searxng", async () => { fallbackCalls++; return { results: [result("https://example.org/ok", "searxng")] }; }),
-        brave: provider("brave", async () => ({ results: [] }))
+        serper: provider("serper", async () => ({ results: [] }))
     });
     const data = await router.web_search("q");
     assert.equal(primaryCalls, 1); assert.equal(fallbackCalls, 1);
@@ -110,7 +113,7 @@ async function testFallbackAndStatusHandling() {
         const authRouter = makeRouter({
             tavily: provider("tavily", async () => { throw Object.assign(new Error("auth"), { status }); }),
             searxng: provider("searxng", async () => ({ results: [result("https://example.org/auth-fallback", "searxng")] })),
-            brave: provider("brave", async () => ({ results: [] }))
+            serper: provider("serper", async () => ({ results: [] }))
         });
         const fallback = await authRouter.web_search("q");
         assert.equal(fallback.providers_used[0], "searxng");
@@ -120,7 +123,7 @@ async function testFallbackAndStatusHandling() {
         const rateRouter = makeRouter({
             tavily: provider("tavily", async () => { throw Object.assign(new Error("status"), { status, retryAfter: "30" }); }),
             searxng: provider("searxng", async () => ({ results: [result("https://example.org/fallback", "searxng")] })),
-            brave: provider("brave", async () => ({ results: [] }))
+            serper: provider("serper", async () => ({ results: [] }))
         });
         await rateRouter.web_search("q");
         const tavily = rateRouter.getStatus().providers.find(p => p.name === "tavily");
@@ -129,14 +132,14 @@ async function testFallbackAndStatusHandling() {
     const timeoutRouter = makeRouter({
         tavily: provider("tavily", async () => { throw Object.assign(new Error("timeout"), { kind: "timeout" }); }),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/timeout", "searxng")] })),
-        brave: provider("brave", async () => ({ results: [] }))
+        serper: provider("serper", async () => ({ results: [] }))
     });
     assert.equal((await timeoutRouter.web_search("q")).providers_used[0], "searxng");
 
     const invalidRouter = makeRouter({
         tavily: provider("tavily", async () => { throw Object.assign(new Error("bad payload"), { kind: "invalid_response" }); }),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/valid", "searxng")] })),
-        brave: provider("brave", async () => ({ results: [] }))
+        serper: provider("serper", async () => ({ results: [] }))
     });
     assert.equal((await invalidRouter.web_search("q")).providers_used[0], "searxng");
 }
@@ -146,7 +149,7 @@ async function testCircuitQuotaAndRecovery() {
     const circuit = makeRouter({
         tavily: provider("tavily", async () => { attempts++; throw Object.assign(new Error("server"), { status: 500 }); }),
         searxng: provider("searxng", async () => ({ results: [] }), false),
-        brave: provider("brave", async () => ({ results: [] }), false)
+        serper: provider("serper", async () => ({ results: [] }), false)
     }, { SEARCH_MAX_FALLBACKS: "0" });
     for (let i = 0; i < 3; i++) await assert.rejects(circuit.web_search("q"), e => e.code === "SEARCH_FAILED");
     assert.equal(circuit.getStatus().providers[0].circuit_breaker, "open");
@@ -159,7 +162,7 @@ async function testCircuitQuotaAndRecovery() {
     const quota = makeRouter({
         tavily: provider("tavily", async () => ({ results: [result("https://example.org/quota", "tavily")] })),
         searxng: provider("searxng", async () => ({ results: [] }), false),
-        brave: provider("brave", async () => ({ results: [] }), false)
+        serper: provider("serper", async () => ({ results: [] }), false)
     }, { SEARCH_MONTHLY_SOFT_LIMIT: "1" });
     await quota.web_search("first");
     await assert.rejects(quota.web_search("second"), e => e.code === "NO_SEARCH_PROVIDER");
@@ -182,7 +185,7 @@ async function testCanonicalDedupAndResearchMode() {
     assert.equal(canonicalUrl("HTTPS://Example.org:443/a/?utm_source=x&keep=1#part"), "https://example.org/a?keep=1");
     const unique = deduplicate([
         result("https://example.org/a?utm_source=x#one", "tavily"),
-        result("https://EXAMPLE.org/a#two", "brave")
+        result("https://EXAMPLE.org/a#two", "serper")
     ]);
     assert.equal(unique.length, 1);
     assert.equal(unique[0].url, "https://example.org/a?utm_source=x#one");
@@ -190,7 +193,7 @@ async function testCanonicalDedupAndResearchMode() {
     const research = makeRouter({
         tavily: provider("tavily", async () => ({ results: [result("https://example.org/shared?utm_medium=a", "tavily", { score: 0.9 }), result("https://example.org/one", "tavily")] })),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/shared#top", "searxng"), result("https://example.org/two", "searxng")] })),
-        brave: provider("brave", async () => ({ results: [] }))
+        serper: provider("serper", async () => ({ results: [] }))
     });
     const output = await research.web_search("q", { research_mode: true });
     assert.deepEqual(new Set(output.providers_used), new Set(["tavily", "searxng"]));
@@ -201,11 +204,11 @@ async function testCanonicalDedupAndResearchMode() {
     const researchFallback = makeRouter({
         tavily: provider("tavily", async () => { throw Object.assign(new Error("down"), { status: 503 }); }),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/second", "searxng")] })),
-        brave: provider("brave", async () => ({ results: [result("https://example.org/third", "brave")] }))
+        serper: provider("serper", async () => ({ results: [result("https://example.org/third", "serper")] }))
     });
     const recovered = await researchFallback.web_search("q", { research_mode: true });
     assert.equal(recovered.providers_used.length, 2);
-    assert.ok(recovered.providers_used.includes("brave"));
+    assert.ok(recovered.providers_used.includes("serper"));
 }
 
 async function testPageExtractionAndSsrF() {
