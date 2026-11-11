@@ -61,6 +61,15 @@ Research mode requires both `SEARCH_RESEARCH_MODE=true` and a caller's explicit 
 
 Consumers must pass all retrieved page/result text to models as clearly labelled **untrusted tool output**, never as a system/developer prompt. `formatUntrustedToolOutput` creates a labelled `role: "tool"` message for a compatible model adapter. Webpage instructions are data, not authority. Preserve exact source URLs and attach citations to the claims they support. Do not claim a search succeeded unless the router returned results.
 
+
+## Private VPS deployment
+
+For a private Ari-only instance, use the official Docker Compose template from the SearXNG repository. Set `SEARXNG_HOST=127.0.0.1` and `SEARXNG_PORT=8080` in the SearXNG `.env` file so the published host port is loopback-only. Do not expose port 8080 through the VM firewall or the public reverse proxy.
+
+Start only the `core` service initially; the bundled Valkey service is not needed while SearXNG's limiter remains disabled. Set a unique `SEARXNG_SECRET` before use. Keep the deployment's configuration and persistent cache directories on the VPS.
+
+The adapter requests `/search?format=json`. SearXNG's default `search.formats` example only enables HTML, so add `json` alongside `html` in `core-config/settings.yml`, then restart the core service. Verify with a request to `http://127.0.0.1:8080/search?q=test&format=json`. Set Ari's server-side `SEARXNG_BASE_URL=http://127.0.0.1:8080`.
+
 ## Model integration boundary
 
 `searchTools` contains the `web_search` and `open_webpage` function schemas for a future compatible adapter. The repository currently routes `.ai` through a JSON classifier and Azure `callAI`; there is no tool-call execution protocol for the local Medium/Max/Ultra models in this service. This branch intentionally leaves that pipeline untouched. A future integration should add explicit tier adapters, route tool calls into these functions, place results in labelled untrusted tool messages, preserve citations, and keep Mini/Ari-0 out of scope.
