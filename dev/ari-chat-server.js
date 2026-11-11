@@ -1188,6 +1188,7 @@ module.exports = {
     buildSearchQuery,
     buildSearchResearchMessage,
     prepareSearchMessages,
+    appendWebpageImages,
     createLocalModelClient,
     startInferenceBridge,
     isDeterministicToolResult,
