@@ -74,7 +74,7 @@ async function testProviderNormalization() {
 }
 
 async function testNoProviderAndValidation() {
-    const router = makeRouter({ serper: provider("serper", async () => ({ results: [] }), false), searxng: provider("searxng", async () => ({ results: [] }), false), serper: provider("serper", async () => ({ results: [] }), false) });
+    const router = makeRouter({ serper: provider("serper", async () => ({ results: [] }), false), searxng: provider("searxng", async () => ({ results: [] }), false) });
     await assert.rejects(router.web_search("hello"), e => e.code === "NO_SEARCH_PROVIDER");
     await assert.rejects(router.web_search(" "), e => e.statusCode === 400);
     await assert.rejects(router.web_search("hello", { freshness: "hour" }), e => e.statusCode === 400);
