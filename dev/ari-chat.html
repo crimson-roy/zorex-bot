@@ -533,6 +533,8 @@
     let thinkEnabled = false;
     let csrfToken = "";
     let authenticatedUser = null;
+    let workspaceSyncReady = false;
+    let chatSyncQueue = Promise.resolve();
 
     function historyStorageKey(sub) {
       return STORAGE_KEY_PREFIX + encodeURIComponent(String(sub));
@@ -549,6 +551,7 @@
       currentChatId = null;
       thinkEnabled = false;
       authenticatedUser = null;
+      workspaceSyncReady = false;
       storageKey = null;
       input.value = "";
       updatePastedTextCard();
@@ -582,6 +585,8 @@
       setAuthVisible(false);
       resizeComposer();
       input.focus();
+      workspaceSyncReady = false;
+      void syncChatsFromServer(user.sub);
     }
 
     async function fetchCsrf() {
@@ -689,13 +694,66 @@
       }
     }
 
-    function saveChats() {
+    function saveChats(options = {}) {
       if (!storageKey) return false;
       try {
         localStorage.setItem(storageKey, JSON.stringify(chats));
+        if (options.remote !== false) queueChatsForServerSync();
         return true;
       } catch (error) {
         return false;
+      }
+    }
+
+    function queueChatsForServerSync() {
+      if (!workspaceSyncReady || !authenticatedUser || !csrfToken) return;
+      const subject = authenticatedUser.sub;
+      const payload = JSON.stringify({ chats });
+      chatSyncQueue = chatSyncQueue.catch(() => undefined).then(async () => {
+        if (!authenticatedUser || authenticatedUser.sub !== subject || !workspaceSyncReady) return;
+        const response = await fetch("/api/workspace/chats", {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: csrfHeaders({ "Content-Type": "application/json" }),
+          body: payload
+        });
+        if (!response.ok) throw new Error("Ari could not sync conversation history.");
+      });
+      void chatSyncQueue.catch(() => undefined);
+    }
+
+    async function syncChatsFromServer(subject) {
+      try {
+        const response = await fetch("/api/workspace/chats", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store"
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!authenticatedUser || authenticatedUser.sub !== subject || !Array.isArray(data.chats)) return;
+
+        const merged = new Map();
+        for (const chat of data.chats) {
+          if (chat && typeof chat.id === "string" && Array.isArray(chat.messages)) merged.set(chat.id, chat);
+        }
+        for (const chat of chats) {
+          if (!chat || typeof chat.id !== "string" || !Array.isArray(chat.messages)) continue;
+          const existing = merged.get(chat.id);
+          if (!existing || Number(chat.updatedAt || 0) >= Number(existing.updatedAt || 0)) merged.set(chat.id, chat);
+        }
+        chats = [...merged.values()].sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+        if (!chats.some(chat => chat.id === currentChatId)) currentChatId = chats[0]?.id || null;
+        saveChats({ remote: false });
+        workspaceSyncReady = true;
+        renderHistory();
+        if (activeWorkspaceView === "chat") {
+          renderConversation(currentChat());
+          showChatView();
+        }
+        queueChatsForServerSync();
+      } catch (_) {
+        // The browser copy remains available when the server store is temporarily unreachable.
       }
     }
 
