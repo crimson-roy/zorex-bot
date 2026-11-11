@@ -9,6 +9,7 @@ const { WordNetDictionary } = require("../lib/wordNet");
 const { respondToLocalLanguage } = require("../lib/localLanguage");
 const { createAriGpuClient, AriGpuClientError, REMOTE_TIERS } = require("./ariGpuClient");
 const { createAriDeveloperAccess, createAriDeveloperUsage } = require("./ariDeveloperAccess");
+const { createAriWorkspaceStore } = require("./ariWorkspaceStore");
 const { respondAriSelfKnowledge } = require("./ariSelfKnowledge");
 
 const wordNet = new WordNetDictionary();
@@ -384,6 +385,10 @@ function createServer(options = {}) {
         ...limits,
         ...(options.now ? { now: options.now } : {})
     });
+    const workspace = options.workspaceStore || createAriWorkspaceStore({
+        dataDir: env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data"),
+        ...(options.now ? { now: options.now } : {})
+    });
     const server = http.createServer(async (request, response) => {
         const url = new URL(request.url, "http://" + HOST);
 
@@ -438,6 +443,41 @@ function createServer(options = {}) {
                 user: session ? auth.publicUser(session) : null,
                 configured: auth.config().configured
             });
+            return;
+        }
+
+        if (request.method === "GET" && url.pathname === "/api/workspace/chats") {
+            const session = auth.requireSession(request);
+            if (!session) {
+                sendAuthJson(response, 401, { error: "Sign in to access your conversations." });
+                return;
+            }
+            try {
+                sendAuthJson(response, 200, { chats: workspace.getChats(session.sub) });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, {
+                    error: error.message || "Ari could not load your saved conversations."
+                });
+            }
+            return;
+        }
+
+        if (request.method === "PUT" && url.pathname === "/api/workspace/chats") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to save your conversations." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const body = await readJsonBody(request, 4 * 1024 * 1024);
+                const chats = await workspace.replaceChats(session.sub, body?.chats);
+                sendAuthJson(response, 200, { saved: true, chats });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, {
+                    error: error.message || "Ari could not save your conversations."
+                });
+            }
             return;
         }
 
