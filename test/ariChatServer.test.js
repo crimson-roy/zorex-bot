@@ -116,7 +116,11 @@ async function main() {
         assert.match(html, /id="paste-card"/);
         assert.match(html, /Copy response/);
         assert.match(html, /function showWorkspaceView/);
-        assert.match(html, /Project workspaces in progress/);
+        assert.match(html, /async function loadProjectsView/);
+        assert.match(html, /function openProjectDetail/);
+        assert.match(html, /filter\(chat => !chat\.projectId\)/);
+        assert.match(html, /projectId: activeProjectId \|\| null/);
+        assert.match(html, /Create project/);
         assert.match(html, /Ari does not yet have the verification and account-data deletion endpoint/);
         assert.match(html, /Delete this conversation from this browser/);
         assert.doesNotMatch(html, /class="history-delete"|textContent = "×"/);
