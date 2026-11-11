@@ -511,6 +511,7 @@
     let storageKey = null;
     let chats = [];
     let currentChatId = null;
+    let chatSyncQueue = Promise.resolve();
     let thinkEnabled = false;
     let csrfToken = "";
     let authenticatedUser = null;
@@ -577,10 +578,25 @@
       accountEmail.textContent = "";
     }
 
-    function restoreAccount(user) {
+    async function restoreAccount(user) {
       authenticatedUser = user;
       storageKey = historyStorageKey(user.sub);
       chats = loadChats();
+
+      try {
+        const response = await fetch("/api/workspace/chats", {
+          credentials: "same-origin",
+          cache: "no-store"
+        });
+        if (response.ok) {
+          const data = await response.json();
+          chats = mergeChatLists(chats, Array.isArray(data.chats) ? data.chats : []);
+          saveChats({ sync: false });
+        }
+      } catch (_) {
+        // Keep the browser cache available when the account store is temporarily unreachable.
+      }
+
       currentChatId = null;
       const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
       if (mostRecent) currentChatId = mostRecent.id;
@@ -593,6 +609,7 @@
       openChatView();
       resizeComposer();
       input.focus();
+      saveChats();
     }
 
     async function fetchCsrf() {
@@ -626,7 +643,7 @@
         }
         csrfToken = result.csrfToken || csrfToken;
         if (homepageOnly) { window.location.assign("/"); return; }
-        restoreAccount(result.user);
+        await restoreAccount(result.user);
       } catch (_) {
         authError.textContent = "Google sign-in could not be completed. Please try again.";
       }
@@ -664,7 +681,7 @@
         authConfigError = config.configured ? "" : (config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.");
         if (me.authenticated && me.user) {
           homepageHasSession = true;
-          if (!homepageOnly) restoreAccount(me.user);
+          if (!homepageOnly) await restoreAccount(me.user);
           else showLanding();
           return;
         }
@@ -701,14 +718,50 @@
       }
     }
 
-    function saveChats() {
+    function mergeChatLists(localChats, serverChats) {
+      const merged = new Map();
+      for (const chat of localChats) {
+        if (chat && typeof chat.id === "string" && Array.isArray(chat.messages)) merged.set(chat.id, chat);
+      }
+      for (const chat of serverChats) {
+        if (!chat || typeof chat.id !== "string" || !Array.isArray(chat.messages)) continue;
+        const existing = merged.get(chat.id);
+        if (!existing || Number(chat.updatedAt || 0) >= Number(existing.updatedAt || 0)) merged.set(chat.id, chat);
+      }
+      return [...merged.values()]
+        .sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || Number(b.updatedAt || 0) - Number(a.updatedAt || 0))
+        .slice(0, 200);
+    }
+
+    function saveChats(options = {}) {
       if (!storageKey) return false;
       try {
         localStorage.setItem(storageKey, JSON.stringify(chats));
-        return true;
       } catch (error) {
         return false;
       }
+
+      const targetSub = authenticatedUser?.sub;
+      if (options.sync !== false && targetSub && csrfToken) {
+        const snapshot = JSON.parse(JSON.stringify(chats));
+        chatSyncQueue = chatSyncQueue.catch(() => undefined).then(async () => {
+          if (!authenticatedUser || authenticatedUser.sub !== targetSub) return;
+          const response = await fetch("/api/workspace/chats", {
+            method: "PUT",
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: csrfHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ chats: snapshot })
+          });
+          if (!response.ok) throw new Error("HTTP " + response.status);
+        }).catch(() => {
+          if (authenticatedUser && authenticatedUser.sub === targetSub) {
+            composerNotice.textContent = "Your latest chats are saved on this device, but Ari couldn't sync them to your account yet.";
+            composerNotice.hidden = false;
+          }
+        });
+      }
+      return true;
     }
 
     function currentChat() {
