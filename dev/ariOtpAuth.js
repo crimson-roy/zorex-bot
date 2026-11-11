@@ -40,6 +40,7 @@ function createAriOtpAuth(options = {}) {
     const ttlSeconds = Number(env.ARI_OTP_TTL_SECONDS || 300);
     const resendSeconds = Number(env.ARI_OTP_RESEND_SECONDS || 60);
     const maxAttempts = Number(env.ARI_OTP_MAX_ATTEMPTS || 5);
+    const sessionTtlSeconds = options.sessionTtlSeconds;
     const resendApiKey = String(env.RESEND_API_KEY || "").trim();
     const emailFrom = String(env.ARI_EMAIL_FROM || "").trim();
     const termiiApiKey = String(env.TERMII_API_KEY || "").trim();
@@ -47,7 +48,8 @@ function createAriOtpAuth(options = {}) {
     const termiiBaseUrl = String(env.TERMII_BASE_URL || "https://api.ng.termii.com").trim().replace(/\/+$/, "");
     const termiiChannel = String(env.TERMII_CHANNEL || "dnd").trim();
     const productionOriginReady = options.isProduction !== true || Boolean(options.validPublicOrigin);
-    const timingReady = secret.length >= 32 && Number.isSafeInteger(ttlSeconds) && ttlSeconds >= 120 &&
+    const timingReady = Number.isSafeInteger(sessionTtlSeconds) && sessionTtlSeconds >= 60 &&
+        secret.length >= 32 && Number.isSafeInteger(ttlSeconds) && ttlSeconds >= 120 &&
         ttlSeconds <= 900 && Number.isSafeInteger(resendSeconds) && resendSeconds >= 30 &&
         resendSeconds <= 600 && Number.isSafeInteger(maxAttempts) && maxAttempts >= 3 &&
         maxAttempts <= 10 && productionOriginReady;
