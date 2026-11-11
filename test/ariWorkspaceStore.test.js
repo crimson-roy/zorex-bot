@@ -69,6 +69,10 @@ async function main() {
         assert.equal(sanitized[0].messages[0].createdAt, now);
         assert.equal(sanitized[0].pinned, false);
 
+        await assert.rejects(
+            restarted.createProject("google-subject-a", { description: "Missing required name." }),
+            { statusCode: 400 }
+        );
         const project = await restarted.createProject("google-subject-a", {
             name: "Ari website",
             description: "Build the Ari workspace."
