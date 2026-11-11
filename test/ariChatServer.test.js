@@ -7,6 +7,7 @@ const path = require("node:path");
 const { WordNetDictionary } = require("../lib/wordNet");
 const { createServer, respondToMessage, HOST } = require("../dev/ari-chat-server");
 const { AriGpuClient } = require("../dev/ariGpuClient");
+const { createAriWorkspaceStore } = require("../dev/ariWorkspaceStore");
 
 function createTestServer(options = {}) {
     const authService = {
@@ -49,7 +50,10 @@ async function main() {
         fs.rmSync(dictionaryDir, { recursive: true, force: true });
     }
 
-    const app = createTestServer();
+    const workspaceDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ari-chat-workspace-http-"));
+    const app = createTestServer({
+        workspaceStore: createAriWorkspaceStore({ dataDir: workspaceDataDir })
+    });
     await new Promise((resolve, reject) => {
         app.once("error", reject);
         app.listen(0, HOST, resolve);
@@ -72,6 +76,36 @@ async function main() {
         const homepage = await fetch(baseUrl + "/homepage");
         assert.equal(homepage.status, 200);
         assert.match(await homepage.text(), /id="landing-screen"/);
+
+        const emptyWorkspace = await fetch(baseUrl + "/api/workspace/chats");
+        assert.equal(emptyWorkspace.status, 200);
+        assert.deepEqual((await emptyWorkspace.json()).chats, []);
+        const savedWorkspace = await fetch(baseUrl + "/api/workspace/chats", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                chats: [{
+                    id: "chat-http-0001",
+                    title: "HTTP sync test",
+                    pinned: false,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    messages: [{ role: "user", text: "Save this conversation.", createdAt: Date.now() }]
+                }]
+            })
+        });
+        assert.equal(savedWorkspace.status, 200);
+        assert.equal((await savedWorkspace.json()).chats[0].title, "HTTP sync test");
+        const restoredWorkspace = await fetch(baseUrl + "/api/workspace/chats");
+        assert.equal((await restoredWorkspace.json()).chats[0].id, "chat-http-0001");
+
+        const invalidWorkspace = await fetch(baseUrl + "/api/workspace/chats", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chats: [{ id: "bad-id", messages: [] }] })
+        });
+        assert.equal(invalidWorkspace.status, 400);
+
         const favicon = await fetch(baseUrl + "/ari-favicon.png");
         assert.equal(favicon.status, 200);
         assert.equal(favicon.headers.get("content-type"), "image/png");
@@ -163,6 +197,7 @@ async function main() {
         console.log("PASS: Ari playground serves persistent history and handles local arithmetic and greetings over HTTP.");
     } finally {
         await new Promise(resolve => app.close(resolve));
+        fs.rmSync(workspaceDataDir, { recursive: true, force: true });
     }
     const modelCalls = [];
     const modelApp = createTestServer({
