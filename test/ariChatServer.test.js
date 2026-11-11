@@ -92,8 +92,8 @@ async function main() {
         assert.match(html, /auth-tabs\[data-mode="signup"\]/);
         assert.match(html, /window.location.pathname === "\/homepage"/);
         assert.match(html, /registrationMode !== "open"/);
-        assert.match(html, /Google sign-in is currently enabled/);
-        assert.match(html, /Other account methods will appear when their verification service is ready/);
+        assert.match(html, /Google sign-in is currently the available account method/);
+        assert.match(html, /Email OTP and phone verification are not connected yet/);
         assert.doesNotMatch(html, /invited developers only|invited Google account/i);
         assert.match(html, /<link rel="icon" type="image\/png" href="\/ari-favicon\.png">/);
         const favicon = await fetch(baseUrl + "/ari-favicon.png");
