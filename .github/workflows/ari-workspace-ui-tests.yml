@@ -1,0 +1,41 @@
+name: Ari workspace UI checks
+
+on:
+  pull_request:
+    paths:
+      - "dev/ari-chat.html"
+      - "dev/ari-chat-server.js"
+      - "test/ariChatServer.test.js"
+      - ".github/workflows/ari-workspace-ui-tests.yml"
+  push:
+    branches:
+      - "feature/ari-workspace-ui"
+    paths:
+      - "dev/ari-chat.html"
+      - "dev/ari-chat-server.js"
+      - "test/ariChatServer.test.js"
+      - ".github/workflows/ari-workspace-ui-tests.yml"
+
+jobs:
+  workspace-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check server syntax
+        run: node --check dev/ari-chat-server.js
+      - name: Check inline browser script syntax
+        run: |
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const html = fs.readFileSync("dev/ari-chat.html", "utf8");
+          const match = html.match(/<script>([\s\S]*?)<\/script>/i);
+          if (!match) throw new Error("Ari page has no inline script.");
+          new Function(match[1]);
+          NODE
+      - name: Test Ari chat server and page routes
+        run: node test/ariChatServer.test.js
