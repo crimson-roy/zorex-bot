@@ -569,6 +569,7 @@
     }
 
     function restoreAccount(user) {
+      workspaceSyncReady = false;
       authenticatedUser = user;
       const displayName = String(user.name || user.email || "Your account").trim();
       accountName.textContent = displayName || "Your account";
