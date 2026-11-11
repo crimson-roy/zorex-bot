@@ -551,6 +551,7 @@
       authenticatedUser = null;
       storageKey = null;
       input.value = "";
+      updatePastedTextCard();
       sendButton.disabled = false;
       imageInput.value = "";
       for (const attachmentInput of attachmentInputs) attachmentInput.value = "";
@@ -803,6 +804,7 @@
         select.textContent = chat.title || "New chat";
         select.title = chat.title || "New chat";
         select.addEventListener("click", () => {
+          showChatView();
           currentChatId = chat.id;
           renderConversation(chat);
           renderHistory();
@@ -1039,8 +1041,8 @@
     });
 
     function createChat() {
-      showChatView();
       currentChatId = null;
+      showChatView();
       renderConversation(null);
       renderHistory();
       sidebar.classList.remove("open");
@@ -1155,6 +1157,7 @@
         currentChatId = chat.id;
       }
       if (!chat.messages.length) chat.title = makeTitle(firstMessage);
+      topbarHeading.textContent = chat.title || "New chat";
       return chat;
     }
 
@@ -1217,6 +1220,7 @@
 
       input.value = "";
       resizeComposer();
+      updatePastedTextCard();
       sendButton.disabled = true;
       const waiting = addMessage("Thinking…", "ari");
 
@@ -1269,6 +1273,7 @@
           void generateChatTitle(tier, prompt, reply).then(generatedTitle => {
           if (generatedTitle && chats.includes(targetChat)) {
             targetChat.title = generatedTitle;
+            if (currentChatId === targetChat.id) topbarHeading.textContent = generatedTitle;
             targetChat.updatedAt = Date.now();
             saveChats();
             renderHistory();
