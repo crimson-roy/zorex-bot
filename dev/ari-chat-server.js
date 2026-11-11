@@ -477,13 +477,13 @@ function createServer(options = {}) {
 
         if (request.method === "GET" && url.pathname === "/robots.txt") {
             const configuredOrigin = String(env.ARI_PUBLIC_ORIGIN || "").trim().replace(/\/$/, "");
-            const sitemap = configuredOrigin ? "Sitemap: " + configuredOrigin + "/sitemap.xml\\n" : "";
+            const sitemap = configuredOrigin ? "Sitemap: " + configuredOrigin + "/sitemap.xml\n" : "";
             response.writeHead(200, {
                 "Content-Type": "text/plain; charset=utf-8",
                 "Cache-Control": "public, max-age=3600",
                 "X-Content-Type-Options": "nosniff"
             });
-            response.end("User-agent: *\\nAllow: /\\nDisallow: /api/\\n" + sitemap);
+            response.end("User-agent: *\nAllow: /\nDisallow: /api/\n" + sitemap);
             return;
         }
 
@@ -500,7 +500,7 @@ function createServer(options = {}) {
             }
             const xmlEscape = value => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
             const urls = [sitemapOrigin + "/", sitemapOrigin + "/about"];
-            const xml = '<?xml version="1.0" encoding="UTF-8"?>\\n' +
+            const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
                 '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
                 urls.map(location => "<url><loc>" + xmlEscape(location) + "</loc></url>").join("") +
                 "</urlset>";
