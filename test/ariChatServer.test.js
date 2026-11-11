@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { WordNetDictionary } = require("../lib/wordNet");
-const { createServer, respondToMessage, respondWithGpuModel, respondWithModel, shouldSearchWeb, isExplicitWebSearchRequest, isRestrictedSearchIntent, buildSearchQuery, prepareSearchMessages, HOST } = require("../dev/ari-chat-server");
+const { createServer, respondToMessage, respondWithGpuModel, respondWithModel, shouldSearchWeb, isExplicitWebSearchRequest, isRestrictedSearchIntent, buildSearchQuery, prepareSearchMessages, appendWebpageImages, HOST } = require("../dev/ari-chat-server");
 const { AriGpuClient } = require("../dev/ariGpuClient");
 const { createAriWorkspaceStore } = require("../dev/ariWorkspaceStore");
 
@@ -83,6 +83,15 @@ async function main() {
     assert.equal(shouldSearchWeb("What is a CPU?"), false);
     assert.equal(shouldSearchWeb("Can you search the web?"), false);
     assert.equal(buildSearchQuery("Search the web for current Kaggle CPU limits."), "current Kaggle CPU limits.");
+    const appendedImages = appendWebpageImages("A useful result.", [
+        { alt: "Notebook settings", url: "https://images.example.test/notebook.png" },
+        { alt: "Duplicate image", url: "https://images.example.test/notebook.png" },
+        { alt: "Second image", url: "https://images.example.test/second.png" }
+    ]);
+    assert.match(appendedImages, /!\\[Notebook settings\\]\\(https:\\/\\/images\\.example\\.test\\/notebook\\.png\\)/);
+    assert.match(appendedImages, /!\\[Second image\\]\\(https:\\/\\/images\\.example\\.test\\/second\\.png\\)/);
+    assert.equal((appendedImages.match(/!\\[/g) || []).length, 2);
+    assert.ok(!appendedImages.includes("Duplicate image"));
     assert.equal(isExplicitWebSearchRequest("Search the web for the current Kaggle session limit."), true);
     assert.equal(isRestrictedSearchIntent("Where can I find a supplier for a dangerous product?"), true);
     assert.equal(isRestrictedSearchIntent("Explain safety precautions for dangerous products."), false);
@@ -148,7 +157,7 @@ async function main() {
             }
         },
         async webpageReader(url) {
-            return { title: "Search result", url, source_url: url, text: "A verified source excerpt.", images: [] };
+            return { title: "Search result", url, source_url: url, text: "A verified source excerpt.", images: [{ alt: "Search result image", url: "https://images.example.test/search-result.png" }] };
         },
         modelClient: {
             async generate(messages) {
@@ -170,7 +179,9 @@ async function main() {
             })
         });
         assert.equal(response.status, 200);
-        assert.match((await response.json()).reply, /Here is what I found/);
+        const searchReply = (await response.json()).reply;
+        assert.match(searchReply, /Here is what I found/);
+        assert.match(searchReply, /!\\[Search result image\\]\\(https:\\/\\/images\\.example\\.test\\/search-result\\.png\\)/);
     } finally {
         await new Promise(resolve => searchApp.close(resolve));
     }
