@@ -838,7 +838,13 @@
       } else {
         landingPrimaryButton.textContent = "Get started ↗";
         landingSecondaryButton.hidden = false;
-        landingNote.textContent = "Sign in with Google, email or phone verification.";
+        const availableMethods = [];
+        if (googleClientId && !authConfigurationError) availableMethods.push("Google");
+        if (otpMethods.emailOtp) availableMethods.push("email");
+        if (otpMethods.smsOtp) availableMethods.push("phone verification");
+        landingNote.textContent = availableMethods.length
+          ? "Sign in with " + availableMethods.join(", ") + "."
+          : "Ari sign-in is temporarily unavailable. Please contact the site administrator.";
       }
     }
 
