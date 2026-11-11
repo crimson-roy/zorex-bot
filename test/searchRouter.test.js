@@ -246,7 +246,7 @@ async function testSchemasAndUntrustedBoundary() {
     assert.throws(() => formatUntrustedToolOutput("system", {}), TypeError);
     const docs = fs.readFileSync(path.join(__dirname, "..", "docs", "search-router.md"), "utf8");
     assert.match(docs, /untrusted/i);
-    assert.match(docs, /does not attach it to Baileys/i);
+    assert.match(docs, /WhatsApp `\.ai` command and other bot paths remain separate/i);
 }
 
 async function main() {
