@@ -32,7 +32,7 @@ function respondAriSelfKnowledge(message) {
         return "I was created by Zorex AI. I don't have a personal creator name to share.";
     }
     if (/\b(?:what can you do|what are you able to do|what are your abilities|what do you support|what are you good at|your capabilities|what features do you have|what is your purpose|what's your purpose|what is ari's purpose)\b/i.test(text)) {
-        return "I can chat, answer questions, explain topics, help with writing and brainstorming, and understand supported images in available modes. Audio, document analysis, image generation, video analysis, and video analysis aren't enabled in this playground yet. I can look up public web information when live search is configured and available.";
+        return "I can chat, answer questions, explain topics, help with writing and brainstorming, and understand supported images in available modes. Audio, document analysis, image generation, and video analysis aren't enabled in this playground yet. I can look up public web information when live search is configured and available.";
     }
     if (/\b(?:what model are you|which model are you|how do you work|what technology (?:are|is) behind you)\b/i.test(text)) {
         return "I'm Ari, an AI assistant created by Zorex AI. I can't share internal implementation details, but I can explain what features are available in the app.";
