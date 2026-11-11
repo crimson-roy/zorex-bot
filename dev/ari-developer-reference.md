@@ -16,7 +16,7 @@ This document contains operational details for developers. Do not copy this sect
 - `ARI_ALLOWED_EMAILS`: comma-separated approved addresses, required only in restricted mode.
 - To make a deployment public, set `ARI_REGISTRATION_MODE=open` in its runtime environment and restart the Ari service. To keep a deployment private, set `ARI_REGISTRATION_MODE=restricted` and list the exact authorized Google emails in `ARI_ALLOWED_EMAILS`.
 - `ARI_SESSION_TTL_SECONDS`: absolute session lifetime; default 28,800 seconds.
-- `ARI_PUBLIC_ORIGIN`: exact public HTTPS origin in production.
+- `ARI_PUBLIC_ORIGIN`: exact public HTTPS origin in production; current public origin is `https://ari-zorex.duckdns.org` (the homepage is `/`, with `/homepage` as an alias).
 - `ARI_TEXT_FALLBACK_ENABLED`: defaults to `true`; uses the shared Zorex text API only when an Ari text model is unavailable. It never receives image/media payloads. Set to `false` to disable the backup.
 - `NODE_ENV=production`: required for Secure production cookies and production-origin validation.
 - `ARI_DATA_DIR`: private writable directory for persisted quota records.
