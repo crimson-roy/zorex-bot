@@ -84,6 +84,7 @@ async function main() {
     const { access } = setupAccess({}, () => current);
     assert.equal(access.config().configured, true);
     assert.equal(access.registrationMode, "restricted");
+    assert.equal(access.config().registrationMode, "restricted");
     const restrictedWithoutEmails = setupAccess({ env: { ARI_ALLOWED_EMAILS: "" } }).access;
     assert.equal(restrictedWithoutEmails.config().configured, false);
     const csrfResponse = responseStub();
@@ -147,6 +148,7 @@ async function main() {
     }, () => current).access;
     assert.equal(openRegistration.config().configured, true);
     assert.equal(openRegistration.registrationMode, "open");
+    assert.equal(openRegistration.config().registrationMode, "open");
     for (let signIn = 0; signIn < 2; signIn += 1) {
         const openResponse = responseStub();
         const openLogin = await openRegistration.authenticateCredential(
