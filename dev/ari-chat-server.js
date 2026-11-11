@@ -470,7 +470,7 @@ function createServer(options = {}) {
                     return;
                 }
                 auth.assertOriginAndCsrf(request);
-                const body = await readJsonBody(request, 4 * 1024 * 1024);
+                const body = await readJsonBody(request, 8 * 1024 * 1024);
                 const chats = await workspace.replaceChats(session.sub, body?.chats);
                 sendAuthJson(response, 200, { saved: true, chats });
             } catch (error) {
