@@ -7,10 +7,14 @@ const path = require("node:path");
 const STORE_VERSION = 1;
 const MAX_CHATS = 200;
 const MAX_PROJECTS = 100;
+const MAX_MEMORIES = 100;
+const MAX_MEMORY_TEXT = 500;
 const MAX_MESSAGES_PER_CHAT = 200;
 const MAX_MESSAGE_CHARS = 50000;
 const MAX_TOTAL_CHARS = 1_500_000;
 const PROJECT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MEMORY_ID_PATTERN = PROJECT_ID_PATTERN;
+const CREDENTIAL_PATTERN = /\\b(?:password|passwd|passphrase|api[ _-]?key|access[ _-]?token|refresh[ _-]?token|private[ _-]?key|secret)\\b\\s*[:=]/i;
 
 function accountKey(subject) {
     return crypto.createHash("sha256").update(String(subject)).digest("hex");
@@ -110,6 +114,14 @@ function normalizeProjectInput(input, existing = {}) {
         ? (existing.description || "")
         : boundedText(input.description, 500, "Project description");
     return { name, description };
+}
+
+function normalizeMemoryText(value) {
+    const text = boundedText(value, MAX_MEMORY_TEXT, "Memory", true);
+    if (CREDENTIAL_PATTERN.test(text) || /-----BEGIN [A-Z ]*PRIVATE KEY-----/i.test(text)) {
+        throw Object.assign(new Error("Ari Memory cannot store passwords, access tokens, API keys or private keys."), { statusCode: 400 });
+    }
+    return text;
 }
 
 function createAriWorkspaceStore(options = {}) {
@@ -252,6 +264,101 @@ function createAriWorkspaceStore(options = {}) {
         return operation;
     }
 
+    function listMemories(subject) {
+        requireSubject(subject);
+        const store = readStore();
+        const account = accountFor(store, subject);
+        return Array.isArray(account.memories)
+            ? account.memories.slice().sort((a, b) => b.updatedAt - a.updatedAt)
+            : [];
+    }
+
+    function createMemory(subject, input, options = {}) {
+        if (typeof subject !== "string" || !subject.trim()) {
+            return Promise.reject(Object.assign(new Error("A signed-in account is required."), { statusCode: 401 }));
+        }
+        const operation = queue.then(() => {
+            const text = normalizeMemoryText(input && input.text);
+            const store = readStore();
+            const key = accountKey(subject);
+            const account = store.accounts[key] && typeof store.accounts[key] === "object" ? store.accounts[key] : {};
+            const memories = Array.isArray(account.memories) ? account.memories : [];
+            if (memories.length >= MAX_MEMORIES) {
+                throw Object.assign(new Error("A maximum of " + MAX_MEMORIES + " saved memories is allowed."), { statusCode: 400 });
+            }
+            const timestamp = now();
+            const memory = {
+                id: crypto.randomUUID(),
+                text,
+                status: options.status === "pending" ? "pending" : "active",
+                source: options.source === "ari" ? "ari" : "user",
+                createdAt: timestamp,
+                updatedAt: timestamp
+            };
+            store.accounts[key] = { ...account, memories: [...memories, memory] };
+            writeStore(store);
+            return memory;
+        });
+        queue = operation.catch(() => undefined);
+        return operation;
+    }
+
+    function updateMemory(subject, id, input) {
+        if (typeof subject !== "string" || !subject.trim()) {
+            return Promise.reject(Object.assign(new Error("A signed-in account is required."), { statusCode: 401 }));
+        }
+        const operation = queue.then(() => {
+            if (typeof id !== "string" || !MEMORY_ID_PATTERN.test(id)) {
+                throw Object.assign(new Error("That memory could not be found."), { statusCode: 404 });
+            }
+            if (!input || typeof input !== "object" || Array.isArray(input)) {
+                throw Object.assign(new Error("Memory changes are invalid."), { statusCode: 400 });
+            }
+            const store = readStore();
+            const key = accountKey(subject);
+            const account = store.accounts[key] && typeof store.accounts[key] === "object" ? store.accounts[key] : {};
+            const memories = Array.isArray(account.memories) ? account.memories : [];
+            const index = memories.findIndex(memory => memory.id === id);
+            if (index < 0) throw Object.assign(new Error("That memory could not be found."), { statusCode: 404 });
+            const existing = memories[index];
+            const text = input.text === undefined ? existing.text : normalizeMemoryText(input.text);
+            const status = input.status === undefined ? existing.status : input.status;
+            if (!["active", "pending"].includes(status)) {
+                throw Object.assign(new Error("Memory status is invalid."), { statusCode: 400 });
+            }
+            const updated = { ...existing, text, status, updatedAt: now() };
+            const nextMemories = memories.slice();
+            nextMemories[index] = updated;
+            store.accounts[key] = { ...account, memories: nextMemories };
+            writeStore(store);
+            return updated;
+        });
+        queue = operation.catch(() => undefined);
+        return operation;
+    }
+
+    function deleteMemory(subject, id) {
+        if (typeof subject !== "string" || !subject.trim()) {
+            return Promise.reject(Object.assign(new Error("A signed-in account is required."), { statusCode: 401 }));
+        }
+        const operation = queue.then(() => {
+            if (typeof id !== "string" || !MEMORY_ID_PATTERN.test(id)) {
+                throw Object.assign(new Error("That memory could not be found."), { statusCode: 404 });
+            }
+            const store = readStore();
+            const key = accountKey(subject);
+            const account = store.accounts[key] && typeof store.accounts[key] === "object" ? store.accounts[key] : {};
+            const memories = Array.isArray(account.memories) ? account.memories : [];
+            const memory = memories.find(item => item.id === id);
+            if (!memory) throw Object.assign(new Error("That memory could not be found."), { statusCode: 404 });
+            store.accounts[key] = { ...account, memories: memories.filter(item => item.id !== id) };
+            writeStore(store);
+            return memory;
+        });
+        queue = operation.catch(() => undefined);
+        return operation;
+    }
+
     function deleteProject(subject, id) {
         if (typeof subject !== "string" || !subject.trim()) {
             return Promise.reject(Object.assign(new Error("A signed-in account is required."), { statusCode: 401 }));
@@ -295,6 +402,10 @@ function createAriWorkspaceStore(options = {}) {
         createProject,
         updateProject,
         deleteProject,
+        listMemories,
+        createMemory,
+        updateMemory,
+        deleteMemory,
         filePath,
         directory
     };
@@ -305,7 +416,10 @@ module.exports = {
     normalizeChats,
     MAX_CHATS,
     MAX_PROJECTS,
+    MAX_MEMORIES,
+    MAX_MEMORY_TEXT,
     MAX_MESSAGES_PER_CHAT,
     MAX_MESSAGE_CHARS,
-    MAX_TOTAL_CHARS
+    MAX_TOTAL_CHARS,
+    normalizeMemoryText
 };
