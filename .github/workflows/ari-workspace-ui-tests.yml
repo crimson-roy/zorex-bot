@@ -37,5 +37,7 @@ jobs:
           if (!match) throw new Error("Ari page has no inline script.");
           new Function(match[1]);
           NODE
+      - name: Test persistent sessions and auth
+        run: node test/ariDeveloperAccess.test.js
       - name: Test Ari chat server and page routes
         run: node test/ariChatServer.test.js
