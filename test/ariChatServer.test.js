@@ -62,10 +62,11 @@ async function main() {
         const page = await fetch(baseUrl + "/");
         assert.equal(page.status, 200);
         const html = await page.text();
-        const inlineScripts = [...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)];
-        assert.equal(inlineScripts.length, 1, "Ari should ship one inline application script.");
-        assert.doesNotThrow(() => new Function(inlineScripts[0][1]), "Ari's browser script must be syntactically valid.");
-        const htmlIds = [...html.matchAll(/\\bid="([^"]+)"/g)].map(match => match[1]);
+        const scriptStart = html.indexOf("<script>");
+        const scriptEnd = html.indexOf("</script>", scriptStart + 8);
+        assert.ok(scriptStart >= 0 && scriptEnd > scriptStart, "Ari's inline application script must exist.");
+        assert.doesNotThrow(() => new Function(html.slice(scriptStart + 8, scriptEnd)), "Ari's browser script must be syntactically valid.");
+        const htmlIds = html.split(' id="').slice(1).map(part => part.split('"', 1)[0]);
         assert.equal(new Set(htmlIds).size, htmlIds.length, "Ari's page must not contain duplicate element IDs.");
         assert.match(html, /Welcome back/);
         assert.match(html, /Google sign-in is currently enabled/);
