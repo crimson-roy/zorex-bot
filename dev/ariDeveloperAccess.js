@@ -41,7 +41,7 @@ function createAriDeveloperAccess(options = {}) {
     const env = options.env || process.env;
     const isProduction = options.isProduction ?? env.NODE_ENV === "production";
     const clientId = String(env.GOOGLE_CLIENT_ID || "").trim();
-    const requestedRegistrationMode = String(env.ARI_REGISTRATION_MODE || "restricted").trim().toLowerCase();
+    const requestedRegistrationMode = String(env.ARI_REGISTRATION_MODE || "open").trim().toLowerCase();
     const registrationModeValid = requestedRegistrationMode === "restricted" || requestedRegistrationMode === "open";
     const registrationMode = registrationModeValid ? requestedRegistrationMode : "restricted";
     const allowedEmails = new Set(String(env.ARI_ALLOWED_EMAILS || "").split(",").map(normalizedEmail).filter(Boolean));
