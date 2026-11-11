@@ -4,7 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/ari-favicon.png">
-  <title>Ari — Local Playground</title>
+  <title>Ari — Your workspace</title>
+  <meta name="theme-color" content="#171d19">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; }
@@ -143,46 +147,259 @@
     #sign-out { padding: 6px 10px; border: 1px solid #484848; border-radius: 14px; color: #ddd; background: #292929; font-size: 12px; }
     #sign-out:hover { background: #3b3b3b; }
     @media (max-width: 480px) { .auth-card { padding: 26px 20px; } #account-email { display: none; } }
+
+    :root {
+      color-scheme: dark;
+      --ari-bg:#171d19; --ari-sidebar:#141a16; --ari-panel:#1d2620; --ari-raised:#222d26;
+      --ari-border:#2d3931; --ari-strong:#405047; --ari-text:#edf3ee; --ari-muted:#9aa89f;
+      --ari-subtle:#748178; --ari-accent:#a7c8b4; --ari-accent-ink:#142019;
+      --ari-danger:#e5a6a0; --ari-serif:"Newsreader",Georgia,serif; --ari-sans:"Inter",system-ui,sans-serif;
+    }
+    html,body{min-width:320px;background:var(--ari-bg);color:var(--ari-text)}
+    body,button,input,select,textarea{font-family:var(--ari-sans)}
+    button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ari-accent);outline-offset:3px}
+    .app{background:var(--ari-bg)}
+    .sidebar{flex:0 0 268px;width:268px;padding:16px 12px 12px;border-color:var(--ari-border);background:var(--ari-sidebar)}
+    .sidebar-header{justify-content:flex-start;gap:10px;padding:7px 8px 18px;border:0}
+    .ari-brand{display:flex;align-items:center;gap:10px;min-width:0}
+    .ari-mark{display:grid;place-items:center;width:34px;height:34px;flex:0 0 auto;border-radius:12px;color:var(--ari-accent-ink);background:var(--ari-accent);font:600 22px var(--ari-serif)}
+    .ari-wordmark{color:var(--ari-text);font:500 25px var(--ari-serif);letter-spacing:-.04em}
+    .new-chat{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:4px 0 14px;padding:11px 12px;border:1px solid var(--ari-strong);border-radius:12px;color:var(--ari-text);background:var(--ari-panel);font-size:13px;font-weight:500}
+    .new-chat:hover{border-color:#66776d;background:var(--ari-raised)}
+    .sidebar-nav{display:grid;gap:4px;padding:0 0 17px;border-bottom:1px solid var(--ari-border)}
+    .sidebar-nav button{display:flex;align-items:center;gap:11px;min-height:40px;width:100%;padding:0 11px;border:0;border-radius:10px;color:#c2cec5;background:transparent;text-align:left;font-size:13px;font-weight:500}
+    .sidebar-nav button:hover,.sidebar-nav button.active{color:var(--ari-text);background:#253129}
+    .sidebar-nav svg{width:17px;height:17px;color:var(--ari-accent)}
+    .history-label{padding:19px 10px 8px;color:var(--ari-subtle);font-size:10px;font-weight:700;letter-spacing:.12em}
+    #chat-list{gap:3px;padding:3px 0 12px}
+    .history-row{gap:2px}
+    .history-row.pinned::before{color:var(--ari-accent)}
+    .history-select{padding:9px 11px;border-radius:9px;color:#c1ccc4;font-size:12px}
+    .history-select:hover,.history-select.active{color:var(--ari-text);background:#253129}
+    .history-empty{padding:10px 11px;color:var(--ari-subtle);font-size:12px;line-height:1.5}
+    .sidebar-footer{position:relative;margin-top:auto;padding-top:10px;border-top:1px solid var(--ari-border)}
+    #account-controls{display:block;margin:0}
+    #account-menu-toggle{display:flex;align-items:center;gap:10px;width:100%;padding:9px 8px;border:0;border-radius:11px;color:var(--ari-text);background:transparent;text-align:left}
+    #account-menu-toggle:hover,#account-menu-toggle[aria-expanded=true]{background:#253129}
+    .account-avatar{display:grid;place-items:center;width:34px;height:34px;flex:0 0 auto;border-radius:50%;color:var(--ari-accent-ink);background:var(--ari-accent);font-size:12px;font-weight:700}
+    .account-meta{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+    #account-name{overflow:hidden;color:var(--ari-text);font-size:12px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+    #account-email{overflow:hidden;color:var(--ari-muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+    #account-menu{position:absolute;z-index:30;right:0;bottom:calc(100% + 9px);left:0;display:flex;flex-direction:column;gap:3px;padding:6px;border:1px solid var(--ari-strong);border-radius:14px;background:#202a23;box-shadow:0 16px 38px #0008}
+    #account-menu[hidden]{display:none}
+    #account-menu button{display:flex;align-items:center;min-height:38px;padding:0 10px;border:0;border-radius:9px;color:#d9e2db;background:transparent;text-align:left;font-size:12px}
+    #account-menu button:hover{background:#2c3a30}
+    #account-menu .menu-separator{height:1px;margin:3px 2px;background:var(--ari-border)}
+    #account-menu #sign-out{margin-top:2px;border:0;border-radius:9px;color:var(--ari-danger);background:transparent;font-size:12px}
+    #account-menu #sign-out:hover{background:#3a2927}
+    .main{background:var(--ari-bg)}
+    .topbar{min-height:62px;padding:10px 24px;border-color:var(--ari-border);background:rgba(23,29,25,.94);backdrop-filter:blur(14px)}
+    .topbar h1{color:var(--ari-text);font-size:13px;font-weight:600}
+    #sidebar-toggle{width:36px;height:36px;border:1px solid transparent;border-radius:10px;color:var(--ari-muted);background:transparent}
+    #sidebar-toggle:hover{color:var(--ari-text);background:var(--ari-panel)}
+    #conversation{padding:34px clamp(18px,4vw,56px) 18px}
+    #empty-state{color:var(--ari-muted);font:400 clamp(25px,3vw,38px) var(--ari-serif)}
+    #messages{max-width:none;gap:25px;padding:0 0 12px}
+    .message{max-width:min(92%,1040px);padding:0;border:0;border-radius:0;color:#dce6de;line-height:1.72;font-size:15px}
+    .message.user{max-width:min(82%,780px);padding:12px 16px;border:1px solid #344238;border-radius:18px;color:var(--ari-text);background:#26332a}
+    .message.ari{max-width:1040px;color:#e1e9e3;font:400 19px/1.62 var(--ari-serif)}
+    .message small{color:var(--ari-muted);font:11px var(--ari-sans)}
+    #composer-wrap{width:100%;max-width:none;margin:0;padding:12px clamp(14px,3vw,38px) 20px}
+    #chat-form{max-width:1180px;margin:0 auto;gap:12px;padding:12px 14px;border:1px solid #3a493f;border-radius:23px;background:#202a23;box-shadow:0 12px 34px #0003}
+    #chat-form:focus-within{border-color:#708b79;box-shadow:0 0 0 3px rgba(167,200,180,.08),0 12px 34px #0003}
+    #attach-button{width:38px;height:38px;color:#bdcbbf}
+    #attach-button:hover,#attach-button:focus-visible{color:var(--ari-text);background:#314035}
+    #compose-center{gap:9px}
+    #message-input{min-height:38px;max-height:210px;padding:7px 3px 3px;color:var(--ari-text);font-size:14px}
+    #message-input::placeholder{color:#88968d}
+    #composer-bottom{gap:8px}
+    #think-toggle,#tier-select{color:#b9c7bd;font-size:11px}
+    #think-toggle:hover,#think-toggle[aria-pressed=true]{color:var(--ari-text);background:#344439}
+    #think-toggle[aria-pressed=true]{border-color:#63796a}
+    #tier-select:hover,#tier-select:focus{background:#344439}
+    #tier-select option{color:var(--ari-text);background:#202a23}
+    #send{width:38px;height:38px;color:var(--ari-accent-ink);background:var(--ari-accent)}
+    #send:hover{filter:brightness(1.07)}
+    #send svg{color:var(--ari-accent-ink)}
+    #attach-menu{width:190px;border-color:var(--ari-strong);border-radius:14px;background:#202a23}
+    .attach-option{min-height:40px;border-radius:9px;color:#dce6de;font-size:12px}
+    .attach-option:hover{background:#304035}
+    #attachment-chip{align-items:center;gap:10px;width:fit-content;max-width:min(100%,390px);padding:8px;border-color:#415246;border-radius:14px;background:#26332a}
+    #attachment-chip[hidden]{display:none}
+    #attachment-thumb{display:grid;place-items:center;width:54px;height:54px;flex:0 0 auto;overflow:hidden;border:1px solid #4a5a4e;border-radius:10px;color:var(--ari-accent-ink);background:var(--ari-accent);font-size:10px;font-weight:700}
+    #attachment-image-preview{display:block;width:100%;height:100%;object-fit:cover}
+    #attachment-image-preview[hidden]{display:none}
+    .attachment-info{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}
+    #attachment-name{max-width:260px;color:var(--ari-text);font-size:11px}
+    #attachment-size{color:var(--ari-muted);font-size:10px}
+    #remove-attachment{display:grid;place-items:center;width:28px;height:28px;font-size:18px}
+    #composer-disclaimer{margin-top:10px;color:var(--ari-subtle);font-size:10px}
+    #composer-notice{color:#e6b1ab;font-size:11px}
+    #workspace-page{flex:1;min-height:0;overflow-y:auto;padding:clamp(26px,5vw,64px);background:var(--ari-bg)}
+    #workspace-page[hidden]{display:none}
+    .workspace-page-inner{width:min(100%,1040px);margin:0 auto}
+    .page-kicker{margin:0 0 12px;color:var(--ari-accent);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+    .page-title{margin:0;color:var(--ari-text);font:400 clamp(34px,5vw,52px) var(--ari-serif);letter-spacing:-.035em}
+    .page-description{max-width:650px;margin:13px 0 30px;color:var(--ari-muted);font-size:13px;line-height:1.75}
+    .page-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .page-card{padding:20px;border:1px solid var(--ari-border);border-radius:17px;background:var(--ari-panel)}
+    .page-card h3{margin:0 0 8px;color:var(--ari-text);font-size:13px;font-weight:600}
+    .page-card p{margin:0;color:var(--ari-muted);font-size:12px;line-height:1.7}
+    .page-card-icon,.page-empty-icon{display:grid;place-items:center;width:42px;height:42px;margin-bottom:15px;border-radius:13px;color:var(--ari-accent);background:#2a392e}
+    .page-empty{display:grid;justify-items:center;padding:52px 18px;border:1px dashed #3b4b40;border-radius:18px;background:rgba(31,42,34,.55);text-align:center}
+    .page-empty-icon{width:52px;height:52px;border-radius:16px}
+    .page-empty h3{margin:0 0 8px;color:var(--ari-text);font:400 25px var(--ari-serif)}
+    .page-empty p{max-width:470px;margin:0;color:var(--ari-muted);font-size:12px;line-height:1.7}
+    .page-inline-note{margin-top:18px;color:var(--ari-subtle);font-size:11px;line-height:1.7}
+    .setting-row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:17px 0;border-bottom:1px solid var(--ari-border)}
+    .setting-row:last-child{border-bottom:0}
+    .setting-row strong{display:block;margin-bottom:4px;color:var(--ari-text);font-size:12px}
+    .setting-row span{display:block;color:var(--ari-muted);font-size:11px;line-height:1.55}
+    .setting-value{flex:0 0 auto;color:var(--ari-accent)!important;text-align:right}
+    .landing-screen,#auth-screen{min-height:100%;background:var(--ari-bg)}
+    .landing-screen{display:flex;flex-direction:column;padding:0 clamp(22px,6vw,88px)}
+    .landing-screen[hidden]{display:none}
+    .landing-header{display:flex;align-items:center;justify-content:space-between;min-height:82px;border-bottom:1px solid var(--ari-border)}
+    .landing-header .ari-wordmark{font-size:29px}
+    .landing-top-link{padding:9px 14px;border:1px solid var(--ari-strong);border-radius:999px;color:var(--ari-text);background:transparent;font-size:12px}
+    .landing-top-link:hover{background:var(--ari-panel)}
+    .landing-hero{display:grid;flex:1;align-content:center;width:min(100%,1060px);margin:0 auto;padding:70px 0 100px}
+    .landing-eyebrow{margin:0 0 22px;color:var(--ari-accent);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+    .landing-title{max-width:850px;margin:0;color:var(--ari-text);font:400 clamp(55px,9vw,108px)/.98 var(--ari-serif);letter-spacing:-.06em}
+    .landing-title em{color:var(--ari-accent);font-weight:400}
+    .landing-copy{max-width:570px;margin:28px 0 30px;color:#aab8ae;font-size:14px;line-height:1.85}
+    .landing-actions{display:flex;flex-wrap:wrap;align-items:center;gap:15px}
+    .landing-primary{display:inline-flex;align-items:center;gap:10px;padding:13px 18px;border:0;border-radius:999px;color:var(--ari-accent-ink);background:var(--ari-accent);font-size:12px;font-weight:700}
+    .landing-primary:hover{filter:brightness(1.07)}
+    .landing-secondary{padding:12px 4px;border:0;color:#aab8ae;background:transparent;font-size:12px}
+    .landing-footnote{margin-top:70px;color:var(--ari-subtle);font-size:10px}
+    #auth-screen{display:grid;min-height:100%;place-items:center;padding:24px}
+    #auth-screen[hidden]{display:none}
+    .auth-card{width:min(100%,440px);padding:30px;border:1px solid var(--ari-border);border-radius:22px;background:var(--ari-panel);box-shadow:0 20px 60px #0005;text-align:left}
+    .auth-back{margin:0 0 26px;padding:0;border:0;color:var(--ari-muted);background:transparent;font-size:11px}
+    .auth-heading{margin:20px 0 8px;color:var(--ari-text);font:400 38px var(--ari-serif);letter-spacing:-.035em}
+    .auth-description{margin:0 0 22px;color:var(--ari-muted);font-size:12px;line-height:1.7}
+    .auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:22px;padding:4px;border:1px solid var(--ari-border);border-radius:999px;background:#18211b}
+    .auth-tabs button{min-height:36px;border:0;border-radius:999px;color:var(--ari-muted);background:transparent;font-size:11px}
+    .auth-tabs button.active{color:var(--ari-accent-ink);background:var(--ari-accent)}
+    #google-sign-in{justify-content:flex-start;min-height:48px;margin-top:12px}
+    #auth-error{margin:12px 0 0;color:var(--ari-danger)!important;text-align:left}
+    .auth-legal{margin:20px 0 0;color:var(--ari-subtle);font-size:10px;line-height:1.6}
+    #sidebar-backdrop{display:none}
+    @media(max-width:760px){
+      .sidebar{flex-basis:268px;width:268px}
+      .topbar{min-height:56px;padding:8px 14px}
+      #conversation{padding:24px 16px 12px}
+      .message,.message.ari{max-width:96%}
+      .message.user{max-width:88%}
+      #workspace-page{padding:28px 18px}
+      .page-grid{grid-template-columns:1fr}
+      .landing-title{font-size:clamp(50px,13vw,78px)}
+      .landing-hero{padding:60px 0 80px}
+      .landing-screen{padding:0 22px}
+      #sidebar-backdrop{position:fixed;z-index:19;inset:0;display:block;border:0;background:rgba(5,10,7,.58);opacity:0;pointer-events:none;transition:opacity .18s ease}
+      .app.mobile-sidebar-open #sidebar-backdrop{opacity:1;pointer-events:auto}
+      .app .sidebar{z-index:20}
+      .app.sidebar-collapsed .sidebar{display:flex}
+    }
+    @media(max-width:480px){
+      #composer-wrap{padding:8px 10px max(10px,env(safe-area-inset-bottom))}
+      #chat-form{gap:5px;padding:9px;border-radius:21px}
+      #attach-button{width:35px;height:35px}
+      #tier-select{width:92px;max-width:92px;padding:0 16px 0 6px}
+      #think-toggle{padding:0 7px}
+      #composer-bottom{gap:2px}
+      .auth-card{padding:25px 21px}
+      .landing-header{min-height:68px}
+      .landing-footnote{margin-top:48px}
+      .setting-row{align-items:flex-start;flex-direction:column;gap:8px}
+      .setting-value{text-align:left}
+    }
+
   </style>
 </head>
 <body>
+  <section id="landing-screen" class="landing-screen" hidden>
+    <header class="landing-header">
+      <div class="ari-brand"><span class="ari-mark">a</span><span class="ari-wordmark">ari</span></div>
+      <button class="landing-top-link" id="landing-sign-in" type="button">Sign in</button>
+    </header>
+    <main class="landing-hero">
+      <p class="landing-eyebrow">A quieter kind of intelligence</p>
+      <h1 class="landing-title">Make room for <em>better thinking.</em></h1>
+      <p class="landing-copy">Ari brings your conversations, ideas and work into one calm, considered workspace. Start with a question and build from there.</p>
+      <div class="landing-actions">
+        <button class="landing-primary" id="landing-get-started" type="button">Get started <span aria-hidden="true">↗</span></button>
+        <button class="landing-secondary" id="landing-open-chat" type="button">I already have an account</button>
+      </div>
+      <p class="landing-footnote">Ari by Zorex AI · Thoughtful tools, one workspace.</p>
+    </main>
+  </section>
+
   <section id="auth-screen" aria-labelledby="auth-title" hidden>
     <div class="auth-card">
-      <h1 id="auth-title">Ari Developer Playground</h1>
-      <p>Sign in with your Google account to use Ari. When open registration is enabled, your Ari account is created automatically.</p>
+      <button class="auth-back" id="auth-back" type="button">← Back to Ari</button>
+      <div class="ari-brand"><span class="ari-mark">a</span><span class="ari-wordmark">ari</span></div>
+      <div class="auth-tabs" role="tablist" aria-label="Account access">
+        <button class="active" id="auth-login-tab" type="button" role="tab" aria-selected="true" data-auth-mode="login">Log in</button>
+        <button id="auth-signup-tab" type="button" role="tab" aria-selected="false" data-auth-mode="signup">Sign up</button>
+      </div>
+      <h1 id="auth-title" class="auth-heading">Welcome back.</h1>
+      <p id="auth-description" class="auth-description">Sign in with Google to continue to your Ari workspace.</p>
       <div id="google-sign-in"></div>
       <p id="auth-error" role="status" aria-live="polite"></p>
+      <p class="auth-legal">Email verification and additional sign-in methods will appear here after their providers are configured.</p>
     </div>
   </section>
   <div class="app" id="ari-app" hidden>
-    <aside class="sidebar" id="sidebar" aria-label="Chat history">
-      <div class="sidebar-header">
-        <strong>Chats</strong>
-        <button class="new-chat" id="new-chat" type="button">+ New chat</button>
-      </div>
-      <div class="history-label">Recent</div>
-      <nav id="chat-list" aria-label="Previous chats">
-        <div class="history-empty">No previous chats yet.</div>
+    <aside class="sidebar" id="sidebar" aria-label="Ari workspace navigation">
+      <div class="sidebar-header"><div class="ari-brand"><span class="ari-mark">a</span><span class="ari-wordmark">ari</span></div></div>
+      <button class="new-chat" id="new-chat" type="button"><span aria-hidden="true">＋</span> New chat</button>
+      <nav class="sidebar-nav" aria-label="Workspace">
+        <button type="button" id="nav-library" data-workspace-page="library">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8"/></svg>
+          Library
+        </button>
+        <button type="button" id="nav-projects" data-workspace-page="projects">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>
+          Projects
+        </button>
       </nav>
+      <div class="history-label">RECENT CHATS</div>
+      <nav id="chat-list" aria-label="Previous chats"><div class="history-empty">Your recent conversations will appear here.</div></nav>
+      <div class="sidebar-footer">
+        <div id="account-controls" hidden>
+          <button id="account-menu-toggle" type="button" aria-expanded="false" aria-haspopup="menu">
+            <span class="account-avatar" id="account-avatar">A</span>
+            <span class="account-meta"><span id="account-name">Your account</span><span id="account-email"></span></span>
+            <span aria-hidden="true" style="color:#9aa89f">⌃</span>
+          </button>
+          <div id="account-menu" role="menu" hidden>
+            <button type="button" role="menuitem" data-account-page="profile">Profile / About You</button>
+            <button type="button" role="menuitem" data-account-page="memory">Memory</button>
+            <button type="button" role="menuitem" data-account-page="settings">Settings</button>
+            <button type="button" role="menuitem" data-account-page="delete-account">Delete Account</button>
+            <div class="menu-separator"></div>
+            <button id="sign-out" type="button" role="menuitem">Sign out</button>
+          </div>
+        </div>
+      </div>
     </aside>
+    <button id="sidebar-backdrop" type="button" aria-label="Close navigation" tabindex="-1"></button>
 
     <section class="main">
       <header class="topbar">
         <button id="sidebar-toggle" type="button" aria-label="Collapse chat sidebar" title="Collapse chat sidebar" aria-expanded="true">
           <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M14 9l-3 3 3 3"/></svg>
         </button>
-        <h1>Ari</h1>
-        <div id="account-controls" hidden>
-          <span id="account-email"></span>
-          <button id="sign-out" type="button">Sign out</button>
-        </div>
+        <h1 id="view-title">New chat</h1>
       </header>
 
       <main id="conversation" aria-live="polite">
         <div id="empty-state">Type to get started with Ari</div>
         <div id="messages"></div>
       </main>
-
+      <main id="workspace-page" aria-live="polite" hidden></main>
       <div id="composer-wrap">
         <form id="chat-form" aria-label="Message Ari">
           <div class="attach-wrap">
@@ -199,9 +416,10 @@
           <input id="audio-input" type="file" accept="audio/*" aria-label="Choose audio">
           <input id="file-input" type="file" aria-label="Choose a file">
           <div id="compose-center">
-            <div id="attachment-chip" hidden>
-              <span id="attachment-name"></span>
-              <button id="remove-attachment" type="button" aria-label="Remove attached image">×</button>
+            <div id="attachment-chip" class="attachment-card" hidden>
+              <div id="attachment-thumb"><img id="attachment-image-preview" alt="Selected image preview" hidden><span id="attachment-kind">FILE</span></div>
+              <div class="attachment-info"><span id="attachment-name"></span><span id="attachment-size"></span></div>
+              <button id="remove-attachment" type="button" aria-label="Remove attachment">×</button>
             </div>
             <textarea id="message-input" placeholder="Message Ari..." rows="1" maxlength="2000" required aria-label="Message Ari"></textarea>
             <div id="composer-bottom">
@@ -230,6 +448,30 @@
 
     const STORAGE_KEY_PREFIX = "ari-playground-chats-v1:";
     const appElement = document.getElementById("ari-app");
+    const landingScreen = document.getElementById("landing-screen");
+    const landingSignIn = document.getElementById("landing-sign-in");
+    const landingGetStarted = document.getElementById("landing-get-started");
+    const landingOpenChat = document.getElementById("landing-open-chat");
+    const authBackButton = document.getElementById("auth-back");
+    const authTitle = document.getElementById("auth-title");
+    const authDescription = document.getElementById("auth-description");
+    const authTabs = [...document.querySelectorAll("[data-auth-mode]")];
+    const homepageOnly = window.location.pathname === "/homepage";
+    const workspacePage = document.getElementById("workspace-page");
+    const viewTitle = document.getElementById("view-title");
+    const composerWrap = document.getElementById("composer-wrap");
+    const accountMenuToggle = document.getElementById("account-menu-toggle");
+    const accountMenu = document.getElementById("account-menu");
+    const accountName = document.getElementById("account-name");
+    const accountAvatar = document.getElementById("account-avatar");
+    const sidebarBackdrop = document.getElementById("sidebar-backdrop");
+    const attachmentImagePreview = document.getElementById("attachment-image-preview");
+    const attachmentKind = document.getElementById("attachment-kind");
+    const attachmentSize = document.getElementById("attachment-size");
+    let authMode = "login";
+    let authConfigError = "";
+    let homepageHasSession = false;
+    let attachmentObjectUrl = "";
     const authScreen = document.getElementById("auth-screen");
     const authError = document.getElementById("auth-error");
     const googleSignIn = document.getElementById("google-sign-in");
@@ -270,10 +512,42 @@
       return STORAGE_KEY_PREFIX + encodeURIComponent(String(sub));
     }
 
+    function showLanding() {
+      landingScreen.hidden = false;
+      authScreen.hidden = true;
+      appElement.hidden = true;
+      accountControls.hidden = true;
+      accountMenu.hidden = true;
+    }
+
+    function showLogin(mode = "login") {
+      landingScreen.hidden = true;
+      authScreen.hidden = false;
+      appElement.hidden = true;
+      accountControls.hidden = true;
+      setAuthMode(mode);
+      authError.textContent = authConfigError;
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode === "signup" ? "signup" : "login";
+      for (const tab of authTabs) {
+        const active = tab.dataset.authMode === authMode;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+      }
+      authTitle.textContent = authMode === "signup" ? "A good place to begin." : "Welcome back.";
+      authDescription.textContent = authMode === "signup"
+        ? "Create your Ari account with Google. New account access follows the site's registration settings."
+        : "Sign in with Google to continue to your Ari workspace.";
+    }
+
     function setAuthVisible(visible) {
-      authScreen.hidden = !visible;
-      appElement.hidden = visible;
-      accountControls.hidden = visible;
+      if (visible) { showLogin("login"); return; }
+      landingScreen.hidden = true;
+      authScreen.hidden = true;
+      appElement.hidden = false;
+      accountControls.hidden = false;
     }
 
     function clearAccountMemory() {
@@ -304,9 +578,12 @@
       const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
       if (mostRecent) currentChatId = mostRecent.id;
       accountEmail.textContent = user.email || "";
+      accountName.textContent = user.name || (user.email ? user.email.split("@")[0] : "Your account");
+      accountAvatar.textContent = (user.name || user.email || "A").trim().charAt(0).toUpperCase();
       renderHistory();
       renderConversation(mostRecent || null);
       setAuthVisible(false);
+      openChatView();
       resizeComposer();
       input.focus();
     }
@@ -341,6 +618,7 @@
           return;
         }
         csrfToken = result.csrfToken || csrfToken;
+        if (homepageOnly) { window.location.assign("/"); return; }
         restoreAccount(result.user);
       } catch (_) {
         authError.textContent = "Google sign-in could not be completed. Please try again.";
@@ -368,7 +646,7 @@
     }
 
     async function initializeAuthentication() {
-      setAuthVisible(true);
+      showLanding();
       authError.textContent = "";
       try {
         const configResponse = await fetch("/api/auth/config", { credentials: "same-origin", cache: "no-store" });
@@ -376,14 +654,14 @@
         await fetchCsrf();
         const meResponse = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
         const me = await meResponse.json();
+        authConfigError = config.configured ? "" : (config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.");
         if (me.authenticated && me.user) {
-          restoreAccount(me.user);
+          homepageHasSession = true;
+          if (!homepageOnly) restoreAccount(me.user);
+          else showLanding();
           return;
         }
-        if (!config.configured) {
-          authError.textContent = config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.";
-          return;
-        }
+        if (!config.configured) return;
         loadGoogleIdentity(config.clientId);
       } catch (_) {
         authError.textContent = "Ari sign-in is temporarily unavailable. Refresh the page to try again.";
@@ -616,6 +894,8 @@
       renderConversation(null);
       renderHistory();
       sidebar.classList.remove("open");
+      app.classList.remove("mobile-sidebar-open");
+      openChatView();
       input.value = "";
       resizeComposer();
       input.focus();
@@ -630,6 +910,18 @@
       const file = activeAttachmentInput.files && activeAttachmentInput.files[0];
       attachmentChip.hidden = !file;
       attachmentName.textContent = file ? file.name : "";
+      attachmentSize.textContent = file ? formatFileSize(file.size) : "";
+      const isImage = Boolean(file && file.type.startsWith("image/"));
+      if (attachmentObjectUrl) URL.revokeObjectURL(attachmentObjectUrl);
+      attachmentObjectUrl = "";
+      attachmentImagePreview.hidden = !isImage;
+      attachmentKind.hidden = isImage;
+      if (isImage) {
+        attachmentObjectUrl = URL.createObjectURL(file);
+        attachmentImagePreview.src = attachmentObjectUrl;
+      } else if (file) {
+        attachmentKind.textContent = file.name.split(".").pop().slice(0, 5).toUpperCase() || "FILE";
+      }
     }
 
     function setAttachMenuOpen(open) {
@@ -774,7 +1066,7 @@
         if (!response.ok) {
           if (response.status === 401) {
             clearAccountMemory();
-            setAuthVisible(true);
+            showLogin("login");
           }
           throw new Error(data.error || "The local Ari server returned an error.");
         }
@@ -842,7 +1134,7 @@
         if (!response.ok) throw new Error("Ari could not sign out safely. Refresh the page and try again.");
         csrfToken = result.csrfToken || csrfToken;
         clearAccountMemory();
-        setAuthVisible(true);
+        showLanding();
         authError.textContent = "";
       } catch (error) {
         composerNotice.textContent = error.message;
@@ -855,6 +1147,7 @@
       if (window.matchMedia("(max-width: 680px)").matches) {
         const open = !sidebar.classList.contains("open");
         sidebar.classList.toggle("open", open);
+        app.classList.toggle("mobile-sidebar-open", open);
         sidebarToggle.setAttribute("aria-expanded", String(open));
         sidebarToggle.setAttribute("aria-label", open ? "Close chat sidebar" : "Open chat sidebar");
       } else {
@@ -864,6 +1157,108 @@
         sidebarToggle.setAttribute("aria-label", collapsed ? "Show chat sidebar" : "Collapse chat sidebar");
         sidebarToggle.title = collapsed ? "Show chat sidebar" : "Collapse chat sidebar";
       }
+    });
+
+
+    function formatFileSize(bytes) {
+      if (!Number.isFinite(bytes) || bytes < 0) return "";
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function closeAccountMenu() {
+      accountMenu.hidden = true;
+      accountMenuToggle.setAttribute("aria-expanded", "false");
+    }
+
+    function openChatView() {
+      workspacePage.hidden = true;
+      conversation.hidden = false;
+      composerWrap.hidden = false;
+      viewTitle.textContent = currentChat()?.title || "New chat";
+      document.querySelectorAll("[data-workspace-page]").forEach(button => button.classList.remove("active"));
+      closeAccountMenu();
+    }
+
+    function openWorkspacePage(page) {
+      const pages = {
+        library: {
+          title: "Library", kicker: "Your files",
+          description: "A home for the images, documents and other files you use with Ari. Account-level storage is being built separately so uploads can remain private to your account.",
+          body: '<div class="page-empty"><div class="page-empty-icon">▤</div><h3>Your Library is taking shape.</h3><p>Files you attach to conversations will have a dedicated home here once account-level storage is connected. For now, existing chat attachments remain part of their conversations.</p></div><p class="page-inline-note">Planned limits: a per-user storage quota and a 100 MB maximum file size, enforced by the server.</p>'
+        },
+        projects: {
+          title: "Projects", kicker: "Workspaces",
+          description: "Keep related conversations together. Each project will have its own context and conversations without duplicating them in your general recent-chat list.",
+          body: '<div class="page-empty"><div class="page-empty-icon">▱</div><h3>Make space for a project.</h3><p>Project workspaces are part of the conversation-management layer. Their layout is ready; project creation and chat assignment will be connected to the database before they become active.</p></div>'
+        },
+        profile: {
+          title: "Profile / About You", kicker: "Your account",
+          description: "Manage the identity Ari uses when it works with you.",
+          body: '<div class="page-card"><h3>Account details</h3><div class="setting-row"><div><strong>Display name</strong><span id="profile-display-name">Your account name</span></div><span class="setting-value">Google account</span></div><div class="setting-row"><div><strong>Email address</strong><span id="profile-email">Your verified email</span></div><span class="setting-value">Verified by Google</span></div><p class="page-inline-note">Editable profile details will be connected when the account database is added.</p></div>'
+        },
+        memory: {
+          title: "Memory", kicker: "What Ari remembers",
+          description: "Review the useful details Ari can carry between conversations. You stay in control of what is saved.",
+          body: '<div class="page-grid"><div class="page-card"><div class="page-card-icon">◇</div><h3>Review mode</h3><p>The planned default is Review: useful, non-sensitive details can be surfaced for your inspection and management.</p></div><div class="page-card"><div class="page-card-icon">⌁</div><h3>Private by design</h3><p>Passwords, credentials and sensitive personal information should not be saved as ordinary memories.</p></div></div><div class="page-empty" style="margin-top:16px"><h3>Your memory space is not connected yet.</h3><p>Nothing is being added to persistent memory from this page. Add, edit, review and delete controls will arrive with the account database.</p></div>'
+        },
+        settings: {
+          title: "Settings", kicker: "Make Ari yours",
+          description: "Your workspace preferences, privacy choices and account controls will live here.",
+          body: '<div class="page-card"><div class="setting-row"><div><strong>Appearance</strong><span>Workspace theme and contrast.</span></div><span class="setting-value">Charcoal · Seafoam</span></div><div class="setting-row"><div><strong>Chat layout</strong><span>Wide conversation area with a responsive composer.</span></div><span class="setting-value">Wide</span></div><div class="setting-row"><div><strong>Memory mode</strong><span>Review useful memories before they become part of your profile.</span></div><span class="setting-value">Review · planned</span></div><div class="setting-row"><div><strong>Privacy and data</strong><span>Manage sessions, saved files and account information.</span></div><span class="setting-value">In progress</span></div></div>'
+        },
+        "delete-account": {
+          title: "Delete Account", kicker: "Account controls",
+          description: "Account deletion will require verification before any account data is removed.",
+          body: '<div class="page-card"><h3>Delete your Ari account</h3><p>This action will eventually remove your profile, saved conversations, memory entries and stored files. A verification step and a clear final confirmation will be required.</p><p class="page-inline-note">The deletion endpoint is not connected yet. Nothing can be deleted from this screen.</p></div>'
+        }
+      };
+      const data = pages[page] || pages.settings;
+      viewTitle.textContent = data.title;
+      workspacePage.innerHTML = '<div class="workspace-page-inner"><p class="page-kicker">' + data.kicker + '</p><h2 class="page-title">' + data.title + '</h2><p class="page-description">' + data.description + '</p>' + data.body + '</div>';
+      conversation.hidden = true;
+      workspacePage.hidden = false;
+      composerWrap.hidden = true;
+      document.querySelectorAll("[data-workspace-page]").forEach(button => button.classList.toggle("active", button.dataset.workspacePage === page));
+      closeAccountMenu();
+      sidebar.classList.remove("open");
+      app.classList.remove("mobile-sidebar-open");
+      if (page === "profile" && authenticatedUser) {
+        const name = workspacePage.querySelector("#profile-display-name");
+        const email = workspacePage.querySelector("#profile-email");
+        if (name) name.textContent = authenticatedUser.name || "Name not provided";
+        if (email) email.textContent = authenticatedUser.email || "No email available";
+      }
+    }
+
+    function beginSignIn() {
+      if (homepageHasSession) { window.location.assign("/"); return; }
+      showLogin("login");
+    }
+
+    landingSignIn.addEventListener("click", beginSignIn);
+    landingGetStarted.addEventListener("click", beginSignIn);
+    landingOpenChat.addEventListener("click", beginSignIn);
+    authBackButton.addEventListener("click", showLanding);
+    for (const tab of authTabs) {
+      tab.addEventListener("click", () => { setAuthMode(tab.dataset.authMode); authError.textContent = authConfigError; });
+    }
+    document.querySelectorAll("[data-workspace-page]").forEach(button => {
+      button.addEventListener("click", () => openWorkspacePage(button.dataset.workspacePage));
+    });
+    document.querySelectorAll("[data-account-page]").forEach(button => {
+      button.addEventListener("click", () => openWorkspacePage(button.dataset.accountPage));
+    });
+    accountMenuToggle.addEventListener("click", () => {
+      const open = accountMenu.hidden;
+      accountMenu.hidden = !open;
+      accountMenuToggle.setAttribute("aria-expanded", String(open));
+    });
+    sidebarBackdrop.addEventListener("click", () => {
+      sidebar.classList.remove("open");
+      app.classList.remove("mobile-sidebar-open");
+      sidebarToggle.setAttribute("aria-expanded", "false");
     });
 
     renderHistory();
