@@ -164,6 +164,7 @@ async function main() {
             createdAt: timestamp,
             updatedAt: timestamp,
             pinned: true,
+            projectId: null,
             messages: [
                 { role: "user", text: "Save this conversation.", createdAt: timestamp },
                 { role: "ari", text: "This conversation is saved per account.", createdAt: timestamp + 1 }
@@ -182,6 +183,57 @@ async function main() {
         assert.equal((await savedWorkspace.json()).saved, true);
         const loadedWorkspace = await fetch(baseUrl + "/api/workspace/chats");
         assert.deepEqual((await loadedWorkspace.json()).chats, sampleChats);
+
+        const initialProjects = await fetch(baseUrl + "/api/workspace/projects");
+        assert.equal(initialProjects.status, 200);
+        assert.deepEqual((await initialProjects.json()).projects, []);
+
+        const createdProjectResponse = await fetch(baseUrl + "/api/workspace/projects", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": baseUrl,
+                "X-Ari-CSRF": "test-csrf"
+            },
+            body: JSON.stringify({ name: "Ari website", description: "The Ari workspace." })
+        });
+        assert.equal(createdProjectResponse.status, 201);
+        const createdProject = (await createdProjectResponse.json()).project;
+        assert.equal(createdProject.name, "Ari website");
+
+        const projectChats = sampleChats.map(chat => ({ ...chat, projectId: createdProject.id }));
+        const savedProjectChats = await fetch(baseUrl + "/api/workspace/chats", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": baseUrl,
+                "X-Ari-CSRF": "test-csrf"
+            },
+            body: JSON.stringify({ chats: projectChats })
+        });
+        assert.equal(savedProjectChats.status, 200);
+        assert.equal((await savedProjectChats.json()).chats[0].projectId, createdProject.id);
+
+        const renamedProjectResponse = await fetch(baseUrl + "/api/workspace/projects/" + createdProject.id, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": baseUrl,
+                "X-Ari-CSRF": "test-csrf"
+            },
+            body: JSON.stringify({ name: "Ari product", description: "The updated workspace." })
+        });
+        assert.equal(renamedProjectResponse.status, 200);
+        assert.equal((await renamedProjectResponse.json()).project.name, "Ari product");
+
+        const removedProjectResponse = await fetch(baseUrl + "/api/workspace/projects/" + createdProject.id, {
+            method: "DELETE",
+            headers: { "Origin": baseUrl, "X-Ari-CSRF": "test-csrf" }
+        });
+        assert.equal(removedProjectResponse.status, 200);
+        assert.equal((await removedProjectResponse.json()).unassignedChats, 1);
+        const historyAfterProjectDelete = await fetch(baseUrl + "/api/workspace/chats");
+        assert.equal((await historyAfterProjectDelete.json()).chats[0].projectId, null);
 
         const invalidWorkspace = await fetch(baseUrl + "/api/workspace/chats", {
             method: "PUT",
