@@ -1004,22 +1004,6 @@ function createServer(options = {}) {
                     return;
                 }
                 let messages = normalizeMessages(body);
-                const research = await prepareSearchMessages(body.message, messages, { searchRouter, webpageReader });
-                if (research.searched) {
-                    messages = research.messages;
-                } else if (shouldSearchWeb(body.message)) {
-                    if (isExplicitWebSearchRequest(body.message)) {
-                        sendJson(response, 200, {
-                            reply: "I couldn't reach a working web search provider just now, so I haven't verified this online. Please try again shortly.",
-                            mode: "Web search unavailable"
-                        });
-                        return;
-                    }
-                    messages = [...messages.slice(-7), {
-                        role: "user",
-                        content: "Live web search was unavailable for this request. Do not claim to have searched or verified current information. Answer only with general knowledge and clearly state that current details could not be checked."
-                    }];
-                }
                 let result;
                 let image = null;
                 let generationOptions = null;
@@ -1044,6 +1028,22 @@ function createServer(options = {}) {
                 if (selfKnowledgeReply) {
                     sendJson(response, 200, { reply: selfKnowledgeReply, mode: "Ari information" });
                     return;
+                }
+                const research = await prepareSearchMessages(body.message, messages, { searchRouter, webpageReader });
+                if (research.searched) {
+                    messages = research.messages;
+                } else if (shouldSearchWeb(body.message)) {
+                    if (isExplicitWebSearchRequest(body.message)) {
+                        sendJson(response, 200, {
+                            reply: "I couldn't reach a working web search provider just now, so I haven't verified this online. Please try again shortly.",
+                            mode: "Web search unavailable"
+                        });
+                        return;
+                    }
+                    messages = [...messages.slice(-7), {
+                        role: "user",
+                        content: "Live web search was unavailable for this request. Do not claim to have searched or verified current information. Answer only with general knowledge and clearly state that current details could not be checked."
+                    }];
                 }
                 if (tier === "mini") {
                     result = await respondWithModel(body.message, messages, {
