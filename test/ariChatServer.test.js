@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { WordNetDictionary } = require("../lib/wordNet");
-const { createServer, respondToMessage, respondWithGpuModel, respondWithModel, HOST } = require("../dev/ari-chat-server");
+const { createServer, respondToMessage, respondWithGpuModel, respondWithModel, shouldSearchWeb, isExplicitWebSearchRequest, prepareSearchMessages, HOST } = require("../dev/ari-chat-server");
 const { AriGpuClient } = require("../dev/ariGpuClient");
 const { createAriWorkspaceStore } = require("../dev/ariWorkspaceStore");
 
@@ -78,6 +78,98 @@ async function main() {
         }
     }), error => error.code === "GPU_MEDIA_UNAVAILABLE");
     assert.equal(mediaWasSentToBackup, false, "the text-only backup must never receive a media request.");
+
+    assert.equal(shouldSearchWeb("What's the latest Kaggle CPU notebook runtime?"), true);
+    assert.equal(shouldSearchWeb("What is a CPU?"), false);
+    assert.equal(isExplicitWebSearchRequest("Search the web for the current Kaggle session limit."), true);
+    const searchMessages = [{ role: "user", content: "Search the web for current Kaggle CPU limits." }];
+    let searchQuery = "";
+    let pageReadCount = 0;
+    const preparedResearch = await prepareSearchMessages(searchMessages[0].content, searchMessages, {
+        searchRouter: {
+            config: { enabled: true },
+            async web_search(query, options) {
+                searchQuery = query;
+                assert.equal(options.limit, 4);
+                return {
+                    providers_used: ["serper"],
+                    results: [{
+                        title: "Official notebook documentation",
+                        url: "https://docs.example.test/notebooks",
+                        snippet: "Notebook sessions have runtime limits."
+                    }]
+                };
+            }
+        },
+        async webpageReader(url) {
+            pageReadCount++;
+            assert.equal(url, "https://docs.example.test/notebooks");
+            return {
+                title: "Official notebook documentation",
+                url,
+                source_url: url,
+                text: "The page explains CPU notebook session limits and interactive idling.",
+                images: [{ alt: "Notebook settings", url: "https://images.example.test/notebook.png" }]
+            };
+        }
+    });
+    assert.equal(searchQuery, searchMessages[0].content);
+    assert.equal(pageReadCount, 1);
+    assert.equal(preparedResearch.searched, true);
+    assert.equal(preparedResearch.providers[0], "serper");
+    assert.equal(preparedResearch.messages.length, 2);
+    assert.match(preparedResearch.messages[1].content, /UNTRUSTED WEB RESULTS/);
+    assert.match(preparedResearch.messages[1].content, /https:\/\/docs\.example\.test\/notebooks/);
+    assert.match(preparedResearch.messages[1].content, /https:\/\/images\.example\.test\/notebook\.png/);
+    assert.ok(preparedResearch.messages[1].content.length <= 2000);
+    const disabledResearch = await prepareSearchMessages(searchMessages[0].content, searchMessages, {
+        searchRouter: { config: { enabled: false } }
+    });
+    assert.equal(disabledResearch.searched, false);
+    assert.equal(disabledResearch.error, "disabled");
+
+    const searchApp = createTestServer({
+        searchRouter: {
+            config: { enabled: true },
+            async web_search(query) {
+                assert.match(query, /search the web/i);
+                return {
+                    providers_used: ["serper"],
+                    results: [{
+                        title: "Search result",
+                        url: "https://docs.example.test/search-result",
+                        snippet: "Verified information."
+                    }]
+                };
+            }
+        },
+        async webpageReader(url) {
+            return { title: "Search result", url, source_url: url, text: "A verified source excerpt.", images: [] };
+        },
+        modelClient: {
+            async generate(messages) {
+                assert.match(messages[messages.length - 1].content, /UNTRUSTED WEB RESULTS/);
+                assert.match(messages[messages.length - 1].content, /https:\/\/docs\.example\.test\/search-result/);
+                return { reply: "Here is what I found. [Source](https://docs.example.test/search-result)" };
+            }
+        }
+    });
+    await new Promise((resolve, reject) => { searchApp.once("error", reject); searchApp.listen(0, HOST, resolve); });
+    try {
+        const response = await fetch("http://" + HOST + ":" + searchApp.address().port + "/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                message: "Search the web for current notebook information.",
+                tier: "mini",
+                messages: [{ role: "user", content: "Search the web for current notebook information." }]
+            })
+        });
+        assert.equal(response.status, 200);
+        assert.match((await response.json()).reply, /Here is what I found/);
+    } finally {
+        await new Promise(resolve => searchApp.close(resolve));
+    }
 
     const dictionaryDir = fs.mkdtempSync(path.join(os.tmpdir(), "ari-server-wordnet-"));
     try {
