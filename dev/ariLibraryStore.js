@@ -22,7 +22,8 @@ function positiveLimit(value, fallback, maximum) {
 function safeFileName(value) {
     let name = typeof value === "string" ? value : "";
     try { name = decodeURIComponent(name); } catch { /* Keep the original header value. */ }
-    name = name.replace(/[\\/]/g, "_").replace(/[\u0000-\u001f\u007f]/g, "")
+    name = name.replace(/\\/g, "/").split("/").pop() || "";
+    name = name.replace(/[\u0000-\u001f\u007f]/g, "")
         .replace(/\s+/g, " ").replace(/^\.+/, "").trim().slice(0, 140);
     return name || "uploaded-file";
 }
