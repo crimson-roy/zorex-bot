@@ -10,6 +10,7 @@ const { respondToLocalLanguage } = require("../lib/localLanguage");
 const { createAriGpuClient, AriGpuClientError, REMOTE_TIERS } = require("./ariGpuClient");
 const { createAriDeveloperAccess, createAriDeveloperUsage } = require("./ariDeveloperAccess");
 const { respondAriSelfKnowledge } = require("./ariSelfKnowledge");
+const { createAriWorkspaceStore } = require("./ariWorkspaceStore");
 
 const wordNet = new WordNetDictionary();
 
@@ -19,6 +20,7 @@ const MODEL_HOST = "127.0.0.1";
 const MODEL_PORT = 4174;
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_WORKSPACE_BODY_BYTES = 8 * 1024 * 1024;
 const ALLOWED_IMAGE_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 const HTML_PATH = path.join(__dirname, "ari-chat.html");
 const FAVICON_PATH = path.join(__dirname, "ari-favicon.png");
@@ -376,12 +378,21 @@ function startInferenceBridge(options = {}) {
 }
 
 function createServer(options = {}) {
-    const auth = options.authService || createAriDeveloperAccess({ env: options.env || process.env, port: options.port || DEFAULT_PORT });
     const env = options.env || process.env;
+    const dataDir = path.resolve(env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data"));
+    const auth = options.authService || createAriDeveloperAccess({
+        env,
+        port: options.port || DEFAULT_PORT,
+        sessionFile: path.join(dataDir, "ariSessions.json")
+    });
     const limits = developerUsageSettings(env);
     const usage = options.usageStore || createAriDeveloperUsage({
-        dataDir: env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data"),
+        dataDir,
         ...limits,
+        ...(options.now ? { now: options.now } : {})
+    });
+    const workspace = options.workspaceStore || createAriWorkspaceStore({
+        dataDir,
         ...(options.now ? { now: options.now } : {})
     });
     const server = http.createServer(async (request, response) => {
@@ -404,7 +415,7 @@ function createServer(options = {}) {
             return;
         }
 
-        if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
+        if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html" || url.pathname === "/homepage")) {
             try {
                 const html = fs.readFileSync(HTML_PATH);
                 response.writeHead(200, {
@@ -460,6 +471,43 @@ function createServer(options = {}) {
             } catch (error) {
                 sendAuthJson(response, Number.isInteger(error.statusCode) ? error.statusCode : 403, {
                     error: error.message || "This request could not be verified."
+                });
+            }
+            return;
+        }
+
+        if (request.method === "GET" && url.pathname === "/api/workspace/chats") {
+            const session = auth.requireSession(request);
+            if (!session) {
+                sendAuthJson(response, 401, { error: "Sign in to view your saved conversations." });
+                return;
+            }
+            try {
+                const chats = await workspace.listChats(session.sub);
+                sendJson(response, 200, { chats });
+            } catch (error) {
+                sendJson(response, 500, { error: "Ari could not load your saved conversations." });
+            }
+            return;
+        }
+
+        if (request.method === "PUT" && url.pathname === "/api/workspace/chats") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to save conversations." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const body = await readJsonBody(request, MAX_WORKSPACE_BODY_BYTES);
+                const chats = await workspace.replaceChats(session.sub, body?.chats);
+                sendJson(response, 200, { chats });
+            } catch (error) {
+                const status = Number.isInteger(error.statusCode) ? error.statusCode : 500;
+                sendJson(response, status, {
+                    error: status === 400 || status === 413
+                        ? error.message
+                        : "Ari could not save your conversations right now."
                 });
             }
             return;

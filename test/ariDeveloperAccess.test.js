@@ -1,6 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -40,6 +41,7 @@ function setupAccess(overrides = {}, now = () => 1_900_000_000_000) {
             return claims;
         }),
         isProduction: overrides.isProduction,
+        sessionFile: overrides.sessionFile,
     });
     return { access, env };
 }
@@ -208,6 +210,50 @@ async function main() {
     current += 120_001;
     assert.equal(expiryAccess.requireSession(request({ cookie: `${SESSION_COOKIE}=${expiryCookie}` })), null);
     assert.equal(expiryLogin.authenticated, true);
+
+    const sessionDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ari-persistent-sessions-"));
+    try {
+        const sessionFile = path.join(sessionDataDir, "ariSessions.json");
+        const firstInstance = setupAccess({ sessionFile }, () => current).access;
+        const firstCsrfResponse = responseStub();
+        const firstCsrf = firstInstance.issueCsrf(request(), firstCsrfResponse).csrfToken;
+        const firstLoginResponse = responseStub();
+        const firstLogin = await firstInstance.authenticateCredential(
+            request({ cookie: `${CSRF_COOKIE}=${firstCsrf}`, csrf: firstCsrf }),
+            firstLoginResponse,
+            { credential: "valid" }
+        );
+        const firstSessionCookie = cookieValue(firstLoginResponse, SESSION_COOKIE);
+        assert.ok(firstSessionCookie);
+        const sessionDisk = JSON.parse(fs.readFileSync(sessionFile, "utf8"));
+        const expectedSessionHash = crypto.createHash("sha256").update(firstSessionCookie).digest("hex");
+        assert.equal(sessionDisk.version, 1);
+        assert.equal(sessionDisk.sessions.length, 1);
+        assert.equal(sessionDisk.sessions[0][0], expectedSessionHash);
+        assert.equal(JSON.stringify(sessionDisk).includes(firstSessionCookie), false,
+            "the raw bearer cookie must never be written to the session file");
+
+        const restartedInstance = setupAccess({ sessionFile }, () => current).access;
+        const restoredSession = restartedInstance.requireSession(
+            request({ cookie: `${SESSION_COOKIE}=${firstSessionCookie}` })
+        );
+        assert.equal(restoredSession.sub, BASE_CLAIMS.sub,
+            "a valid login session must survive construction of a new server instance");
+
+        restartedInstance.logout(
+            request({
+                cookie: `${SESSION_COOKIE}=${firstSessionCookie}; ${CSRF_COOKIE}=${firstLogin.csrfToken}`,
+                csrf: firstLogin.csrfToken
+            }),
+            responseStub()
+        );
+        const afterLogoutRestart = setupAccess({ sessionFile }, () => current).access;
+        assert.equal(afterLogoutRestart.requireSession(
+            request({ cookie: `${SESSION_COOKIE}=${firstSessionCookie}` })
+        ), null, "logout revocation must survive a subsequent restart");
+    } finally {
+        fs.rmSync(sessionDataDir, { recursive: true, force: true });
+    }
 
     const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ari-developer-usage-"));
     try {

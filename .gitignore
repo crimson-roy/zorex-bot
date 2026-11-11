@@ -40,6 +40,11 @@ npm-debug.log*
 # shop.json
 # data/
 
+# Ari private runtime session store (hashes only; never commit live session data)
+data/ariWorkspace/
+data/ariSessions.json
+data/ariSessions.json.tmp-*
+
 # Ari developer-only session usage data (never commit private account usage)
 data/ariDeveloperUsage.json
 data/ariDeveloperUsage.json.tmp-*
