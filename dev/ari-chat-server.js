@@ -215,11 +215,23 @@ async function prepareSearchMessages(message, messages, options = {}) {
             catch { return null; }
         }));
         const researchMessage = buildSearchResearchMessage(message, searchResult, pageResults);
+        const images = [];
+        const imageUrls = new Set();
+        for (const page of pageResults.filter(Boolean)) {
+            for (const image of page.images || []) {
+                if (typeof image.url !== "string" || !/^https:\/\//i.test(image.url) || imageUrls.has(image.url)) continue;
+                imageUrls.add(image.url);
+                images.push({ url: image.url, alt: String(image.alt || page.title || "Image from webpage").slice(0, 160) });
+                if (images.length >= 2) break;
+            }
+            if (images.length >= 2) break;
+        }
         return {
             messages: [...messages.slice(-7), { role: "user", content: researchMessage }],
             searched: true,
             error: null,
-            providers: searchResult.providers_used || []
+            providers: searchResult.providers_used || [],
+            images
         };
     } catch (error) {
         return { messages, searched: false, error: error.code || "failed" };
@@ -325,6 +337,20 @@ async function respondWithGpuModel(message, messages, options = {}) {
             statusCode: 503, code: "GPU_AND_FALLBACK_UNAVAILABLE", retryable: true
         });
     }
+}
+
+function appendWebpageImages(reply, images = []) {
+    let output = String(reply || "").trim();
+    const existing = new Set([...output.matchAll(/!\\[[^\\]]*\\]\\((https:\\/\\/[^)\\s]+)\\)/g)].map(match => match[1]));
+    const additions = [];
+    for (const image of images.slice(0, 2)) {
+        if (!image || typeof image.url !== "string" || !/^https:\/\//i.test(image.url) || existing.has(image.url)) continue;
+        const alt = String(image.alt || "Image from webpage").replace(/[\\r\\n\\[\\]]/g, " ").slice(0, 140).trim() || "Image from webpage";
+        additions.push("![" + alt + "](" + image.url + ")");
+        existing.add(image.url);
+    }
+    if (additions.length) output = (output ? output + "\\n\\n" : "") + additions.join("\\n");
+    return output;
 }
 
 async function getAriTextFallback(messages, options = {}) {
@@ -1095,6 +1121,9 @@ function createServer(options = {}) {
                         textFallbackClient: options.textFallbackClient,
                         textFallbackEnabled: String(env.ARI_TEXT_FALLBACK_ENABLED || "true").trim().toLowerCase() !== "false"
                     });
+                }
+                if (research.searched && research.images?.length && result && typeof result.reply === "string") {
+                    result.reply = appendWebpageImages(result.reply, research.images);
                 }
                 sendJson(response, 200, result);
             } catch (error) {
