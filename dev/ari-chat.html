@@ -157,6 +157,11 @@
     .message-code-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 11px; border-bottom:1px solid #354139; color:var(--muted); background:#202722; font:600 10px/1.3 var(--sans); letter-spacing:.06em; text-transform:uppercase; }
     .message-code-copy { min-height:27px; padding:5px 9px; border:1px solid #46554b; border-radius:7px; color:var(--text); background:#29332d; font:500 10px var(--sans); cursor:pointer; }
     .message-code-copy:hover { border-color:var(--accent); color:var(--accent-strong); }
+    .message-image { max-width:min(100%,760px); margin:15px 0 18px; }
+    .message-image img { display:block; width:auto; max-width:100%; max-height:520px; border:1px solid #46554b; border-radius:13px; object-fit:contain; background:#151b17; }
+    .message-image figcaption { margin-top:6px; color:var(--muted); font:11px/1.4 var(--sans); }
+    .message-image a { color:var(--accent); text-decoration:none; }
+    .message-image a:hover { text-decoration:underline; }
     .message-code pre { max-width:100%; margin:0; padding:13px 14px; overflow:auto; color:#e4eee7; font:12px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; tab-size:2; }
     .message-code code { color:inherit; white-space:pre; font:inherit; }
     .message small { display: block; margin-top: 7px; color: var(--muted); font: 11px/1.4 var(--sans); }
@@ -1078,7 +1083,7 @@
       }
     }
 
-    function appendMessageText(container, value) {
+    function appendPlainMessageText(container, value) {
       const paragraphs = String(value || "").split(/\n{2,}/);
       for (const paragraphText of paragraphs) {
         if (!paragraphText.trim()) continue;
@@ -1087,6 +1092,46 @@
         paragraph.textContent = paragraphText.trim();
         container.appendChild(paragraph);
       }
+    }
+
+    function appendMessageText(container, value) {
+      const source = String(value || "");
+      const imagePattern = /!\\[([^\\]]*)\\]\\((https:\\/\\/[^)\\s]+)\\)/g;
+      let cursor = 0;
+      let match;
+      while ((match = imagePattern.exec(source)) !== null) {
+        appendPlainMessageText(container, source.slice(cursor, match.index));
+        let imageUrl = null;
+        try {
+          const parsed = new URL(match[2]);
+          if (parsed.protocol === "https:" && !parsed.username && !parsed.password) imageUrl = parsed.toString();
+        } catch { /* Invalid image URLs remain ordinary text. */ }
+        if (!imageUrl) {
+          appendPlainMessageText(container, match[0]);
+          cursor = imagePattern.lastIndex;
+          continue;
+        }
+        const figure = document.createElement("figure");
+        figure.className = "message-image";
+        const image = document.createElement("img");
+        image.src = imageUrl;
+        image.alt = String(match[1] || "Image from website").slice(0, 240);
+        image.loading = "lazy";
+        image.decoding = "async";
+        image.referrerPolicy = "no-referrer";
+        image.addEventListener("error", () => figure.remove(), { once: true });
+        const caption = document.createElement("figcaption");
+        const sourceLink = document.createElement("a");
+        sourceLink.href = imageUrl;
+        sourceLink.target = "_blank";
+        sourceLink.rel = "noopener noreferrer";
+        sourceLink.textContent = "Open image source";
+        caption.appendChild(sourceLink);
+        figure.append(image, caption);
+        container.appendChild(figure);
+        cursor = imagePattern.lastIndex;
+      }
+      appendPlainMessageText(container, source.slice(cursor));
     }
 
     function renderAriContent(container, value) {
