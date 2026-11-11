@@ -862,7 +862,7 @@
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
           authError.textContent = response.status === 403
-            ? "This Google account cannot access Ari in the current setup. Contact the site administrator if you think this is a mistake."
+            ? "This Google account isn't on Ari's approved sign-in list. Try the Google account that was approved, or ask the site administrator to add this account."
             : response.status === 503
               ? "Google sign-in is temporarily unavailable. Please try again later."
               : "Google couldn't verify your sign-in. Please try again.";
