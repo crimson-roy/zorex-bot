@@ -301,6 +301,9 @@ function createAriDeveloperAccess(options = {}) {
 
     function invalidateAll() {
         sessions.clear();
+        otpAuth.challenges.clear();
+        otpAuth.sentAt.clear();
+        otpAuth.sendHistory.clear();
     }
 
     return {
