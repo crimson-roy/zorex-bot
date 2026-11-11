@@ -5,7 +5,13 @@ on:
     paths:
       - "dev/ari-chat.html"
       - "dev/ari-chat-server.js"
+      - "dev/ariDeveloperAccess.js"
+      - "dev/ariWorkspaceStore.js"
       - "test/ariChatServer.test.js"
+      - "test/ariDeveloperAccess.test.js"
+      - "test/ariWorkspaceStore.test.js"
+      - "package.json"
+      - ".gitignore"
       - ".github/workflows/ari-workspace-ui-tests.yml"
   push:
     branches:
@@ -13,7 +19,13 @@ on:
     paths:
       - "dev/ari-chat.html"
       - "dev/ari-chat-server.js"
+      - "dev/ariDeveloperAccess.js"
+      - "dev/ariWorkspaceStore.js"
       - "test/ariChatServer.test.js"
+      - "test/ariDeveloperAccess.test.js"
+      - "test/ariWorkspaceStore.test.js"
+      - "package.json"
+      - ".gitignore"
       - ".github/workflows/ari-workspace-ui-tests.yml"
 
 jobs:
