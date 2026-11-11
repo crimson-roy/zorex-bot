@@ -1107,7 +1107,7 @@
 
     function appendInlineMessageText(container, value) {
       const source = String(value || "");
-      const linkPattern = /\\[([^\\]]{1,160})\\]\\((https:\\/\\/[^)\\s]+)\\)/g;
+      const linkPattern = /\[([^\]]{1,160})\]\((https:\/\/[^)\s]+)\)/g;
       let cursor = 0;
       let match;
       while ((match = linkPattern.exec(source)) !== null) {
