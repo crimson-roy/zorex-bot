@@ -6,6 +6,9 @@ node_modules/
 .env.*
 !.env.example
 
+# Search-router usage telemetry (runtime only)
+data/searchRouterUsage.json*
+
 # Runtime data written by the bot
 users.json
 owners.json
