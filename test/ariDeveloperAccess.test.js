@@ -27,6 +27,7 @@ const BASE_CLAIMS = {
 function setupAccess(overrides = {}, now = () => 1_900_000_000_000) {
     const env = {
         GOOGLE_CLIENT_ID: CLIENT_ID,
+        ARI_REGISTRATION_MODE: "restricted",
         ARI_ALLOWED_EMAILS: "dev@example.com, Other@Example.com",
         ARI_SESSION_TTL_SECONDS: "120",
         ...overrides.env,
