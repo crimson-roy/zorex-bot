@@ -389,6 +389,24 @@
     .project-chat-row span:last-child { flex:none; color:var(--muted); font-size:11px; }
     @media (max-width:600px) { .project-grid { grid-template-columns:1fr; } }
 
+  
+    .memory-review-note { margin:14px 0 18px; padding:13px 15px; border:1px solid var(--line); border-radius:12px; color:var(--muted); background:var(--panel); font-size:12px; line-height:1.6; }
+    .memory-create-form { display:grid; gap:10px; margin:16px 0 22px; padding:16px; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
+    .memory-create-form textarea { width:100%; min-height:76px; padding:11px 12px; border:1px solid var(--line); border-radius:10px; color:var(--text); background:var(--surface); font:400 13px var(--sans); resize:vertical; outline:none; }
+    .memory-create-form textarea:focus { border-color:var(--accent); }
+    .memory-create-form button, .memory-action { min-height:34px; padding:7px 11px; border:1px solid var(--line); border-radius:9px; color:var(--text); background:var(--surface); font:500 11px var(--sans); cursor:pointer; }
+    .memory-create-form button { justify-self:start; border-color:var(--accent); background:var(--accent); color:var(--accent-ink,var(--bg)); }
+    .memory-group { display:grid; gap:10px; margin-top:20px; }
+    .memory-group h3 { margin:0; color:var(--text); font:600 14px var(--sans); }
+    .memory-item { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:13px 15px; border:1px solid var(--line); border-radius:13px; background:var(--panel); }
+    .memory-item-copy { min-width:0; display:grid; gap:6px; }
+    .memory-item-copy p { margin:0; color:var(--text); font-size:13px; line-height:1.55; overflow-wrap:anywhere; }
+    .memory-item-copy small { color:var(--muted); font-size:10px; }
+    .memory-item-actions { display:flex; flex:none; flex-wrap:wrap; gap:7px; }
+    .memory-action.primary { border-color:var(--accent); background:var(--accent); color:var(--accent-ink,var(--bg)); }
+    .memory-action.danger { color:var(--danger); }
+    @media (max-width:600px) { .memory-item { flex-direction:column; } .memory-item-actions { width:100%; } }
+
   </style>
 </head>
 <body>
@@ -690,6 +708,7 @@
     let activeProjectId = null;
     let projects = [];
     let projectLoadToken = 0;
+    let memoryLoadToken = 0;
     let selectedLibraryFile = null;
     let attachmentUploadError = "";
     let attachmentUploadPromise = Promise.resolve(null);
@@ -774,6 +793,7 @@
     function clearAccountMemory() {
       projectLoadToken++;
       libraryLoadToken++;
+      memoryLoadToken++;
       chats = [];
       projects = [];
       activeProjectId = null;
@@ -1313,6 +1333,7 @@
       workspaceContent.appendChild(panel);
       if (view === "library") void loadLibraryView();
       if (view === "projects") void loadProjectsView();
+      if (view === "memory") void loadMemoryView();
     }
 
     libraryNav.addEventListener("click", () => showWorkspaceView("library"));
@@ -1329,6 +1350,183 @@
     });
 
 
+
+
+    async function loadMemoryView() {
+      const token = ++memoryLoadToken;
+      const subject = authenticatedUser?.sub;
+      if (!subject) return;
+      try {
+        const response = await fetch("/api/workspace/memory", { credentials: "same-origin", cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (token !== memoryLoadToken || activeWorkspaceView !== "memory" ||
+            !authenticatedUser || authenticatedUser.sub !== subject) return;
+        if (response.status === 401) {
+          clearAccountMemory();
+          showLanding();
+          return;
+        }
+        if (!response.ok || !Array.isArray(data.memories)) {
+          throw new Error(data.error || "Ari could not load your memories.");
+        }
+
+        const existingPanel = workspaceContent.querySelector(".workspace-panel");
+        workspaceContent.replaceChildren();
+        if (existingPanel) workspaceContent.appendChild(existingPanel);
+
+        const note = document.createElement("div");
+        note.className = "memory-review-note";
+        note.textContent = "Review mode is active. Notes you add here are saved to your account. Automatic suggestions from Ari's model are not connected yet. Do not save passwords, access keys or highly private information.";
+        workspaceContent.appendChild(note);
+
+        const form = document.createElement("form");
+        form.className = "memory-create-form";
+        const field = document.createElement("textarea");
+        field.name = "memory";
+        field.maxLength = 500;
+        field.required = true;
+        field.placeholder = "Add a useful, non-sensitive note for future conversations…";
+        field.setAttribute("aria-label", "New memory");
+        const save = document.createElement("button");
+        save.type = "submit";
+        save.textContent = "Save memory";
+        form.append(field, save);
+        form.addEventListener("submit", async event => {
+          event.preventDefault();
+          save.disabled = true;
+          try {
+            const result = await fetch("/api/workspace/memory", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: csrfHeaders({ "Content-Type": "application/json" }),
+              body: JSON.stringify({ text: field.value })
+            });
+            const payload = await result.json().catch(() => ({}));
+            if (!result.ok) throw new Error(payload.error || "Ari could not save this memory.");
+            await loadMemoryView();
+          } catch (error) {
+            showWorkspaceNotice(error.message);
+          } finally {
+            save.disabled = false;
+          }
+        });
+        workspaceContent.appendChild(form);
+
+        const makeGroup = (headingText, items, pending) => {
+          const group = document.createElement("section");
+          group.className = "memory-group";
+          const heading = document.createElement("h3");
+          heading.textContent = headingText;
+          group.appendChild(heading);
+          if (!items.length) {
+            const empty = document.createElement("div");
+            empty.className = "library-empty";
+            empty.textContent = pending ? "No suggestions are waiting for review." : "No saved memories yet.";
+            group.appendChild(empty);
+            workspaceContent.appendChild(group);
+            return;
+          }
+          for (const memory of items) {
+            const row = document.createElement("article");
+            row.className = "memory-item";
+            const copy = document.createElement("div");
+            copy.className = "memory-item-copy";
+            const text = document.createElement("p");
+            text.textContent = memory.text;
+            const meta = document.createElement("small");
+            meta.textContent = (memory.source === "ari" ? "Suggested by Ari" : "Added by you") +
+              " · " + new Date(memory.updatedAt || memory.createdAt || Date.now()).toLocaleDateString();
+            copy.append(text, meta);
+            const actions = document.createElement("div");
+            actions.className = "memory-item-actions";
+            const edit = document.createElement("button");
+            edit.type = "button";
+            edit.className = "memory-action";
+            edit.textContent = "Edit";
+            edit.addEventListener("click", async () => {
+              const nextText = window.prompt("Edit memory", memory.text);
+              if (nextText === null || !nextText.trim() || nextText.trim() === memory.text) return;
+              edit.disabled = true;
+              try {
+                const result = await fetch("/api/workspace/memory/" + encodeURIComponent(memory.id), {
+                  method: "PATCH",
+                  credentials: "same-origin",
+                  headers: csrfHeaders({ "Content-Type": "application/json" }),
+                  body: JSON.stringify({ text: nextText.trim() })
+                });
+                const payload = await result.json().catch(() => ({}));
+                if (!result.ok) throw new Error(payload.error || "Ari could not update this memory.");
+                await loadMemoryView();
+              } catch (error) {
+                showWorkspaceNotice(error.message);
+                edit.disabled = false;
+              }
+            });
+            actions.appendChild(edit);
+
+            if (pending) {
+              const approve = document.createElement("button");
+              approve.type = "button";
+              approve.className = "memory-action primary";
+              approve.textContent = "Keep memory";
+              approve.addEventListener("click", async () => {
+                approve.disabled = true;
+                try {
+                  const result = await fetch("/api/workspace/memory/" + encodeURIComponent(memory.id), {
+                    method: "PATCH",
+                    credentials: "same-origin",
+                    headers: csrfHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ status: "active" })
+                  });
+                  const payload = await result.json().catch(() => ({}));
+                  if (!result.ok) throw new Error(payload.error || "Ari could not approve this memory.");
+                  await loadMemoryView();
+                } catch (error) {
+                  showWorkspaceNotice(error.message);
+                  approve.disabled = false;
+                }
+              });
+              actions.appendChild(approve);
+            }
+
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "memory-action danger";
+            remove.textContent = pending ? "Dismiss" : "Delete";
+            remove.addEventListener("click", async () => {
+              if (!window.confirm(pending ? "Dismiss this memory suggestion?" : "Delete this saved memory?")) return;
+              remove.disabled = true;
+              try {
+                const result = await fetch("/api/workspace/memory/" + encodeURIComponent(memory.id), {
+                  method: "DELETE",
+                  credentials: "same-origin",
+                  headers: csrfHeaders()
+                });
+                const payload = await result.json().catch(() => ({}));
+                if (!result.ok) throw new Error(payload.error || "Ari could not delete this memory.");
+                await loadMemoryView();
+              } catch (error) {
+                showWorkspaceNotice(error.message);
+                remove.disabled = false;
+              }
+            });
+            actions.appendChild(remove);
+            row.append(copy, actions);
+            group.appendChild(row);
+          }
+          workspaceContent.appendChild(group);
+        };
+
+        const pending = data.memories.filter(memory => memory.status === "pending");
+        const active = data.memories.filter(memory => memory.status !== "pending");
+        makeGroup("Needs your review", pending, true);
+        makeGroup("Saved memories", active, false);
+      } catch (error) {
+        if (token !== memoryLoadToken || activeWorkspaceView !== "memory" ||
+            !authenticatedUser || authenticatedUser.sub !== subject) return;
+        showWorkspaceNotice(error.message || "Ari could not load your memories.");
+      }
+    }
 
     async function loadProjectsView() {
       const token = ++projectLoadToken;
