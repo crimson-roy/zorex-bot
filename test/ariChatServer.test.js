@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { WordNetDictionary } = require("../lib/wordNet");
-const { createServer, respondToMessage, respondWithGpuModel, respondWithModel, shouldSearchWeb, isExplicitWebSearchRequest, buildSearchQuery, prepareSearchMessages, HOST } = require("../dev/ari-chat-server");
+const { createServer, respondToMessage, respondWithGpuModel, respondWithModel, shouldSearchWeb, isExplicitWebSearchRequest, isRestrictedSearchIntent, buildSearchQuery, prepareSearchMessages, HOST } = require("../dev/ari-chat-server");
 const { AriGpuClient } = require("../dev/ariGpuClient");
 const { createAriWorkspaceStore } = require("../dev/ariWorkspaceStore");
 
@@ -84,6 +84,8 @@ async function main() {
     assert.equal(shouldSearchWeb("Can you search the web?"), false);
     assert.equal(buildSearchQuery("Search the web for current Kaggle CPU limits."), "current Kaggle CPU limits.");
     assert.equal(isExplicitWebSearchRequest("Search the web for the current Kaggle session limit."), true);
+    assert.equal(isRestrictedSearchIntent("Where can I find a supplier for a dangerous product?"), true);
+    assert.equal(isRestrictedSearchIntent("Explain safety precautions for dangerous products."), false);
     const searchMessages = [{ role: "user", content: "Search the web for current Kaggle CPU limits." }];
     let searchQuery = "";
     let pageReadCount = 0;
