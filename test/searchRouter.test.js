@@ -88,7 +88,6 @@ async function testFallbackAndStatusHandling() {
     const router = makeRouter({
         serper: provider("serper", async () => { primaryCalls++; throw Object.assign(new Error("down"), { status: 503, kind: "http" }); }),
         searxng: provider("searxng", async () => { fallbackCalls++; return { results: [result("https://example.org/ok", "searxng")] }; }),
-        serper: provider("serper", async () => ({ results: [] }))
     });
     const data = await router.web_search("q");
     assert.equal(primaryCalls, 1); assert.equal(fallbackCalls, 1);
@@ -99,7 +98,6 @@ async function testFallbackAndStatusHandling() {
         const authRouter = makeRouter({
             serper: provider("serper", async () => { throw Object.assign(new Error("auth"), { status }); }),
             searxng: provider("searxng", async () => ({ results: [result("https://example.org/auth-fallback", "searxng")] })),
-            serper: provider("serper", async () => ({ results: [] }))
         });
         const fallback = await authRouter.web_search("q");
         assert.equal(fallback.providers_used[0], "searxng");
@@ -109,7 +107,6 @@ async function testFallbackAndStatusHandling() {
         const rateRouter = makeRouter({
             serper: provider("serper", async () => { throw Object.assign(new Error("status"), { status, retryAfter: "30" }); }),
             searxng: provider("searxng", async () => ({ results: [result("https://example.org/fallback", "searxng")] })),
-            serper: provider("serper", async () => ({ results: [] }))
         });
         await rateRouter.web_search("q");
         const serper = rateRouter.getStatus().providers.find(p => p.name === "serper");
@@ -118,14 +115,12 @@ async function testFallbackAndStatusHandling() {
     const timeoutRouter = makeRouter({
         serper: provider("serper", async () => { throw Object.assign(new Error("timeout"), { kind: "timeout" }); }),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/timeout", "searxng")] })),
-        serper: provider("serper", async () => ({ results: [] }))
     });
     assert.equal((await timeoutRouter.web_search("q")).providers_used[0], "searxng");
 
     const invalidRouter = makeRouter({
         serper: provider("serper", async () => { throw Object.assign(new Error("bad payload"), { kind: "invalid_response" }); }),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/valid", "searxng")] })),
-        serper: provider("serper", async () => ({ results: [] }))
     });
     assert.equal((await invalidRouter.web_search("q")).providers_used[0], "searxng");
 }
@@ -177,7 +172,6 @@ async function testCanonicalDedupAndResearchMode() {
     const research = makeRouter({
         serper: provider("serper", async () => ({ results: [result("https://example.org/shared?utm_medium=a", "serper", { score: 0.9 }), result("https://example.org/one", "serper")] })),
         searxng: provider("searxng", async () => ({ results: [result("https://example.org/shared#top", "searxng"), result("https://example.org/two", "searxng")] })),
-        serper: provider("serper", async () => ({ results: [] }))
     });
     const output = await research.web_search("q", { research_mode: true });
     assert.deepEqual(new Set(output.providers_used), new Set(["serper", "searxng"]));
