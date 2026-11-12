@@ -313,7 +313,7 @@ function extractChatSearchQuery(message) {
         .replace(/\b(?:my )?(?:other )?(?:old |previous |past |earlier )?(?:chats?|conversations?|messages?)\b/ig, " ")
         .replace(/\b(?:what did we|what was|where did i|which one did i|remember when we|we discussed|we talked about|i told you|i mentioned|i asked about)\b/ig, " ")
         .replace(/\b(?:in|from|during) (?:our )?(?:last|previous|earlier) (?:chat|conversation)\b/ig, " ")
-        .replace(/^(?:for|about|on|regarding|the|my|where|what|which)\s+/i, "")
+        .replace(/^(?:(?:for|about|on|regarding|the|my|where|what|which)\s+)+/i, "")
         .replace(/[?!.]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
 }
 
