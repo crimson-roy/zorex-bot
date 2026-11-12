@@ -15,7 +15,8 @@ function createTestServer(options = {}) {
         config: () => ({ clientId: "test-client", configured: true, error: null }),
         issueCsrf: () => ({ csrfToken: "test-csrf", clientId: "test-client", configured: true, error: null }),
         requireSession: () => ({ sub: "test-google-sub", email: "test@example.com", name: "Test" }),
-        publicUser: session => ({ sub: session.sub, email: session.email, name: session.name }),
+        publicUser: session => ({ sub: session.sub, email: session.email, name: session.name, isAdmin: options.isAdmin === true }),
+        isAdmin: () => options.isAdmin === true,
         assertOriginAndCsrf() {},
         authenticateCredential: async () => ({ authenticated: true }),
         logout: () => ({ ok: true }),
@@ -24,6 +25,15 @@ function createTestServer(options = {}) {
     const workspaceData = new Map();
     const workspaceStore = options.workspaceStore || {
         getChats(subject) { return workspaceData.get(subject) || []; },
+        searchChats() { return []; },
+        getProfile() {
+            return { preferredNickname: "", hobbies: "", occupation: "", aboutYou: "", personality: "neutral", emojiUse: "balanced" };
+        },
+        async updateProfile(_subject, profile) { return profile; },
+        getSettings() { return { accessPreviousChats: false, accessLastChat: false, activeExperienceLearning: true }; },
+        async updateSettings(_subject, settings) {
+            return { accessPreviousChats: false, accessLastChat: false, activeExperienceLearning: true, ...settings };
+        },
         async replaceChats(subject, chats) {
             workspaceData.set(subject, chats);
             return chats;
