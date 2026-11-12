@@ -81,6 +81,27 @@ function normalizeChats(input, now = Date.now()) {
             if (typeof message.imageName === "string" && message.imageName.trim()) {
                 normalized.imageName = boundedText(message.imageName, 255, "Image name");
             }
+            if (message.role === "ari") {
+                if (message.id !== undefined) {
+                    const messageId = boundedText(message.id, 100, "Message ID", true);
+                    if (!/^[A-Za-z0-9._:-]{1,100}$/.test(messageId)) {
+                        throw Object.assign(new Error("Message ID is invalid."), { statusCode: 400 });
+                    }
+                    normalized.id = messageId;
+                }
+                if (["like", "dislike"].includes(message.feedbackRating)) {
+                    normalized.feedbackRating = message.feedbackRating;
+                }
+                if (Array.isArray(message.activity)) {
+                    normalized.activity = message.activity.slice(-20).map((entry, activityIndex) =>
+                        boundedText(entry, 160, "Activity update " + (activityIndex + 1), true)
+                    );
+                }
+                if (Number.isSafeInteger(message.activityDurationMs) &&
+                    message.activityDurationMs >= 0 && message.activityDurationMs <= 30 * 60 * 1000) {
+                    normalized.activityDurationMs = message.activityDurationMs;
+                }
+            }
             if (message.role === "user" && ["mini", "medium", "max", "ultra"].includes(message.tier)) {
                 normalized.tier = message.tier;
             }
