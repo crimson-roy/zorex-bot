@@ -3025,7 +3025,7 @@
           return;
         }
         if (!["max", "ultra"].includes(tier)) {
-          showComposerMessage("Choose Max or Ultra to send audio. Those tiers use Gemma audio-capable models.");
+          showComposerMessage("Choose Max or Ultra to send audio. Audio input is not available on this tier.");
           return;
         }
         if (!["audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3", "audio/webm", "audio/ogg", "audio/mp4", "audio/aac", "audio/flac"].includes(selectedAudio.type)) {
