@@ -28,7 +28,7 @@ No provider credentials are included in the repository. Configure them as server
 - TERMII_API_KEY: API key from the Termii dashboard.
 - TERMII_SENDER_ID: sender ID configured for the Termii account.
 - TERMII_BASE_URL: account-specific base URL; defaults to https://api.ng.termii.com.
-- TERMII_CHANNEL: defaults to dnd.
+- TERMII_CHANNEL: defaults to dnd. Termii recommends its DND/transactional route for OTPs; this route must be activated on your Termii account before it can deliver to DND-restricted numbers.
 
 ### Restricted registration
 
