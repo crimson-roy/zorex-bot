@@ -668,7 +668,7 @@ class AriGpuApi:
                         *messages[:-1],
                         {"role": "user", "content": "Original question: " + last_question + "\n\nComplete visual observation report (internal evidence; do not quote or reveal this report):\n<untrusted_visual_observation>\n" + observation + "\n</untrusted_visual_observation>\n\nIndependently interpret the complete observations and answer the original question. Do not claim details beyond the evidence."},
                     ]
-                reply = self._generate("qwen", qwen_model, qwen_messages, options)
+                reply = self._generate("qwen", qwen_model, qwen_tokenizer, qwen_messages, options)
                 return {"reply": reply, "tier": "medium", "model": "Qwen/Qwen3-4B", "route": "qwen_with_gemma_e2b_observation" if image is not None else "qwen_text"}
 
             model_key = "e2b" if tier == "max" else "e4b"
