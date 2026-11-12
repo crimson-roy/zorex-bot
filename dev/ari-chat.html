@@ -268,6 +268,12 @@
     .message-action[aria-pressed="true"] { border-color: #52675a; color: var(--accent-strong); background: #2b3930; opacity: 1; }
     .message-action:disabled { opacity: .45; cursor: wait; }
     .message-feedback-status { min-width: 0; color: var(--muted-soft); font: 10px/1.3 var(--sans); }
+    .message-load-older {
+      align-self: center; min-height: 32px; margin: 0 0 4px; padding: 0 12px;
+      border: 1px solid var(--line); border-radius: 9px; color: var(--muted);
+      background: #202722; font: 11px var(--sans);
+    }
+    .message-load-older:hover { border-color: var(--line-strong); color: var(--text); background: #28322c; }
     #composer-wrap { width: min(100%, 1180px); margin: 0 auto; padding: 10px clamp(12px, 3vw, 42px) 15px; }
     #chat-form {
       position: relative; display: flex; min-width: 0; align-items: flex-end; gap: 11px; padding: 13px 14px 10px;
@@ -1720,8 +1726,9 @@
         addMessageActions(bubble, options.message || null, options.chatId || null);
       }
 
-      messagesElement.appendChild(bubble);
-      conversation.scrollTop = conversation.scrollHeight;
+      if (options.beforeNode) messagesElement.insertBefore(bubble, options.beforeNode);
+      else messagesElement.appendChild(bubble);
+      if (options.scroll !== false) conversation.scrollTop = conversation.scrollHeight;
       return bubble;
     }
 
@@ -1731,18 +1738,54 @@
       let assignedMessageIds = false;
       emptyState.hidden = started;
       if (chat) {
-        for (const message of chat.messages) {
+        const initialCount = 30;
+        let renderedStart = Math.max(0, chat.messages.length - initialCount);
+        let olderButton = null;
+        if (renderedStart > 0) {
+          olderButton = document.createElement("button");
+          olderButton.type = "button";
+          olderButton.className = "message-load-older";
+          olderButton.textContent = "Load older messages";
+          messagesElement.appendChild(olderButton);
+        }
+        const renderMessage = (message, beforeNode = null) => {
           if (message.role === "ari" && !message.id) {
             message.id = createId();
             assignedMessageIds = true;
           }
-          addMessage(message.text, message.role, message.imageName || message.audioName || message.textFileName, {
-            message,
-            chatId: chat.id,
-            activity: message.activity,
-            activityDurationMs: message.activityDurationMs
+          return addMessage(message.text, message.role,
+            message.imageName || message.audioName || message.textFileName, {
+              message,
+              chatId: chat.id,
+              activity: message.activity,
+              activityDurationMs: message.activityDurationMs,
+              beforeNode,
+              scroll: false
+            });
+        };
+        for (let index = renderedStart; index < chat.messages.length; index++) {
+          renderMessage(chat.messages[index]);
+        }
+        if (olderButton) {
+          olderButton.addEventListener("click", () => {
+            if (!olderButton.isConnected || renderedStart <= 0) return;
+            const previousHeight = conversation.scrollHeight;
+            const previousTop = conversation.scrollTop;
+            const nextStart = Math.max(0, renderedStart - initialCount);
+            const firstVisibleMessage = olderButton.nextSibling;
+            for (let index = nextStart; index < renderedStart; index++) {
+              renderMessage(chat.messages[index], firstVisibleMessage);
+            }
+            renderedStart = nextStart;
+            if (renderedStart === 0) {
+              olderButton.remove();
+            } else {
+              olderButton.textContent = "Load older messages (" + renderedStart + " remaining)";
+            }
+            conversation.scrollTop = previousTop + (conversation.scrollHeight - previousHeight);
           });
         }
+        conversation.scrollTop = conversation.scrollHeight;
       }
       if (assignedMessageIds) saveChats();
     }
