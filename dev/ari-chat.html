@@ -1228,8 +1228,12 @@
         });
         if (!response.ok) return null;
         const data = await response.json();
-        const title = String(data.reply || "").replace(/[\r\n"'`]+/g, " ").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
-        return title && title.length <= 48 ? title : title.slice(0, 45).trimEnd() + "...";
+        const title = String(data.reply || "").replace(/[\\r\\n"'\\x60]+/g, " ").replace(/[.!?]+$/g, "").replace(/\\s+/g, " ").trim();
+        const wordCount = title ? title.split(" ").length : 0;
+        const titleIsValid = title.length <= 48 && wordCount >= 2 && wordCount <= 6 &&
+          /^[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} '&’:-]*$/u.test(title) &&
+          !/^(?:here is|the title is|title:)/i.test(title);
+        return titleIsValid ? title : null;
       } catch (_) {
         return null;
       }
