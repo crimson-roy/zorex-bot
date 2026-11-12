@@ -357,7 +357,7 @@ async function main() {
             projectId: null,
             messages: [
                 { role: "user", text: "Save this conversation.", createdAt: timestamp },
-                { role: "ari", text: "This conversation is saved per account.", createdAt: timestamp + 1 }
+                { role: "ari", text: "This conversation is saved per account.", id: "response-1", createdAt: timestamp + 1 }
             ]
         }];
         const savedWorkspace = await fetch(baseUrl + "/api/workspace/chats", {
