@@ -414,7 +414,7 @@ class AriGpuApi:
                 [
                     "ffmpeg", "-hide_banner", "-loglevel", "error",
                     "-i", "pipe:0", "-map", "0:a:0", "-vn",
-                    "-ac", "1", "-ar", "16000", "-c:a", "pcm_f32le",
+                    "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le",
                     "-y", output_path
                 ],
                 input=raw,
@@ -431,7 +431,7 @@ class AriGpuApi:
                 sample_width = audio_file.getsampwidth()
                 frames = audio_file.getnframes()
             duration = frames / sample_rate if sample_rate else 0
-            if sample_rate != 16000 or channels != 1 or sample_width != 4 or frames <= 0:
+            if sample_rate != 16000 or channels != 1 or sample_width != 2 or frames <= 0:
                 raise AriGpuApiError(400, "Audio could not be converted to the required mono 16 kHz float format.")
             if duration > ARI_GPU_API_MAX_AUDIO_SECONDS:
                 raise AriGpuApiError(413, "Gemma audio clips are limited to 30 seconds.")
