@@ -1619,6 +1619,10 @@
           button.disabled = true;
           status.textContent = "";
           try {
+            if (!workspaceSyncReady && authenticatedUser) {
+              await syncChatsFromServer(authenticatedUser.sub);
+            }
+            queueChatsForServerSync();
             await chatSyncQueue.catch(() => undefined);
             const response = await fetch("/api/feedback", {
               method: "POST",
@@ -1629,8 +1633,12 @@
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.error || "Feedback could not be saved.");
             message.feedbackRating = rating;
-            updateSelected();
             status.textContent = "Feedback saved";
+            if (currentChatId === chatId && !bubble.isConnected) {
+              renderConversation(currentChat());
+            } else {
+              updateSelected();
+            }
             saveChats();
           } catch (_) {
             status.textContent = "Couldn't save feedback";
