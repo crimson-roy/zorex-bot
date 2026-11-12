@@ -10,6 +10,7 @@ const { respondToLocalLanguage } = require("../lib/localLanguage");
 const { createAriGpuClient, AriGpuClientError, REMOTE_TIERS } = require("./ariGpuClient");
 const { createAriDeveloperAccess, createAriDeveloperUsage } = require("./ariDeveloperAccess");
 const { createAriWorkspaceStore } = require("./ariWorkspaceStore");
+const { createAriAnalyticsStore } = require("./ariAnalyticsStore");
 const { createAriLibraryStore } = require("./ariLibraryStore");
 const { respondAriSelfKnowledge } = require("./ariSelfKnowledge");
 const { callAI: callZorexTextAI } = require("../lib/textAIClient");
@@ -88,6 +89,24 @@ function sendAuthJson(response, statusCode, payload, headers = {}) {
         ...headers
     });
     response.end(JSON.stringify(payload));
+}
+
+function startSseResponse(response) {
+    response.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer"
+    });
+    if (typeof response.flushHeaders === "function") response.flushHeaders();
+}
+
+function writeSseEvent(response, event, payload) {
+    if (response.destroyed || response.writableEnded) return false;
+    response.write("event: " + event + "\ndata: " + JSON.stringify(payload) + "\n\n");
+    return true;
 }
 
 function developerUsageSettings(env = process.env) {
@@ -557,6 +576,10 @@ function createServer(options = {}) {
         ...(options.now ? { now: options.now } : {})
     });
     const workspace = options.workspaceStore || createAriWorkspaceStore({
+        dataDir: env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data"),
+        ...(options.now ? { now: options.now } : {})
+    });
+    const analytics = options.analyticsStore || createAriAnalyticsStore({
         dataDir: env.ARI_DATA_DIR || env.DATA_DIR || path.join(ROOT, "data"),
         ...(options.now ? { now: options.now } : {})
     });
@@ -1033,7 +1056,64 @@ function createServer(options = {}) {
             return;
         }
 
+        if (request.method === "POST" && url.pathname === "/api/feedback") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to rate Ari's responses." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const body = await readJsonBody(request, 8 * 1024);
+                if (!body || typeof body.chatId !== "string" ||
+                    !/^[A-Za-z0-9._:-]{1,100}$/.test(body.chatId) ||
+                    typeof body.messageId !== "string" ||
+                    !/^[A-Za-z0-9._:-]{1,100}$/.test(body.messageId) ||
+                    !["like", "dislike"].includes(body.rating)) {
+                    sendAuthJson(response, 400, { error: "Ari response feedback is invalid." });
+                    return;
+                }
+                const ownedChat = workspace.getChats(session.sub).some(chat => chat.id === body.chatId);
+                if (!ownedChat) {
+                    sendAuthJson(response, 404, { error: "That conversation could not be found." });
+                    return;
+                }
+                const result = await analytics.recordFeedback(session.sub, {
+                    chatId: body.chatId,
+                    messageId: body.messageId,
+                    rating: body.rating
+                });
+                sendAuthJson(response, 200, { saved: true, ...result });
+            } catch (error) {
+                sendAuthJson(response, error.statusCode || 500, {
+                    error: error.message || "Ari could not save this feedback."
+                });
+            }
+            return;
+        }
+
         if (request.method === "POST" && url.pathname === "/api/chat") {
+            let streamRequested = false;
+            let streamStarted = false;
+            const beginStream = () => {
+                if (!streamRequested || streamStarted) return;
+                startSseResponse(response);
+                streamStarted = true;
+            };
+            const sendProgress = message => {
+                if (!streamRequested) return;
+                beginStream();
+                writeSseEvent(response, "progress", { message: String(message).slice(0, 160) });
+            };
+            const sendFinal = result => {
+                if (streamRequested) {
+                    beginStream();
+                    writeSseEvent(response, "final", result);
+                    if (!response.writableEnded) response.end();
+                } else {
+                    sendJson(response, 200, result);
+                }
+            };
             try {
                 const session = auth.requireSession(request);
                 if (!session) {
@@ -1042,6 +1122,7 @@ function createServer(options = {}) {
                 }
                 auth.assertOriginAndCsrf(request);
                 const body = await readJsonBody(request, MAX_BODY_BYTES);
+                streamRequested = body?.stream === true;
                 if (typeof body?.message !== "string" || !body.message.trim()) {
                     sendJson(response, 400, { error: "Message must be a non-empty string." });
                     return;
@@ -1084,17 +1165,20 @@ function createServer(options = {}) {
                     });
                     return;
                 }
+                sendProgress("Understanding your request");
                 const selfKnowledgeReply = shouldSearchWeb(body.message) ? null : respondAriSelfKnowledge(body.message);
                 if (selfKnowledgeReply) {
-                    sendJson(response, 200, { reply: selfKnowledgeReply, mode: "Ari information" });
+                    sendFinal({ reply: selfKnowledgeReply, mode: "Ari information" });
                     return;
                 }
+                const needsWebSearch = shouldSearchWeb(body.message);
+                sendProgress(needsWebSearch ? "Searching the web for relevant sources" : "Checking relevant context");
                 const research = await prepareSearchMessages(body.message, messages, { searchRouter, webpageReader });
                 if (research.searched) {
                     messages = research.messages;
-                } else if (shouldSearchWeb(body.message)) {
+                } else if (needsWebSearch) {
                     if (isExplicitWebSearchRequest(body.message)) {
-                        sendJson(response, 200, {
+                        sendFinal({
                             reply: "I couldn't reach a working web search provider just now, so I haven't verified this online. Please try again shortly.",
                             mode: "Web search unavailable"
                         });
@@ -1105,6 +1189,7 @@ function createServer(options = {}) {
                         content: "Live web search was unavailable for this request. Do not claim to have searched or verified current information. Answer only with general knowledge and clearly state that current details could not be checked."
                     }];
                 }
+                sendProgress("Generating a response");
                 if (tier === "mini") {
                     result = await respondWithModel(body.message, messages, {
                         dictionary: wordNet,
@@ -1126,7 +1211,8 @@ function createServer(options = {}) {
                 if (research.searched && research.images?.length && result && typeof result.reply === "string") {
                     result.reply = appendWebpageImages(result.reply, research.images);
                 }
-                sendJson(response, 200, result);
+                sendProgress("Finishing the response");
+                sendFinal(result);
             } catch (error) {
                 if (!response.headersSent && !response.destroyed) {
                     const remoteRequest = typeof error.code === "string" && error.code.startsWith("GPU_");
@@ -1136,9 +1222,20 @@ function createServer(options = {}) {
                             statusCode: error.statusCode || 500
                         });
                     }
-                    sendAuthJson(response, error.statusCode || 500, {
-                        error: remoteRequest ? friendlyGpuError(error) : error.message || "Could not process the message."
+                    const message = remoteRequest ? friendlyGpuError(error) : error.message || "Could not process the message.";
+                    if (streamStarted) {
+                        writeSseEvent(response, "error", { error: message });
+                        if (!response.writableEnded) response.end();
+                    } else {
+                        sendAuthJson(response, error.statusCode || 500, { error: message });
+                    }
+                } else if (streamStarted && !response.destroyed && !response.writableEnded) {
+                    writeSseEvent(response, "error", {
+                        error: typeof error.code === "string" && error.code.startsWith("GPU_")
+                            ? friendlyGpuError(error)
+                            : error.message || "Could not process the message."
                     });
+                    response.end();
                 }
             }
             return;
