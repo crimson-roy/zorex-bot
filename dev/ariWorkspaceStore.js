@@ -145,6 +145,72 @@ function normalizeMemoryText(value) {
     return text;
 }
 
+function defaultProfile() {
+    return {
+        preferredNickname: "",
+        hobbies: "",
+        occupation: "",
+        aboutYou: "",
+        personality: "neutral",
+        emojiUse: "balanced"
+    };
+}
+
+function normalizeProfileInput(input, existing = defaultProfile()) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+        throw Object.assign(new Error("Profile details are invalid."), { statusCode: 400 });
+    }
+    const next = { ...defaultProfile(), ...existing };
+    const fields = {
+        preferredNickname: 48,
+        hobbies: 240,
+        occupation: 120,
+        aboutYou: 1000
+    };
+    for (const [field, maximum] of Object.entries(fields)) {
+        if (input[field] !== undefined) {
+            const value = boundedText(input[field], maximum, field);
+            if (CREDENTIAL_PATTERN.test(value) || /-----BEGIN [A-Z ]*PRIVATE KEY-----/i.test(value)) {
+                throw Object.assign(new Error("Profile details cannot contain passwords, tokens or private keys."), { statusCode: 400 });
+            }
+            next[field] = value;
+        }
+    }
+    if (input.personality !== undefined) {
+        if (!["overly_cheerful", "cheerful", "neutral", "sarcastic", "professional"].includes(input.personality)) {
+            throw Object.assign(new Error("Choose a supported Ari personality."), { statusCode: 400 });
+        }
+        next.personality = input.personality;
+    }
+    if (input.emojiUse !== undefined) {
+        if (!["none", "balanced", "more"].includes(input.emojiUse)) {
+            throw Object.assign(new Error("Choose a supported emoji preference."), { statusCode: 400 });
+        }
+        next.emojiUse = input.emojiUse;
+    }
+    return next;
+}
+
+function normalizeSettingsInput(input, existing = {}) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+        throw Object.assign(new Error("Ari settings are invalid."), { statusCode: 400 });
+    }
+    const next = {
+        accessPreviousChats: existing.accessPreviousChats === true,
+        accessLastChat: existing.accessLastChat === true,
+        activeExperienceLearning: existing.activeExperienceLearning !== false
+    };
+    for (const field of Object.keys(next)) {
+        if (input[field] !== undefined) {
+            if (typeof input[field] !== "boolean") {
+                throw Object.assign(new Error(field + " must be true or false."), { statusCode: 400 });
+            }
+            next[field] = input[field];
+        }
+    }
+    return next;
+}
+
 function createAriWorkspaceStore(options = {}) {
     const fsImpl = options.fs || fs;
     const now = options.now || (() => Date.now());
@@ -195,6 +261,91 @@ function createAriWorkspaceStore(options = {}) {
         const store = readStore();
         const account = accountFor(store, subject);
         return Array.isArray(account.chats) ? account.chats : [];
+    }
+
+    function getProfile(subject) {
+        requireSubject(subject);
+        const store = readStore();
+        const account = accountFor(store, subject);
+        return normalizeProfileInput({}, account.profile || {});
+    }
+
+    function updateProfile(subject, input) {
+        if (typeof subject !== "string" || !subject.trim()) {
+            return Promise.reject(Object.assign(new Error("A signed-in account is required."), { statusCode: 401 }));
+        }
+        const operation = queue.then(() => {
+            const store = readStore();
+            const key = accountKey(subject);
+            const account = store.accounts[key] && typeof store.accounts[key] === "object" ? store.accounts[key] : {};
+            const profile = normalizeProfileInput(input, account.profile || {});
+            store.accounts[key] = { ...account, profile, profileUpdatedAt: now() };
+            writeStore(store);
+            return profile;
+        });
+        queue = operation.catch(() => undefined);
+        return operation;
+    }
+
+    function getSettings(subject) {
+        requireSubject(subject);
+        const store = readStore();
+        const account = accountFor(store, subject);
+        return normalizeSettingsInput({}, account.settings || {});
+    }
+
+    function updateSettings(subject, input) {
+        if (typeof subject !== "string" || !subject.trim()) {
+            return Promise.reject(Object.assign(new Error("A signed-in account is required."), { statusCode: 401 }));
+        }
+        const operation = queue.then(() => {
+            const store = readStore();
+            const key = accountKey(subject);
+            const account = store.accounts[key] && typeof store.accounts[key] === "object" ? store.accounts[key] : {};
+            const settings = normalizeSettingsInput(input, account.settings || {});
+            store.accounts[key] = { ...account, settings, settingsUpdatedAt: now() };
+            writeStore(store);
+            return settings;
+        });
+        queue = operation.catch(() => undefined);
+        return operation;
+    }
+
+    function searchChats(subject, query, options = {}) {
+        requireSubject(subject);
+        const needle = boundedText(query, 300, "Chat search", true).toLowerCase();
+        const store = readStore();
+        const account = accountFor(store, subject);
+        const allChats = Array.isArray(account.chats) ? account.chats : [];
+        const chats = options.onlyLatest
+            ? allChats.slice().sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0)).slice(0, 1)
+            : allChats;
+        const limit = Number.isSafeInteger(options.limit) ? Math.max(1, Math.min(30, options.limit)) : 10;
+        const results = [];
+        for (const chat of chats) {
+            const title = String(chat.title || "New chat");
+            if (title.toLowerCase().includes(needle)) {
+                results.push({ chatId: chat.id, title, updatedAt: chat.updatedAt, excerpt: title });
+            }
+            for (let index = (chat.messages || []).length - 1; index >= 0; index--) {
+                const message = chat.messages[index];
+                const text = String(message.text || "");
+                const matchAt = text.toLowerCase().indexOf(needle);
+                if (matchAt < 0) continue;
+                const start = Math.max(0, matchAt - 180);
+                const end = Math.min(text.length, matchAt + needle.length + 260);
+                results.push({
+                    chatId: chat.id,
+                    title,
+                    updatedAt: chat.updatedAt,
+                    role: message.role,
+                    excerpt: (start ? "…" : "") + text.slice(start, end) + (end < text.length ? "…" : "")
+                });
+                if (results.length >= limit) break;
+            }
+            if (results.length >= limit) break;
+        }
+        return results.slice(0, limit).sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
     }
 
     function listProjects(subject) {
@@ -418,6 +569,11 @@ function createAriWorkspaceStore(options = {}) {
 
     return {
         getChats,
+        searchChats,
+        getProfile,
+        updateProfile,
+        getSettings,
+        updateSettings,
         replaceChats,
         listProjects,
         createProject,
