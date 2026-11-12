@@ -215,10 +215,12 @@ async function main() {
 
     const workspaceDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "ari-workspace-http-"));
     const analyticsStore = createAriAnalyticsStore({ dataDir: workspaceDirectory });
+    const experienceStore = createAriExperienceStore({ dataDir: workspaceDirectory });
     const app = createTestServer({
         env: { ARI_PUBLIC_ORIGIN: "https://ari.example.test" },
         workspaceStore: createAriWorkspaceStore({ dataDir: workspaceDirectory }),
-        analyticsStore
+        analyticsStore,
+        experienceStore
     });
     await new Promise((resolve, reject) => {
         app.once("error", reject);
