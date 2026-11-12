@@ -72,6 +72,44 @@
     .side-nav.active svg, .side-nav:hover svg { color: var(--accent); }
     .history-section { display: flex; flex: 1; min-height: 0; flex-direction: column; }
     .history-label { padding: 5px 10px 9px; color: var(--muted-soft); font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+    #chat-history-search {
+      width: 100%; min-height: 36px; margin: 3px 0 10px; padding: 0 11px;
+      border: 1px solid var(--line); border-radius: 10px; color: var(--text);
+      background: #202722; font-size: 12px;
+    }
+    #chat-history-search::placeholder { color: var(--muted-soft); }
+    .profile-form, .settings-list { display: grid; gap: 14px; width: min(100%, 720px); margin-top: 18px; }
+    .profile-field { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
+    .profile-field input, .profile-field textarea, .profile-field select {
+      width: 100%; min-height: 40px; padding: 9px 11px; border: 1px solid var(--line-strong);
+      border-radius: 10px; color: var(--text); background: #202722; font-size: 13px;
+    }
+    .profile-field textarea { min-height: 88px; resize: vertical; }
+    .profile-field small { color: var(--muted-soft); font-size: 10px; }
+    .workspace-save {
+      justify-self: start; min-height: 38px; padding: 0 16px; border: 1px solid #647b69;
+      border-radius: 10px; color: #17221b; background: var(--accent); font-weight: 600;
+    }
+    .workspace-save:hover { background: var(--accent-strong); }
+    .setting-row {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
+      padding: 16px 0; border-bottom: 1px solid var(--line);
+    }
+    .setting-row-copy { display: grid; gap: 4px; min-width: 0; }
+    .setting-row-copy strong { color: var(--text); font-size: 13px; font-weight: 600; }
+    .setting-row-copy span { color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .setting-row input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--accent); }
+    .analytics-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-top: 18px; }
+    .analytics-stat { padding: 16px; border: 1px solid var(--line); border-radius: 13px; background: #202722; }
+    .analytics-stat strong { display: block; color: var(--text); font: 500 26px/1.2 var(--serif); }
+    .analytics-stat span { color: var(--muted); font-size: 11px; }
+    .analytics-rates { display: grid; gap: 12px; margin-top: 20px; max-width: 620px; }
+    .analytics-rate { display: grid; gap: 7px; }
+    .analytics-rate-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; }
+    .analytics-track { height: 9px; overflow: hidden; border-radius: 10px; background: #303a34; }
+    .analytics-fill { height: 100%; border-radius: inherit; background: var(--accent); }
+    .analytics-empty { margin-top: 16px; color: var(--muted-soft); font-size: 11px; }
+    @media (max-width: 520px) { .analytics-grid { grid-template-columns: 1fr 1fr; } .setting-row { gap: 10px; } }
     #chat-list { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 3px; overflow-y: auto; padding: 0 1px 10px; scrollbar-width: thin; scrollbar-color: #39443d transparent; }
     .history-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
     .history-row.pinned::before { content: "◆"; flex: 0 0 auto; padding: 0 2px 0 5px; color: var(--accent); font-size: 8px; }
@@ -580,6 +618,7 @@
 
       <div class="history-section">
         <div class="history-label">Recent chats</div>
+        <input id="chat-history-search" type="search" placeholder="Search your chats…" aria-label="Search previous chats">
         <nav id="chat-list" aria-label="Previous chats">
           <div class="history-empty">No previous chats yet.</div>
         </nav>
@@ -606,8 +645,12 @@
               <span>Memory</span>
             </button>
             <button class="account-menu-item" type="button" role="menuitem" data-account-view="settings">
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.2 1-1.2 2.1-1.5-.5a8 8 0 0 1-1.6.9l-.3 1.6h-2.4l-.3-1.6a8 8 0 0 1-1.6-.9l-1.5.5-1.2-2.1 1.2-1a8 8 0 0 1 0-1.9l-1.2-1 1.2-2.1 1.5.5a8 8 0 0 1 1.6-.9l.3-1.6h2.4l.3 1.6a8 8 0 0 1 1.6.9l1.5-.5 1.2 2.1-1.2 1a8 8 0 0 1-.1 1.9Z"/></svg>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.2 1-1.2 2.1-1.5-.5a8 8 0 0 1-1.6.9l-.3 1.6h-2.4l-.3-1.6a8 8 0 0 1-1.6-.9l-1.5.5-1.2-2.1 1.2-1a8 8 0 0 1 0-1.9l-1.2-1 1.2-2.1 1.5.5a8 8 0 0 1 1.6-.9l.3-1.6h2.4l.3-1.6a8 8 0 0 1 1.6.9l1.5-.5 1.2 2.1-1.2 1a8 8 0 0 1-.1 1.9Z"/></svg>
               <span>Settings</span>
+            </button>
+            <button class="account-menu-item" id="analytics-menu-item" type="button" role="menuitem" data-account-view="analytics" hidden>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 15v3M13 10v8M18 5v13"/></svg>
+              <span>Admin analytics</span>
             </button>
             <div class="account-menu-divider"></div>
             <button class="account-menu-item" type="button" role="menuitem" data-account-view="delete">
@@ -750,6 +793,8 @@
     const messagesElement = document.getElementById("messages");
     const emptyState = document.getElementById("empty-state");
     const chatList = document.getElementById("chat-list");
+    const chatHistorySearch = document.getElementById("chat-history-search");
+    const analyticsMenuItem = document.getElementById("analytics-menu-item");
     const conversation = document.getElementById("conversation");
     const sidebar = document.getElementById("sidebar");
     const sidebarToggle = document.getElementById("sidebar-toggle");
@@ -911,6 +956,18 @@
       const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
       if (mostRecent) currentChatId = mostRecent.id;
       accountEmail.textContent = user.email || user.phone || "";
+      if (analyticsMenuItem) analyticsMenuItem.hidden = user.isAdmin !== true;
+      if (!window.__ariActivityHeartbeat) {
+        const sendActivityHeartbeat = () => {
+          if (!authenticatedUser || !csrfToken) return;
+          fetch("/api/activity", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: csrfHeaders()
+          }).catch(() => {});
+        };
+        window.__ariActivityHeartbeat = window.setInterval(sendActivityHeartbeat, 60 * 1000);
+      }
       renderHistory();
       renderConversation(mostRecent || null);
       showChatView();
@@ -1521,12 +1578,18 @@
 
     function renderHistory() {
       chatList.replaceChildren();
-      const sorted = [...chats].filter(chat => !chat.projectId).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || (b.updatedAt || 0) - (a.updatedAt || 0));
+      const query = String(chatHistorySearch?.value || "").trim().toLowerCase();
+      const sorted = [...chats].filter(chat => !chat.projectId && (!query ||
+        String(chat.title || "").toLowerCase().includes(query) ||
+        (chat.messages || []).some(message => String(message.text || "").toLowerCase().includes(query))
+      )).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || (b.updatedAt || 0) - (a.updatedAt || 0));
 
       if (!sorted.length) {
         const empty = document.createElement("div");
         empty.className = "history-empty";
-        empty.textContent = chats.some(chat => chat.projectId) ? "Project chats live inside their projects." : "No previous chats yet.";
+        empty.textContent = query
+          ? "No conversations match this search."
+          : chats.some(chat => chat.projectId) ? "Project chats live inside their projects." : "No previous chats yet.";
         chatList.appendChild(empty);
         return;
       }
@@ -1656,10 +1719,10 @@
         profile: {
           eyebrow: "Your account",
           title: "Profile / About You",
-          description: "Review the account identity currently used to sign in to Ari.",
-          status: "Account information",
-          heading: "Your sign-in profile",
-          copy: "This page currently displays the identity supplied by Google sign-in. Editable profile fields and saved personal details will be connected to the account database."
+          description: "Edit the personal details and communication style Ari should use.",
+          status: "Your editable profile",
+          heading: "Tell Ari a little about you",
+          copy: "These details are optional, can be edited at any time, and are used only to personalise your conversations."
         },
         memory: {
           eyebrow: "Personalisation",
@@ -1672,10 +1735,18 @@
         settings: {
           eyebrow: "Preferences",
           title: "Settings",
-          description: "Manage how Ari looks and how your account works.",
-          status: "Settings foundation",
-          heading: "Workspace preferences",
-          copy: "The visual theme and responsive layout are in place. Persistent appearance preferences, notification controls, data export and account security settings will be wired to the account service in a later step."
+          description: "Choose what Ari may access and how it improves over time.",
+          status: "Privacy and access controls",
+          heading: "Control Ari's access",
+          copy: "Switch access to your previous chats, your most recent chat and experience learning on or off at any time."
+        },
+        analytics: {
+          eyebrow: "Administration",
+          title: "Admin analytics",
+          description: "Live account activity and response feedback, visible only to approved administrators.",
+          status: "Private usage overview",
+          heading: "Ari usage and response ratings",
+          copy: "Account counts are based on recorded sign-ins and recent activity heartbeats. Feedback rates are calculated from unique rated responses."
         },
         delete: {
           eyebrow: "Account",
@@ -1714,27 +1785,10 @@
       copy.textContent = page.copy;
       panel.append(status, heading, copy);
 
-      if (view === "profile") {
-        const grid = document.createElement("div");
-        grid.className = "workspace-grid";
-        const details = [
-          ["Display name", authenticatedUser?.name || "Not supplied by Google"],
-          ["Email", authenticatedUser?.email || "Not supplied"]
-        ];
-        for (const [label, value] of details) {
-          const item = document.createElement("div");
-          item.className = "workspace-stat";
-          const strong = document.createElement("strong");
-          strong.textContent = value;
-          const span = document.createElement("span");
-          span.textContent = label;
-          item.append(strong, span);
-          grid.appendChild(item);
-        }
-        workspaceContent.append(panel, grid);
-        return;
-      }
       workspaceContent.appendChild(panel);
+      if (view === "profile") void loadProfileView();
+      if (view === "settings") void loadSettingsView();
+      if (view === "analytics" && authenticatedUser?.isAdmin === true) void loadAnalyticsView();
       if (view === "library") void loadLibraryView();
       if (view === "projects") void loadProjectsView();
       if (view === "memory") void loadMemoryView();
@@ -1750,11 +1804,224 @@
     accountMenu.addEventListener("click", event => {
       const item = event.target.closest("[data-account-view]");
       if (!item) return;
+      if (item.dataset.accountView === "analytics" && authenticatedUser?.isAdmin !== true) return;
       showWorkspaceView(item.dataset.accountView);
     });
+    chatHistorySearch.addEventListener("input", renderHistory);
 
 
 
+
+    async function loadProfileView() {
+      const subject = authenticatedUser?.sub;
+      if (!subject) return;
+      try {
+        const response = await fetch("/api/workspace/profile", { credentials: "same-origin", cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.profile) throw new Error(payload.error || "Ari could not load your profile.");
+        if (activeWorkspaceView !== "profile" || authenticatedUser?.sub !== subject) return;
+        const profile = payload.profile;
+        const form = document.createElement("form");
+        form.className = "profile-form";
+        const addField = (labelText, name, value, options = {}) => {
+          const label = document.createElement("label");
+          label.className = "profile-field";
+          label.appendChild(document.createTextNode(labelText));
+          let field;
+          if (options.choices) {
+            field = document.createElement("select");
+            for (const [choiceValue, choiceLabel] of options.choices) {
+              const option = document.createElement("option");
+              option.value = choiceValue;
+              option.textContent = choiceLabel;
+              field.appendChild(option);
+            }
+          } else {
+            field = document.createElement(options.multiline ? "textarea" : "input");
+            if (!options.multiline) field.type = "text";
+            field.maxLength = options.maxLength || 500;
+          }
+          field.name = name;
+          field.value = value || "";
+          label.appendChild(field);
+          if (options.help) {
+            const help = document.createElement("small");
+            help.textContent = options.help;
+            label.appendChild(help);
+          }
+          form.appendChild(label);
+          return field;
+        };
+        addField("Preferred nickname", "preferredNickname", profile.preferredNickname, { maxLength: 48, help: "Ari can use this naturally in conversation." });
+        addField("Occupation", "occupation", profile.occupation, { maxLength: 120, help: "Optional. Share only what you are comfortable including." });
+        addField("Hobbies and interests", "hobbies", profile.hobbies, { multiline: true, maxLength: 240 });
+        addField("A little more about you", "aboutYou", profile.aboutYou, { multiline: true, maxLength: 1000, help: "Add useful context that helps Ari tailor explanations and suggestions. Do not add passwords or private credentials." });
+        addField("Ari's personality", "personality", profile.personality, {
+          choices: [
+            ["overly_cheerful", "Overly cheerful"],
+            ["cheerful", "Cheerful"],
+            ["neutral", "Neutral"],
+            ["sarcastic", "Sarcastic"],
+            ["professional", "Professional"]
+          ]
+        });
+        addField("Emoji use", "emojiUse", profile.emojiUse, {
+          choices: [["none", "Zero emojis"], ["balanced", "Balanced"], ["more", "More emojis"]]
+        });
+        const save = document.createElement("button");
+        save.type = "submit";
+        save.className = "workspace-save";
+        save.textContent = "Save profile";
+        form.appendChild(save);
+        form.addEventListener("submit", async event => {
+          event.preventDefault();
+          save.disabled = true;
+          const next = Object.fromEntries(new FormData(form).entries());
+          try {
+            const result = await fetch("/api/workspace/profile", {
+              method: "PATCH",
+              credentials: "same-origin",
+              headers: csrfHeaders({ "Content-Type": "application/json" }),
+              body: JSON.stringify({ profile: next })
+            });
+            const data = await result.json().catch(() => ({}));
+            if (!result.ok) throw new Error(data.error || "Ari could not save your profile.");
+            showWorkspaceNotice("Your profile has been saved.");
+          } catch (error) {
+            showWorkspaceNotice(error.message);
+          } finally {
+            save.disabled = false;
+          }
+        });
+        workspaceContent.appendChild(form);
+      } catch (error) {
+        showWorkspaceNotice(error.message || "Ari could not load your profile.");
+      }
+    }
+
+    async function loadSettingsView() {
+      const subject = authenticatedUser?.sub;
+      if (!subject) return;
+      try {
+        const response = await fetch("/api/workspace/settings", { credentials: "same-origin", cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.settings) throw new Error(payload.error || "Ari could not load your settings.");
+        if (activeWorkspaceView !== "settings" || authenticatedUser?.sub !== subject) return;
+        const settings = payload.settings;
+        const list = document.createElement("div");
+        list.className = "settings-list";
+        const addToggle = (title, description, field, initialValue) => {
+          const row = document.createElement("label");
+          row.className = "setting-row";
+          const copy = document.createElement("span");
+          copy.className = "setting-row-copy";
+          const strong = document.createElement("strong");
+          strong.textContent = title;
+          const detail = document.createElement("span");
+          detail.textContent = description;
+          copy.append(strong, detail);
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = initialValue === true;
+          checkbox.addEventListener("change", async () => {
+            checkbox.disabled = true;
+            try {
+              const result = await fetch("/api/workspace/settings", {
+                method: "PATCH",
+                credentials: "same-origin",
+                headers: csrfHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify({ settings: { [field]: checkbox.checked } })
+              });
+              const data = await result.json().catch(() => ({}));
+              if (!result.ok) throw new Error(data.error || "Ari could not save this setting.");
+              settings[field] = checkbox.checked;
+            } catch (error) {
+              checkbox.checked = !checkbox.checked;
+              showWorkspaceNotice(error.message);
+            } finally {
+              checkbox.disabled = false;
+            }
+          });
+          row.append(copy, checkbox);
+          list.appendChild(row);
+        };
+        addToggle("Access to previous chats",
+          "Allow Ari to search across your saved conversations when you ask about something discussed before.",
+          "accessPreviousChats", settings.accessPreviousChats);
+        addToggle("Access to last chat",
+          "Allow Ari to refer to your most recent conversation only. This is a narrower option than access to all previous chats.",
+          "accessLastChat", settings.accessLastChat);
+        addToggle("Active Experience Learning",
+          "Let Mini learn reusable answer styles and task approaches from your liked or disliked Medium and Max responses. Raw conversation text is not added to the experience library.",
+          "activeExperienceLearning", settings.activeExperienceLearning);
+        workspaceContent.appendChild(list);
+      } catch (error) {
+        showWorkspaceNotice(error.message || "Ari could not load your settings.");
+      }
+    }
+
+    async function loadAnalyticsView() {
+      if (authenticatedUser?.isAdmin !== true) return;
+      try {
+        const response = await fetch("/api/admin/analytics", { credentials: "same-origin", cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Ari analytics could not be loaded.");
+        if (activeWorkspaceView !== "analytics" || authenticatedUser?.isAdmin !== true) return;
+        const grid = document.createElement("div");
+        grid.className = "analytics-grid";
+        const stats = [
+          ["Registered accounts", data.accounts?.registered ?? 0],
+          ["Active now · last 5 min", data.accounts?.activeNow ?? 0],
+          ["Active in 24 hours", data.accounts?.active24h ?? 0],
+          ["Active in 7 days", data.accounts?.active7d ?? 0],
+          ["Active in 30 days", data.accounts?.active30d ?? 0],
+          ["Responses rated", data.responses?.totalRatings ?? 0]
+        ];
+        for (const [label, value] of stats) {
+          const card = document.createElement("div");
+          card.className = "analytics-stat";
+          const number = document.createElement("strong");
+          number.textContent = Number(value).toLocaleString();
+          const caption = document.createElement("span");
+          caption.textContent = label;
+          card.append(number, caption);
+          grid.appendChild(card);
+        }
+        const rates = document.createElement("div");
+        rates.className = "analytics-rates";
+        const makeRate = (label, value) => {
+          const wrapper = document.createElement("div");
+          wrapper.className = "analytics-rate";
+          const head = document.createElement("div");
+          head.className = "analytics-rate-head";
+          const name = document.createElement("span");
+          name.textContent = label;
+          const percentage = Math.max(0, Math.min(100, Number(value) || 0));
+          const rate = document.createElement("span");
+          rate.textContent = percentage.toFixed(1) + "%";
+          head.append(name, rate);
+          const track = document.createElement("div");
+          track.className = "analytics-track";
+          const fill = document.createElement("div");
+          fill.className = "analytics-fill";
+          fill.style.width = percentage + "%";
+          track.appendChild(fill);
+          wrapper.append(head, track);
+          return wrapper;
+        };
+        rates.append(
+          makeRate("Likes", data.responses?.likeRate),
+          makeRate("Dislikes", data.responses?.dislikeRate)
+        );
+        const note = document.createElement("p");
+        note.className = "analytics-empty";
+        note.textContent = "Last updated " + new Date(data.generatedAt || Date.now()).toLocaleString() +
+          ". Active-now uses a five-minute heartbeat window. Accounts are counted once, not once per login.";
+        workspaceContent.append(grid, rates, note);
+      } catch (error) {
+        showWorkspaceNotice(error.message || "Ari analytics could not be loaded.");
+      }
+    }
 
     async function loadMemoryView() {
       const token = ++memoryLoadToken;
