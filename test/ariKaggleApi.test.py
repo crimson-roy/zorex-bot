@@ -3,7 +3,9 @@ import http.client
 from collections import UserDict
 import importlib.util
 import json
+import os
 import pathlib
+import tempfile
 import threading
 import time
 import unittest
@@ -462,6 +464,31 @@ class KaggleApiTests(unittest.TestCase):
 
         gemma_request = sample_request("max", options={"thinking": False, "max_new_tokens": 4})
         self.assertEqual(service.chat(gemma_request)["reply"], "Gemma parsed final.")
+
+    def test_audio_routes_to_gemma_on_max_and_is_rejected_on_medium(self):
+        service = self.make_service(
+            runner=lambda kind, model, processor, messages, options: "Gemma audio response."
+        )
+        audio_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        audio_path = audio_file.name
+        audio_file.close()
+        service._decode_audio_payload = lambda _payload: audio_path
+
+        request = sample_request("max")
+        request["audio"] = {"mime_type": "audio/wav", "data_base64": base64.b64encode(b"fixture").decode("ascii")}
+        result = service.chat(request)
+        self.assertEqual(result["reply"], "Gemma audio response.")
+        self.assertEqual(result["route"], "gemma_audio")
+        audio_part = service.namespace["ARI_E2B_PROCESSOR"].last_messages[-1]["content"][-1]
+        self.assertEqual(audio_part["type"], "audio")
+        self.assertEqual(audio_part["url"], audio_path)
+        self.assertFalse(os.path.exists(audio_path), "temporary audio must be deleted after inference")
+
+        medium_request = sample_request("medium")
+        medium_request["audio"] = request["audio"]
+        with self.assertRaises(API.AriGpuApiError) as error:
+            service.chat(medium_request)
+        self.assertEqual(error.exception.status, 400)
 
     def test_real_adapter_shapes_use_notebook_generation_interfaces(self):
         ns = {
