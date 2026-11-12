@@ -174,12 +174,44 @@
     .message-code pre { max-width:100%; margin:0; padding:13px 14px; overflow:auto; color:#e4eee7; font:12px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; tab-size:2; }
     .message-code code { color:inherit; white-space:pre; font:inherit; }
     .message small { display: block; margin-top: 7px; color: var(--muted); font: 11px/1.4 var(--sans); }
-    .message-copy {
-      display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; padding: 5px 8px;
-      border: 1px solid transparent; border-radius: 8px; color: var(--muted-soft); background: transparent;
-      font: 11px var(--sans); opacity: .76;
+    .message-activity {
+      max-width: min(100%, 640px); margin: 0 0 13px; padding: 0;
+      color: var(--muted); font: 12px/1.5 var(--sans);
     }
-    .message-copy:hover { border-color: var(--line); color: var(--text); background: #222b25; opacity: 1; }
+    .message-activity summary {
+      display: inline-flex; min-height: 25px; align-items: center; gap: 8px;
+      color: #aab7ae; cursor: pointer; font: 500 12px/1.4 var(--sans);
+      list-style: none; user-select: none;
+    }
+    .message-activity summary::-webkit-details-marker { display: none; }
+    .message-activity summary::before {
+      width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+      content: ""; transform: rotate(-45deg); transition: transform .15s ease;
+    }
+    .message-activity[open] summary::before { transform: rotate(45deg); }
+    .message-activity summary:hover { color: var(--accent-strong); }
+    .message-activity-list {
+      display: grid; gap: 6px; margin: 8px 0 5px 15px; padding: 0 0 0 13px;
+      border-left: 1px solid #46554b; color: var(--muted); font: 11px/1.5 var(--sans);
+      list-style: none;
+    }
+    .message-activity-list li { position: relative; min-width: 0; overflow-wrap: anywhere; }
+    .message-activity-list li::before {
+      position: absolute; top: .55em; left: -17px; width: 5px; height: 5px;
+      border-radius: 50%; background: #829b89; content: "";
+    }
+    .message-actions { display: flex; align-items: center; gap: 6px; margin-top: 11px; min-height: 34px; }
+    .message-action {
+      display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center;
+      padding: 0; border: 1px solid transparent; border-radius: 9px;
+      color: var(--muted-soft); background: transparent; opacity: .9;
+      transition: color .15s, background .15s, border-color .15s;
+    }
+    .message-action svg { display: block; width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .message-action:hover { border-color: var(--line); color: var(--text); background: #222b25; opacity: 1; }
+    .message-action[aria-pressed="true"] { border-color: #52675a; color: var(--accent-strong); background: #2b3930; opacity: 1; }
+    .message-action:disabled { opacity: .45; cursor: wait; }
+    .message-feedback-status { min-width: 0; color: var(--muted-soft); font: 10px/1.3 var(--sans); }
     #composer-wrap { width: min(100%, 1180px); margin: 0 auto; padding: 10px clamp(12px, 3vw, 42px) 15px; }
     #chat-form {
       position: relative; display: flex; min-width: 0; align-items: flex-end; gap: 11px; padding: 13px 14px 10px;
@@ -1246,9 +1278,203 @@
       if (!container.childNodes.length) container.textContent = source;
     }
 
-    function addMessage(text, speaker, imageName) {
+    function activityDurationLabel(durationMs) {
+      const seconds = Math.max(1, Math.round((Number(durationMs) || 0) / 1000));
+      return "Thought for " + seconds + "s";
+    }
+
+    function createActivityPanel(activity = [], durationMs = 0, pending = false) {
+      const panel = document.createElement("details");
+      panel.className = "message-activity";
+      panel.open = pending;
+      const summary = document.createElement("summary");
+      summary.textContent = pending ? "Ari is working…" : activityDurationLabel(durationMs);
+      const list = document.createElement("ol");
+      list.className = "message-activity-list";
+      for (const entry of Array.isArray(activity) ? activity.slice(-20) : []) {
+        const item = document.createElement("li");
+        item.textContent = String(entry || "").slice(0, 160);
+        if (item.textContent) list.appendChild(item);
+      }
+      panel.append(summary, list);
+      return panel;
+    }
+
+    function addActivityUpdate(bubble, message) {
+      if (!bubble) return;
+      let panel = bubble._ariActivity;
+      if (!panel) {
+        panel = createActivityPanel([], 0, true);
+        bubble._ariActivity = panel;
+        bubble.prepend(panel);
+      }
+      const list = panel.querySelector(".message-activity-list");
+      const safeMessage = String(message || "").trim().slice(0, 160);
+      if (!safeMessage || (list.lastElementChild && list.lastElementChild.textContent === safeMessage)) return;
+      const item = document.createElement("li");
+      item.textContent = safeMessage;
+      list.appendChild(item);
+      panel.open = true;
+    }
+
+    function finishActivityPanel(bubble, durationMs) {
+      const panel = bubble && bubble._ariActivity;
+      if (!panel) return;
+      const summary = panel.querySelector("summary");
+      if (summary) summary.textContent = activityDurationLabel(durationMs);
+      panel.open = false;
+    }
+
+    function addMessageActions(bubble, message, chatId) {
+      if (!bubble || bubble.querySelector(".message-actions")) return;
+      const actions = document.createElement("div");
+      actions.className = "message-actions";
+
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "message-action message-copy";
+      copy.setAttribute("aria-label", "Copy response");
+      copy.title = "Copy response";
+      copy.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path></svg>';
+      copy.addEventListener("click", async () => {
+        const value = String(bubble.__ariText || "");
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(value);
+          } else {
+            throw new Error("Clipboard API unavailable");
+          }
+        } catch (_) {
+          const temporary = document.createElement("textarea");
+          temporary.value = value;
+          temporary.setAttribute("readonly", "");
+          temporary.style.position = "fixed";
+          temporary.style.opacity = "0";
+          document.body.appendChild(temporary);
+          temporary.select();
+          const copied = document.execCommand("copy");
+          temporary.remove();
+          if (!copied) copy.title = "Copy is unavailable in this browser";
+        }
+      });
+      actions.appendChild(copy);
+
+      const status = document.createElement("span");
+      status.className = "message-feedback-status";
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+
+      const updateSelected = () => {
+        for (const button of actions.querySelectorAll("[data-rating]")) {
+          button.setAttribute("aria-pressed", String(Boolean(message && message.feedbackRating === button.dataset.rating)));
+        }
+      };
+
+      const makeRatingButton = (rating, title, icon) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "message-action message-rating";
+        button.dataset.rating = rating;
+        button.setAttribute("aria-label", title);
+        button.setAttribute("aria-pressed", "false");
+        button.title = title;
+        button.innerHTML = icon;
+        button.addEventListener("click", async () => {
+          if (!message || !chatId || button.disabled) return;
+          if (!message.id) message.id = createId();
+          button.disabled = true;
+          status.textContent = "";
+          try {
+            const response = await fetch("/api/feedback", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: csrfHeaders({ "Content-Type": "application/json" }),
+              body: JSON.stringify({ chatId, messageId: message.id, rating })
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.error || "Feedback could not be saved.");
+            message.feedbackRating = rating;
+            updateSelected();
+            status.textContent = "Feedback saved";
+            saveChats();
+          } catch (_) {
+            status.textContent = "Couldn't save feedback";
+          } finally {
+            button.disabled = false;
+          }
+        });
+        return button;
+      };
+
+      const like = makeRatingButton("like", "Like response",
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v11H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3Z"></path><path d="M7 10 12 3a2 2 0 0 1 2 2v4h4.5a2 2 0 0 1 2 2.4l-1.5 8a2 2 0 0 1-2 1.6H7"></path></svg>');
+      const dislike = makeRatingButton("dislike", "Dislike response",
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14V3H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3Z"></path><path d="m7 14 5 7a2 2 0 0 0 2-2v-4h4.5a2 2 0 0 0 2-2.4l-1.5-8a2 2 0 0 0-2-1.6H7"></path></svg>');
+      actions.append(like, dislike, status);
+      bubble.appendChild(actions);
+      updateSelected();
+    }
+
+    async function readAriChatResponse(response, onProgress) {
+      const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+      if (!contentType.includes("text/event-stream")) {
+        return response.json().catch(() => ({}));
+      }
+      if (!response.body || typeof response.body.getReader !== "function") {
+        throw new Error("Ari's progress stream is unavailable in this browser.");
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalPayload = null;
+      let streamError = null;
+
+      const processEvent = block => {
+        if (!block.trim()) return;
+        let eventName = "message";
+        const dataLines = [];
+        for (const line of block.split(/\r?\n/)) {
+          if (line.startsWith("event:")) eventName = line.slice(6).trim();
+          else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+        }
+        if (!dataLines.length) return;
+        let payload;
+        try { payload = JSON.parse(dataLines.join("\n")); } catch { return; }
+        if (eventName === "progress" && payload && typeof payload.message === "string") {
+          if (typeof onProgress === "function") onProgress(payload.message);
+        } else if (eventName === "final") {
+          finalPayload = payload;
+        } else if (eventName === "error") {
+          streamError = new Error(payload && payload.error || "Ari couldn't complete this request.");
+        }
+      };
+
+      while (true) {
+        const chunk = await reader.read();
+        buffer += decoder.decode(chunk.value || new Uint8Array(), { stream: !chunk.done });
+        let boundary;
+        while ((boundary = buffer.search(/\r?\n\r?\n/)) !== -1) {
+          const block = buffer.slice(0, boundary);
+          const separator = buffer.slice(boundary).match(/^\r?\n\r?\n/)[0];
+          buffer = buffer.slice(boundary + separator.length);
+          processEvent(block);
+        }
+        if (chunk.done) break;
+      }
+      if (buffer.trim()) processEvent(buffer);
+      if (streamError) throw streamError;
+      if (!finalPayload) throw new Error("Ari's response stream ended before the answer arrived.");
+      return finalPayload;
+    }
+
+    function addMessage(text, speaker, imageName, options = {}) {
       const bubble = document.createElement("div");
       bubble.className = "message " + speaker;
+      bubble.__ariText = String(text || "");
+      if (speaker === "ari" && (options.pending || (Array.isArray(options.activity) && options.activity.length))) {
+        bubble._ariActivity = createActivityPanel(options.activity || [], options.activityDurationMs || 0, options.pending === true);
+        bubble.appendChild(bubble._ariActivity);
+      }
       const content = document.createElement("div");
       content.className = "message-content";
       if (speaker === "ari") renderAriContent(content, text);
@@ -1261,20 +1487,8 @@
         bubble.appendChild(meta);
       }
 
-      if (speaker === "ari") {
-        const copy = document.createElement("button");
-        copy.type = "button";
-        copy.className = "message-copy";
-        copy.textContent = "Copy response";
-        copy.addEventListener("click", async () => {
-          try {
-            await navigator.clipboard.writeText(text);
-            copy.textContent = "Copied";
-          } catch (_) {
-            copy.textContent = "Copy unavailable";
-          }
-        });
-        bubble.appendChild(copy);
+      if (speaker === "ari" && !options.pending) {
+        addMessageActions(bubble, options.message || null, options.chatId || null);
       }
 
       messagesElement.appendChild(bubble);
@@ -1285,12 +1499,23 @@
     function renderConversation(chat) {
       messagesElement.replaceChildren();
       const started = Boolean(chat && chat.messages.length);
+      let assignedMessageIds = false;
       emptyState.hidden = started;
       if (chat) {
         for (const message of chat.messages) {
-          addMessage(message.text, message.role, message.imageName);
+          if (message.role === "ari" && !message.id) {
+            message.id = createId();
+            assignedMessageIds = true;
+          }
+          addMessage(message.text, message.role, message.imageName, {
+            message,
+            chatId: chat.id,
+            activity: message.activity,
+            activityDurationMs: message.activityDurationMs
+          });
         }
       }
+      if (assignedMessageIds) saveChats();
     }
 
     function renderHistory() {
@@ -2350,7 +2575,9 @@
       resizeComposer();
       updatePastedTextCard();
       sendButton.disabled = true;
-      const waiting = addMessage("Thinking…", "ari");
+      const activityStartedAt = Date.now();
+      const activityEvents = [];
+      const waiting = addMessage("", "ari", null, { pending: true, chatId });
 
       try {
         const image = selectedImage ? await encodeImage(selectedImage) : null;
@@ -2367,11 +2594,15 @@
             })),
             tier,
             image,
+            stream: true,
             options: { thinking: thinkEnabled, max_new_tokens: thinkEnabled ? 1024 : 512 }
           })
         });
 
-        const data = await response.json().catch(() => ({}));
+        const data = await readAriChatResponse(response, message => {
+          activityEvents.push(message);
+          addActivityUpdate(waiting, message);
+        });
         if (!response.ok) {
           if (response.status === 401) {
             clearAccountMemory();
@@ -2381,9 +2612,13 @@
         }
 
         const reply = data.reply || "Ari did not return a response.";
+        const activityDurationMs = Date.now() - activityStartedAt;
         const assistantMessage = {
           role: "ari",
           text: reply,
+          id: createId(),
+          activity: activityEvents.slice(-20),
+          activityDurationMs,
           createdAt: Date.now()
         };
         const targetChat = chats.find(item => item.id === chatId);
@@ -2393,7 +2628,14 @@
           saveChats();
         }
         if (currentChatId === chatId) {
-          renderAriContent(waiting.querySelector(".message-content"), reply);
+          if (waiting.isConnected) {
+            waiting.__ariText = reply;
+            renderAriContent(waiting.querySelector(".message-content"), reply);
+            finishActivityPanel(waiting, activityDurationMs);
+            addMessageActions(waiting, assistantMessage, chatId);
+          } else if (targetChat) {
+            renderConversation(targetChat);
+          }
           renderHistory();
         }
 
@@ -2416,12 +2658,31 @@
             : "Ari couldn't answer just now. Please try again.";
         const errorText = safeMessage;
         const targetChat = chats.find(item => item.id === chatId);
+        const activityDurationMs = Date.now() - activityStartedAt;
+        const failedMessage = {
+          role: "ari",
+          text: errorText,
+          id: createId(),
+          activity: [...activityEvents, "Ari couldn't complete this request"].slice(-20),
+          activityDurationMs,
+          createdAt: Date.now()
+        };
         if (targetChat) {
-          targetChat.messages.push({ role: "ari", text: errorText, createdAt: Date.now() });
+          targetChat.messages.push(failedMessage);
           targetChat.updatedAt = Date.now();
           saveChats();
         }
-        if (currentChatId === chatId) waiting.querySelector('.message-content').textContent = errorText;
+        if (currentChatId === chatId) {
+          if (waiting.isConnected) {
+            waiting.__ariText = errorText;
+            waiting.querySelector(".message-content").textContent = errorText;
+            addActivityUpdate(waiting, "Ari couldn't complete this request");
+            finishActivityPanel(waiting, activityDurationMs);
+            addMessageActions(waiting, failedMessage, chatId);
+          } else if (targetChat) {
+            renderConversation(targetChat);
+          }
+        }
       } finally {
         activeAttachmentInput.value = "";
         activeAttachmentInput = imageInput;
