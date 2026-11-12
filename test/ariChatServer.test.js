@@ -635,8 +635,28 @@ async function main() {
         await new Promise(resolve => app.close(resolve));
         fs.rmSync(workspaceDirectory, { recursive: true, force: true });
     }
+    const searchHistoryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "ari-chat-search-history-"));
+    const searchHistoryStore = createAriWorkspaceStore({ dataDir: searchHistoryDirectory });
+    await searchHistoryStore.replaceChats("test-google-sub", [{
+        id: "old-search-chat",
+        title: "Blender scene planning",
+        messages: [
+            { role: "user", text: "We discussed a Blender dance scene with a piano and open floor.", createdAt: Date.now() },
+            { role: "ari", text: "The plan kept the piano at the back and left the central floor open.", createdAt: Date.now() + 1 }
+        ],
+        createdAt: Date.now(),
+        updatedAt: Date.now() + 1,
+        pinned: false,
+        projectId: null
+    }]);
+    await searchHistoryStore.updateSettings("test-google-sub", {
+        accessPreviousChats: true,
+        activeExperienceLearning: false
+    });
+
     const modelCalls = [];
     const modelApp = createTestServer({
+        workspaceStore: searchHistoryStore,
         modelClient: {
             async health() {
                 return { connected: true, model: "Ari-0 BPE v3", mode: "fine-tuned", step: 500, parameters: 1874688 };
@@ -703,9 +723,24 @@ async function main() {
         assert.doesNotMatch(streamText, /chain.of.thought|private reasoning/i);
         assert.equal(modelCalls.length, 2);
 
-        console.log("PASS: Ari streams safe progress events, stores feedback, and preserves deterministic maths.");
+        const previousChatSearch = await fetch(baseUrl + "/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                message: "Search my previous chats for the Blender dance scene.",
+                messages: [{ role: "user", content: "Search my previous chats for the Blender dance scene." }]
+            })
+        });
+        assert.equal(previousChatSearch.status, 200);
+        assert.equal(modelCalls.length, 3);
+        assert.ok(modelCalls[2].some(message =>
+            message.role === "assistant" && message.content.includes("Blender dance scene")
+        ), "Mini should receive matching historical chat excerpts when permission is enabled.");
+
+        console.log("PASS: Ari streams progress and retrieves previous chat context only when the account allows it.");
     } finally {
         await new Promise(resolve => modelApp.close(resolve));
+        fs.rmSync(searchHistoryDirectory, { recursive: true, force: true });
     }
 
     const gpuCalls = [];
