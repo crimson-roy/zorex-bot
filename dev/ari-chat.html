@@ -2984,11 +2984,19 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const prompt = input.value.trim();
-      if (!prompt || sendButton.disabled) return;
+      let prompt = input.value.trim();
+      if (sendButton.disabled) return;
 
       const tier = tierSelect.value;
       const selectedFile = activeAttachmentInput.files && activeAttachmentInput.files[0] ? activeAttachmentInput.files[0] : null;
+      if (!prompt && !selectedFile) return;
+      if (!prompt && selectedFile) {
+        prompt = selectedFile.type.startsWith("image/")
+          ? "Please describe the attached image."
+          : selectedFile.type.startsWith("audio/")
+            ? "Please listen to the attached audio and tell me what it contains."
+            : "Please read and help me with the attached text file.";
+      }
       if (selectedFile && !selectedLibraryFile) {
         showComposerMessage(attachmentUploadError || "Wait until the file has finished saving to your Library.");
         return;
