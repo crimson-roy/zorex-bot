@@ -257,7 +257,19 @@ function createAriOtpAuth(options = {}) {
     }
 
     function methods() {
-        return { emailOtp: emailConfigured, smsOtp: smsConfigured };
+        const openRegistration = env.ARI_REGISTRATION_MODE === undefined || String(env.ARI_REGISTRATION_MODE).trim().toLowerCase() === "open";
+        return {
+            emailOtp: emailConfigured && (openRegistration || allowedEmailCount() > 0),
+            smsOtp: smsConfigured && (openRegistration || allowedPhoneCount() > 0)
+        };
+    }
+
+    function allowedEmailCount() {
+        return new Set(String(env.ARI_ALLOWED_EMAILS || "").split(",").map(normalizedEmail).filter(Boolean)).size;
+    }
+
+    function allowedPhoneCount() {
+        return new Set(String(env.ARI_ALLOWED_PHONE_NUMBERS || "").split(",").map(normalizedPhone).filter(Boolean)).size;
     }
 
     return { methods, requestOtp, authenticateOtp, challenges, sentAt, sendHistory };
