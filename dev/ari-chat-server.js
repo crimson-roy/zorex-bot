@@ -1199,6 +1199,10 @@ function createServer(options = {}) {
                 auth.assertOriginAndCsrf(request);
                 const body = await readJsonBody(request, 16 * 1024);
                 const result = await auth.authenticateCredential(request, response, body);
+                if (result && result.authenticated && result.user && result.user.sub) {
+                    try { await analytics.recordActivity(result.user.sub); }
+                    catch (_) { console.error("[Ari analytics] Initial account activity could not be recorded."); }
+                }
                 sendAuthJson(response, 200, result);
             } catch (error) {
                 const status = Number.isInteger(error.statusCode) ? error.statusCode : 401;
