@@ -168,6 +168,27 @@ async function main() {
         destination: "08012345678"
     })).sent, true);
 
+    const restrictedWithoutAllowedContacts = createAriDeveloperAccess({
+        env: {
+            ...env,
+            ARI_REGISTRATION_MODE: "restricted",
+            ARI_ALLOWED_EMAILS: "",
+            ARI_ALLOWED_PHONE_NUMBERS: ""
+        },
+        now: () => current,
+        sendEmail: async () => {},
+        sendSms: async () => {}
+    });
+    assert.deepEqual(restrictedWithoutAllowedContacts.config().methods, { emailOtp: false, smsOtp: false });
+
+    const invalidRegistrationMode = createAriDeveloperAccess({
+        env: { ...env, ARI_REGISTRATION_MODE: "anything-else" },
+        now: () => current,
+        sendEmail: async () => {},
+        sendSms: async () => {}
+    });
+    assert.deepEqual(invalidRegistrationMode.config().methods, { emailOtp: false, smsOtp: false });
+
     const disabled = createAriDeveloperAccess({ env: { ARI_OTP_SECRET: "short" } });
     assert.deepEqual(disabled.config().methods, { emailOtp: false, smsOtp: false });
     await assert.rejects(() => disabled.requestOtp(request("token"), {
