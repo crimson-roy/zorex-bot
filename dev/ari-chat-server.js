@@ -1073,9 +1073,12 @@ function createServer(options = {}) {
                     sendAuthJson(response, 400, { error: "Ari response feedback is invalid." });
                     return;
                 }
-                const ownedChat = workspace.getChats(session.sub).some(chat => chat.id === body.chatId);
-                if (!ownedChat) {
-                    sendAuthJson(response, 404, { error: "That conversation could not be found." });
+                const ownedChat = workspace.getChats(session.sub).find(chat => chat.id === body.chatId);
+                const ownsResponse = ownedChat && ownedChat.messages.some(message =>
+                    message.role === "ari" && message.id === body.messageId
+                );
+                if (!ownsResponse) {
+                    sendAuthJson(response, 404, { error: "That Ari response could not be found in this conversation." });
                     return;
                 }
                 const result = await analytics.recordFeedback(session.sub, {
