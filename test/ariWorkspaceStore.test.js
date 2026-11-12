@@ -21,7 +21,15 @@ async function main() {
             title: "Research notes",
             messages: [
                 { role: "user", text: "Find information about local-first storage.", createdAt: now },
-                { role: "ari", text: "A local-first design keeps a browser copy and syncs it to the account.", createdAt: now + 1 }
+                {
+                    role: "ari",
+                    text: "A local-first design keeps a browser copy and syncs it to the account.",
+                    id: "response-1",
+                    feedbackRating: "like",
+                    activity: ["Understanding the request", "Preparing the response"],
+                    activityDurationMs: 1800,
+                    createdAt: now + 1
+                }
             ],
             createdAt: now,
             updatedAt: now + 1,
