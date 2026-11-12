@@ -71,7 +71,8 @@ async function main() {
     assert.equal(respondAriSelfKnowledge("What is your creator's real name?"), "I was created by Zorex AI. I don't have a personal creator name to share.");
     assert.match(respondAriSelfKnowledge("What are your usage limits?"), /contact the site administrator/i);
     assert.doesNotMatch(respondAriSelfKnowledge("What are your usage limits?"), /\b(?:100|10)\b/);
-    assert.match(respondAriSelfKnowledge("How do I register?"), /verified Google account or, when configured, a one-time code/i);
+    assert.match(respondAriSelfKnowledge("How do I register?"), /verified Google account/i);
+    assert.doesNotMatch(respondAriSelfKnowledge("How do I register?"), /one-time code|phone number|email address/i);
     assert.match(respondAriSelfKnowledge("Can you search the web?"), /search public web information.*configured and available/i);
     assert.doesNotMatch(respondAriSelfKnowledge("How do I get an invite?"), /invited accounts/i);
     assert.match(ARI_SELF_KNOWLEDGE_POLICY, /never disclose numeric quotas/i);
@@ -267,17 +268,11 @@ async function main() {
     assert.notEqual(getHistoryKey("google-sub-one"), getHistoryKey("google-sub-two"));
     assert.match(getHistoryKey("google-sub-one"), /^ari-playground-chats-v1:/);
     assert.doesNotMatch(pageSource, /localStorage\.(?:getItem|setItem)\(["'](?:ari-playground-chats-v1|google-id-token)/);
+    assert.ok(!pageSource.includes("otp-method-tabs") && !pageSource.includes("otp-request-form") && !pageSource.includes("otp-verify-panel"), "public auth page must expose Google only");
+    assert.ok(pageSource.includes("Create your account with a verified Google account"));
 
     const authDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ari-auth-http-"));
-    const httpOtpEmails = [];
-    const httpAuth = setupAccess({
-        env: {
-            ARI_OTP_SECRET: "http-test-otp-secret-that-is-at-least-32-bytes",
-            RESEND_API_KEY: "test-resend-key",
-            ARI_EMAIL_FROM: "Ari <verify@example.test>"
-        },
-        sendEmail: async (destination, code) => httpOtpEmails.push({ destination, code })
-    }).access;
+    const httpAuth = setupAccess().access;
     const server = createServer({
         env: { NODE_ENV: "test", GOOGLE_CLIENT_ID: CLIENT_ID, ARI_ALLOWED_EMAILS: "dev@example.com", ARI_DATA_DIR: authDataDir },
         authService: httpAuth,
@@ -285,7 +280,7 @@ async function main() {
     });
     await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, HOST, resolve); });
     try {
-        const baseUrl = `http://${HOST}:${server.address().port}`;
+        const baseUrl = "http://" + HOST + ":" + server.address().port;
         const unauthenticated = await fetch(baseUrl + "/api/chat", {
             method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: "hello" })
         });
@@ -297,39 +292,28 @@ async function main() {
         const csrfResponseHttp = await fetch(baseUrl + "/api/auth/csrf");
         const csrfData = await csrfResponseHttp.json();
         const csrfSetCookie = csrfResponseHttp.headers.getSetCookie();
-        const csrfCookieHttp = csrfSetCookie.find(value => value.startsWith(`${CSRF_COOKIE}=`)).split(";", 1)[0];
+        const csrfCookieHttp = csrfSetCookie.find(value => value.startsWith(CSRF_COOKIE + "=")).split(";", 1)[0];
         const authConfigHttp = await fetch(baseUrl + "/api/auth/config");
         const authConfigData = await authConfigHttp.json();
-        assert.equal(authConfigData.methods.emailOtp, true);
-        assert.equal(authConfigData.methods.smsOtp, false);
-        const otpRequestHttp = await fetch(baseUrl + "/api/auth/otp/request", {
-            method: "POST",
-            headers: {
-                Origin: baseUrl,
-                Cookie: csrfCookieHttp,
-                "X-Ari-CSRF": csrfData.csrfToken,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ method: "email", destination: "dev@example.com", mode: "login" }),
-        });
-        assert.equal(otpRequestHttp.status, 200);
-        assert.equal(httpOtpEmails.length, 1);
-        assert.equal(httpOtpEmails[0].destination, "dev@example.com");
-        const otpVerifyHttp = await fetch(baseUrl + "/api/auth/otp/verify", {
-            method: "POST",
-            headers: {
-                Origin: baseUrl,
-                Cookie: csrfCookieHttp,
-                "X-Ari-CSRF": csrfData.csrfToken,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ method: "email", destination: "dev@example.com", code: httpOtpEmails[0].code }),
-        });
-        assert.equal(otpVerifyHttp.status, 200);
-        const otpVerifyData = await otpVerifyHttp.json();
-        assert.equal(otpVerifyData.authenticated, true);
-        assert.equal(otpVerifyData.user.email, "dev@example.com");
-        const loginHttp = await fetch(baseUrl + "/api/auth/google", {
+        assert.equal(authConfigData.configured, true);
+        assert.equal(authConfigData.registrationMode, "restricted");
+        assert.equal(Object.hasOwn(authConfigData, "methods"), false);
+
+        for (const route of ["/api/auth/otp/request", "/api/auth/otp/verify"]) {
+            const response = await fetch(baseUrl + route, {
+                method: "POST",
+                headers: {
+                    Origin: baseUrl,
+                    Cookie: csrfCookieHttp,
+                    "X-Ari-CSRF": csrfData.csrfToken,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ method: "email", destination: "dev@example.com", mode: "login", code: "123456" }),
+            });
+            assert.equal(response.status, 404, route + " must remain unavailable while OTP sign-in is disabled");
+        }
+
+            const loginHttp = await fetch(baseUrl + "/api/auth/google", {
             method: "POST",
             headers: {
                 Origin: baseUrl,
