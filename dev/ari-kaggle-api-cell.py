@@ -8,17 +8,28 @@ import base64
 import hmac
 import io
 import json
+import os
 import re
+import shutil
+import subprocess
+import tempfile
 import threading
+import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
 ARI_GPU_API_HOST = "127.0.0.1"
 ARI_GPU_API_PORT = 8765
-ARI_GPU_API_MAX_BODY = 12 * 1024 * 1024
+ARI_GPU_API_MAX_BODY = 16 * 1024 * 1024
 ARI_GPU_API_MAX_IMAGE_BYTES = 8 * 1024 * 1024
+ARI_GPU_API_MAX_AUDIO_BYTES = 8 * 1024 * 1024
+ARI_GPU_API_MAX_AUDIO_SECONDS = 30
 ARI_GPU_API_MAX_IMAGE_PIXELS = 20_000_000
 ARI_GPU_API_ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp"}
+ARI_GPU_API_ALLOWED_AUDIO_MIME = {
+    "audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3", "audio/webm",
+    "audio/ogg", "audio/mp4", "audio/aac", "audio/flac"
+}
 ARI_GPU_API_ALLOWED_TIERS = {"medium", "max", "ultra"}
 ARI_GPU_API_IDENTITY_POLICY = (
     "You are Ari, an AI assistant created by Zorex AI. Your name is Ari. Never introduce yourself as "
@@ -30,8 +41,9 @@ ARI_GPU_API_IDENTITY_POLICY = (
     "name. You support text conversation and recent-turn context. The user-facing choices are Mini, "
     "Medium, Max, and Ultra; availability may vary. Think is available only where supported. Supported "
     "image questions use JPEG, PNG, or WebP images up to 8 MiB in available modes; Mini does not "
-    "accept images. Audio input, voice output, document analysis, image generation or editing, video "
-    "analysis, and live web search are not enabled in the current Ari playground. Do not claim to use "
+    "accept images. Max and Ultra can accept short audio input through supported Gemma models. Voice "
+    "output, document analysis, image generation or editing, video analysis, and live web search are not "
+    "enabled in the current Ari playground. Do not claim to use "
     "unavailable tools or invent current sources. Chat history is browser-local, isolated by the signed-in "
     "Google account, and is not synced across devices. Users can sign in with a verified Google account. "
     "When open registration is enabled, a verified account can register automatically; some sites may "
@@ -376,6 +388,69 @@ class AriGpuApi:
             raise AriGpuApiError(413, "Image exceeds the 8 MiB upload limit.")
         return decoder(mime_type, raw)
 
+    def _decode_audio_payload(self, payload):
+        if not isinstance(payload, dict) or set(payload) != {"mime_type", "data_base64"}:
+            raise AriGpuApiError(400, "audio must contain only mime_type and data_base64.")
+        mime_type = payload.get("mime_type")
+        encoded = payload.get("data_base64")
+        if mime_type not in ARI_GPU_API_ALLOWED_AUDIO_MIME or not isinstance(encoded, str) or not encoded:
+            raise AriGpuApiError(400, "Audio MIME type or base64 data is invalid.")
+        if len(encoded) > ((ARI_GPU_API_MAX_AUDIO_BYTES + 2) // 3) * 4 + 4:
+            raise AriGpuApiError(413, "Audio exceeds the 8 MiB upload limit.")
+        try:
+            raw = base64.b64decode(encoded, validate=True)
+        except Exception as error:
+            raise AriGpuApiError(400, "Audio data is not valid base64.") from error
+        if not raw or len(raw) > ARI_GPU_API_MAX_AUDIO_BYTES:
+            status = 413 if len(raw) > ARI_GPU_API_MAX_AUDIO_BYTES else 400
+            message = "Audio exceeds the 8 MiB upload limit." if status == 413 else "Audio data is empty."
+            raise AriGpuApiError(status, message)
+        if not shutil.which("ffmpeg"):
+            raise AriGpuApiError(503, "Audio decoding is unavailable in this notebook session.")
+        descriptor, output_path = tempfile.mkstemp(prefix="ari-audio-", suffix=".wav")
+        os.close(descriptor)
+        try:
+            result = subprocess.run(
+                [
+                    "ffmpeg", "-hide_banner", "-loglevel", "error",
+                    "-i", "pipe:0", "-map", "0:a:0", "-vn",
+                    "-ac", "1", "-ar", "16000", "-c:a", "pcm_f32le",
+                    "-y", output_path
+                ],
+                input=raw,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                timeout=25,
+                check=False
+            )
+            if result.returncode != 0:
+                raise AriGpuApiError(400, "Ari could not decode this audio file. Try a standard audio format.")
+            with wave.open(output_path, "rb") as audio_file:
+                sample_rate = audio_file.getframerate()
+                channels = audio_file.getnchannels()
+                sample_width = audio_file.getsampwidth()
+                frames = audio_file.getnframes()
+            duration = frames / sample_rate if sample_rate else 0
+            if sample_rate != 16000 or channels != 1 or sample_width != 4 or frames <= 0:
+                raise AriGpuApiError(400, "Audio could not be converted to the required mono 16 kHz float format.")
+            if duration > ARI_GPU_API_MAX_AUDIO_SECONDS:
+                raise AriGpuApiError(413, "Gemma audio clips are limited to 30 seconds.")
+            return output_path
+        except subprocess.TimeoutExpired as error:
+            try:
+                os.remove(output_path)
+            except OSError:
+                pass
+            raise AriGpuApiError(408, "Audio conversion took too long. Try a shorter audio clip.") from error
+        except Exception as error:
+            try:
+                os.remove(output_path)
+            except OSError:
+                pass
+            if isinstance(error, AriGpuApiError):
+                raise
+            raise AriGpuApiError(400, "Ari could not read this audio file.") from error
+
     def _generate(self, kind, model, processor, messages, options):
         if self.generation_runner is not None:
             result = self.generation_runner(kind, model, processor, messages, options)
@@ -540,13 +615,19 @@ class AriGpuApi:
         messages = self._validate_messages(payload.get("messages"))
         options = self._validate_options(payload.get("options", {}))
         image_payload = payload.get("image")
-        if image_payload is not None and tier not in ("medium", "max", "ultra"):
-            raise AriGpuApiError(400, "This tier does not accept images.")
+        audio_payload = payload.get("audio")
+        if audio_payload is not None and tier not in ("max", "ultra"):
+            raise AriGpuApiError(400, "Audio input is available on Max and Ultra Gemma tiers only.")
+        if image_payload is not None and audio_payload is not None:
+            raise AriGpuApiError(400, "Send an image or audio file, not both in one request.")
         image = self._image_for(image_payload)
         models = self._models()
         if not self.generation_lock.acquire(blocking=False):
             raise AriGpuApiError(429, "Another GPU generation is in progress. Retry shortly.")
+        audio_path = None
         try:
+            if audio_payload is not None:
+                audio_path = self._decode_audio_payload(audio_payload)
             system_prompt = self.namespace.get("ARI_SYSTEM_PROMPT")
             if not isinstance(system_prompt, str) or not system_prompt.strip():
                 raise AriGpuApiError(503, "The notebook's ARI_SYSTEM_PROMPT is not available.")
@@ -587,7 +668,7 @@ class AriGpuApi:
                         *messages[:-1],
                         {"role": "user", "content": "Original question: " + last_question + "\n\nComplete visual observation report (internal evidence; do not quote or reveal this report):\n<untrusted_visual_observation>\n" + observation + "\n</untrusted_visual_observation>\n\nIndependently interpret the complete observations and answer the original question. Do not claim details beyond the evidence."},
                     ]
-                reply = self._generate("qwen", qwen_model, qwen_tokenizer, qwen_messages, options)
+                reply = self._generate("qwen", qwen_model, qwen_messages, options)
                 return {"reply": reply, "tier": "medium", "model": "Qwen/Qwen3-4B", "route": "qwen_with_gemma_e2b_observation" if image is not None else "qwen_text"}
 
             model_key = "e2b" if tier == "max" else "e4b"
@@ -600,14 +681,32 @@ class AriGpuApi:
                 user_message = dict(gemma_messages[-1])
                 user_message["content"] = [{"type": "image", "image": image}, {"type": "text", "text": last_question}]
                 gemma_messages[-1] = user_message
+            elif audio_path is not None:
+                user_message = dict(gemma_messages[-1])
+                user_message["content"] = [
+                    {"type": "text", "text": last_question},
+                    {"type": "audio", "url": audio_path},
+                ]
+                gemma_messages[-1] = user_message
             gemma_options = dict(options)
-            # The Think control enables Qwen's deep-thinking path only. Gemma remains in
-            # its normal generation mode for direct Max/Ultra answers and visual reports.
+            # The Think control enables Qwen's deep-thinking path only. Gemma runs its standard response path.
             gemma_options["thinking"] = False
             reply = self._generate("gemma", model, processor, gemma_messages, gemma_options)
-            return {"reply": reply, "tier": tier, "model": "google/gemma-4-E2B-it" if tier == "max" else "google/gemma-4-E4B-it", "route": "gemma_direct_image" if image is not None else "gemma_text"}
+            route = "gemma_audio" if audio_path is not None else "gemma_direct_image" if image is not None else "gemma_text"
+            return {
+                "reply": reply,
+                "tier": tier,
+                "model": "google/gemma-4-E2B-it" if tier == "max" else "google/gemma-4-E4B-it",
+                "route": route
+            }
         finally:
+            if audio_path:
+                try:
+                    os.remove(audio_path)
+                except OSError:
+                    pass
             self.generation_lock.release()
+
 
 
 def _ari_gpu_api_handler(service):
