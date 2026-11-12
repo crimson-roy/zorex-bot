@@ -257,10 +257,13 @@ function createAriOtpAuth(options = {}) {
     }
 
     function methods() {
-        const openRegistration = env.ARI_REGISTRATION_MODE === undefined || String(env.ARI_REGISTRATION_MODE).trim().toLowerCase() === "open";
+        const registrationMode = String(env.ARI_REGISTRATION_MODE || "open").trim().toLowerCase();
+        const registrationModeValid = registrationMode === "open" || registrationMode === "restricted";
+        const openRegistration = registrationModeValid && registrationMode === "open";
+        const restrictedRegistration = registrationModeValid && registrationMode === "restricted";
         return {
-            emailOtp: emailConfigured && (openRegistration || allowedEmailCount() > 0),
-            smsOtp: smsConfigured && (openRegistration || allowedPhoneCount() > 0)
+            emailOtp: emailConfigured && (openRegistration || (restrictedRegistration && allowedEmailCount() > 0)),
+            smsOtp: smsConfigured && (openRegistration || (restrictedRegistration && allowedPhoneCount() > 0))
         };
     }
 
