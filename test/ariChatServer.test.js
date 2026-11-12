@@ -386,6 +386,17 @@ async function main() {
         assert.equal((await savedWorkspace.json()).saved, true);
         const loadedWorkspace = await fetch(baseUrl + "/api/workspace/chats");
         assert.deepEqual((await loadedWorkspace.json()).chats, sampleChats);
+        const chatSearchResponse = await fetch(baseUrl + "/api/workspace/chats/search", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": baseUrl,
+                "X-Ari-CSRF": "test-csrf"
+            },
+            body: JSON.stringify({ query: "Save this conversation" })
+        });
+        assert.equal(chatSearchResponse.status, 200);
+        assert.equal((await chatSearchResponse.json()).results[0].chatId, "persisted-chat-1");
 
         const initialProfile = await fetch(baseUrl + "/api/workspace/profile");
         assert.equal(initialProfile.status, 200);
