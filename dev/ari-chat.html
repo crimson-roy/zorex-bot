@@ -801,6 +801,7 @@
     const app = document.querySelector(".app");
     const tierSelect = document.getElementById("tier-select");
     const imageInput = document.getElementById("image-input");
+    const audioInput = document.getElementById("audio-input");
     const fileInput = document.getElementById("file-input");
     const attachButton = document.getElementById("attach-button");
     const attachMenu = document.getElementById("attach-menu");
@@ -1541,7 +1542,7 @@
 
       if (imageName) {
         const meta = document.createElement("small");
-        meta.textContent = "Image attached: " + imageName;
+        meta.textContent = speaker === "user" ? "Attachment: " + imageName : "Image attached: " + imageName;
         bubble.appendChild(meta);
       }
 
@@ -1565,7 +1566,7 @@
             message.id = createId();
             assignedMessageIds = true;
           }
-          addMessage(message.text, message.role, message.imageName, {
+          addMessage(message.text, message.role, message.imageName || message.audioName || message.textFileName, {
             message,
             chatId: chat.id,
             activity: message.activity,
@@ -2744,8 +2745,31 @@
     });
     input.addEventListener("paste", () => {
       window.setTimeout(() => {
+        const pastedText = input.value;
+        if (pastedText.trim().length >= 700 &&
+            !(activeAttachmentInput.files && activeAttachmentInput.files[0]) &&
+            typeof DataTransfer === "function" && typeof File === "function") {
+          try {
+            const pastedFile = new File(
+              [pastedText],
+              "pasted-text-" + new Date().toISOString().replace(/[:.]/g, "-") + ".txt",
+              { type: "text/plain" }
+            );
+            const transfer = new DataTransfer();
+            transfer.items.add(pastedFile);
+            fileInput.files = transfer.files;
+            activeAttachmentInput = fileInput;
+            input.value = "";
+          } catch (_) {
+            // Keep the pasted text in the composer if this browser cannot create file attachments.
+          }
+        }
         resizeComposer();
         updatePastedTextCard();
+        if (activeAttachmentInput === fileInput && fileInput.files && fileInput.files[0] &&
+            fileInput.files[0].name.startsWith("pasted-text-") && !selectedLibraryFile) {
+          fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
       }, 0);
     });
     input.addEventListener("keydown", event => {
@@ -2799,14 +2823,21 @@
         showComposerMessage(attachmentUploadError || "Wait until the file has finished saving to your Library.");
         return;
       }
-      if (selectedFile && activeAttachmentInput !== imageInput) {
-        showComposerMessage("This file is saved in your Library, but Ari cannot analyse documents or audio yet. Remove it from the composer to send your text.");
+      const selectedImage = selectedFile && activeAttachmentInput === imageInput ? selectedFile : null;
+      const selectedAudio = selectedFile && activeAttachmentInput === audioInput ? selectedFile : null;
+      const selectedTextFile = selectedFile && activeAttachmentInput === fileInput ? selectedFile : null;
+      const textExtension = String(selectedTextFile?.name || "").split(".").pop().toLowerCase();
+      const isReadableTextFile = selectedTextFile && (
+        ["text/plain", "text/markdown", "text/csv", "application/json"].includes(selectedTextFile.type) ||
+        ["txt", "md", "csv", "json"].includes(textExtension)
+      );
+      if (selectedFile && !selectedImage && !selectedAudio && !isReadableTextFile) {
+        showComposerMessage("This file is saved in your Library, but chat reading currently supports text files, images and audio. PDF and Word document analysis will be added separately.");
         return;
       }
-      const selectedImage = selectedFile;
       if (selectedImage) {
         if (selectedImage.size > 8 * 1024 * 1024) {
-          showComposerMessage("This image is saved in your Library, but image chat input is limited to 8 MiB. Choose a smaller image to ask Ari about it.");
+          showComposerMessage("Images must be 8 MiB or smaller.");
           return;
         }
         if (tier === "mini") {
@@ -2817,8 +2848,18 @@
           showComposerMessage("That image type isn't supported. Choose another image.");
           return;
         }
-        if (selectedImage.size > 8 * 1024 * 1024) {
-          showComposerMessage("Choose an image smaller than 8 MiB.");
+      }
+      if (selectedAudio) {
+        if (selectedAudio.size > 8 * 1024 * 1024) {
+          showComposerMessage("Audio files must be 8 MiB or smaller.");
+          return;
+        }
+        if (!["max", "ultra"].includes(tier)) {
+          showComposerMessage("Choose Max or Ultra to send audio. Those tiers use Gemma audio-capable models.");
+          return;
+        }
+        if (!["audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3", "audio/webm", "audio/ogg", "audio/mp4", "audio/aac", "audio/flac"].includes(selectedAudio.type)) {
+          showComposerMessage("That audio format is not supported. Choose WAV, MP3, WebM, OGG, MP4, AAC or FLAC.");
           return;
         }
       }
@@ -2830,7 +2871,10 @@
       const userMessage = {
         role: "user",
         text: prompt,
-        ...(selectedImage ? { imageName: selectedImage.name || "uploaded image", tier } : {}),
+        ...(selectedImage ? { imageName: selectedImage.name || "uploaded image" } : {}),
+        ...(selectedAudio ? { audioName: selectedAudio.name || "audio file" } : {}),
+        ...(isReadableTextFile ? { textFileName: selectedTextFile.name || "text attachment" } : {}),
+        tier,
         createdAt: Date.now()
       };
       chat.messages.push(userMessage);
@@ -2849,6 +2893,17 @@
 
       try {
         const image = selectedImage ? await encodeImage(selectedImage) : null;
+        const audio = selectedAudio ? await encodeImage(selectedAudio) : null;
+        let textAttachment = null;
+        if (isReadableTextFile) {
+          textAttachment = await selectedTextFile.text();
+          const maximum = tier === "mini" ? 1600 : 16000;
+          if (textAttachment.length > maximum) {
+            throw new Error(tier === "mini"
+              ? "Mini text attachments are limited to 1,600 characters. Choose Medium or Max for larger text files."
+              : "Text attachments are limited to 16,000 characters per message.");
+          }
+        }
         const response = await fetch("/api/chat", {
           method: "POST",
           credentials: "same-origin",
@@ -2862,6 +2917,9 @@
             })),
             tier,
             image,
+            audio,
+            textAttachment,
+            textAttachmentName: selectedTextFile?.name || "",
             stream: true,
             options: { thinking: thinkEnabled, max_new_tokens: thinkEnabled ? 1024 : 512 }
           })
