@@ -388,7 +388,7 @@ async function respondWithGpuModel(message, messages, options = {}) {
     if (calculation.matched) {
         return { reply: calculation.error ? "⚠️ " + calculation.error : calculation.display, mode: "Local arithmetic · no AI API" };
     }
-    const localLanguage = options.image ? null : respondToLocalLanguage(prompt, { dictionary: options.dictionary || wordNet });
+    const localLanguage = options.image || options.audio ? null : respondToLocalLanguage(prompt, { dictionary: options.dictionary || wordNet });
     const mode = String(localLanguage?.mode || "");
     const completedLocalTool = /^(?:WordNet (?:word search|dictionary)|Local character analysis|Local capability summary)/.test(mode);
     if (completedLocalTool) return localLanguage;
@@ -402,6 +402,7 @@ async function respondWithGpuModel(message, messages, options = {}) {
             tier: options.tier,
             messages,
             image: options.image || null,
+            audio: options.audio || null,
             options: options.generationOptions || { thinking: false, max_new_tokens: 512 }
         });
         return {
@@ -413,10 +414,13 @@ async function respondWithGpuModel(message, messages, options = {}) {
             ["GPU_NOT_CONFIGURED", "GPU_DISCONNECTED", "GPU_TIMEOUT", "GPU_BAD_RESPONSE"].includes(error.code)));
         if (!unavailable || options.textFallbackEnabled === false) throw error;
 
-        if (options.image) {
-            throw new AriGpuClientError("Ari's image-viewing service is unavailable right now. I can't view that media at the moment.", {
-                statusCode: 503, code: "GPU_MEDIA_UNAVAILABLE", retryable: true
-            });
+        if (options.image || options.audio) {
+            throw new AriGpuClientError(
+                options.audio
+                    ? "Ari's audio-understanding service is unavailable right now. Please try again when Max is available."
+                    : "Ari's image-viewing service is unavailable right now. I can't view that media at the moment.",
+                { statusCode: 503, code: "GPU_MEDIA_UNAVAILABLE", retryable: true }
+            );
         }
 
         const fallback = await getAriTextFallback(messages, options);
