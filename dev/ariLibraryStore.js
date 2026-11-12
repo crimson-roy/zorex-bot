@@ -178,12 +178,38 @@ function createAriLibraryStore(options = {}) {
             throw fileError("Empty files cannot be added to the Library.", 400);
         }
 
-        const operation = queue.then(() => {
+        const uploadHash = crypto.createHash("sha256").update(await fsp.readFile(temporaryPath)).digest("hex");
+        const operation = queue.then(async () => {
             const store = readStore();
             const key = accountKey(subject);
             const existing = store.accounts[key] && Array.isArray(store.accounts[key].files)
                 ? store.accounts[key].files
                 : [];
+            let duplicate = null;
+            let metadataChanged = false;
+            for (const saved of existing) {
+                let savedHash = typeof saved.sha256 === "string" ? saved.sha256 : "";
+                if (!savedHash) {
+                    const savedPath = path.join(libraryDir, key, saved.id + ".bin");
+                    try {
+                        const bytes = await fsp.readFile(savedPath);
+                        savedHash = crypto.createHash("sha256").update(bytes).digest("hex");
+                        saved.sha256 = savedHash;
+                        metadataChanged = true;
+                    } catch (_) {
+                        continue;
+                    }
+                }
+                if (savedHash === uploadHash) duplicate = saved;
+            }
+            if (metadataChanged) {
+                store.accounts[key] = { ...(store.accounts[key] || {}), files: existing };
+                writeStore(store);
+            }
+            if (duplicate) {
+                await fsp.rm(temporaryPath, { force: true });
+                return { ...publicRecord(duplicate), duplicate: true };
+            }
             const usedBytes = sumFiles(existing);
             const globalUsedBytes = Object.values(store.accounts).reduce((sum, account) =>
                 sum + (account && Array.isArray(account.files) ? sumFiles(account.files) : 0), 0);
@@ -199,7 +225,7 @@ function createAriLibraryStore(options = {}) {
             const destination = path.join(accountDirectory, id + ".bin");
             fsImpl.mkdirSync(accountDirectory, { recursive: true, mode: 0o700 });
             fsImpl.renameSync(temporaryPath, destination);
-            const record = { id, name, mimeType, size: actualSize, createdAt: now() };
+            const record = { id, name, mimeType, size: actualSize, sha256: uploadHash, createdAt: now() };
             store.accounts[key] = {
                 ...(store.accounts[key] && typeof store.accounts[key] === "object" ? store.accounts[key] : {}),
                 files: [...existing, record]
