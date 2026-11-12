@@ -1241,43 +1241,185 @@
 
     function appendInlineMessageText(container, value) {
       const source = String(value || "");
-      const linkPattern = /\[([^\]]{1,160})\]\((https:\/\/[^)\s]+)\)/g;
+      const tokenPattern = /(\[[^\]]{1,160}\]\(https:\/\/[^)\s]+\)|\*\*[^*\n]+\*\*|~~[^~\n]+~~|`[^`\n]+`|\*[^*\n]+\*)/g;
       let cursor = 0;
       let match;
-      while ((match = linkPattern.exec(source)) !== null) {
-        container.appendChild(document.createTextNode(source.slice(cursor, match.index)));
-        let safeUrl = null;
-        try {
-          const parsed = new URL(match[2]);
-          const host = parsed.hostname.toLowerCase();
-          const ipLiteral = /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host) || /^\\[[0-9a-f:]+\\]$/i.test(host);
-          const localHost = host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal");
-          if (parsed.protocol === "https:" && !parsed.username && !parsed.password && !ipLiteral && !localHost) safeUrl = parsed.toString();
-        } catch { /* Invalid links remain plain text. */ }
-        if (safeUrl) {
-          const link = document.createElement("a");
-          link.className = "message-inline-link";
-          link.href = safeUrl;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.textContent = match[1];
-          container.appendChild(link);
-        } else {
-          container.appendChild(document.createTextNode(match[0]));
+      while ((match = tokenPattern.exec(source)) !== null) {
+        if (match.index > cursor) container.appendChild(document.createTextNode(source.slice(cursor, match.index)));
+        const token = match[0];
+        if (token.startsWith("[")) {
+          const linkParts = token.match(/^\[([^\]]+)\]\((https:\/\/[^)\s]+)\)$/);
+          let safeUrl = null;
+          if (linkParts) {
+            try {
+              const parsed = new URL(linkParts[2]);
+              const host = parsed.hostname.toLowerCase();
+              const ipLiteral = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(host) || /^\[[0-9a-f:]+\]$/i.test(host);
+              const localHost = host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal");
+              if (parsed.protocol === "https:" && !parsed.username && !parsed.password && !ipLiteral && !localHost) safeUrl = parsed.toString();
+            } catch { /* Invalid links remain ordinary text. */ }
+          }
+          if (safeUrl) {
+            const link = document.createElement("a");
+            link.className = "message-inline-link";
+            link.href = safeUrl;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.textContent = linkParts[1];
+            container.appendChild(link);
+          } else {
+            container.appendChild(document.createTextNode(token));
+          }
+        } else if (token.startsWith("**") && token.endsWith("**")) {
+          const strong = document.createElement("strong");
+          strong.textContent = token.slice(2, -2);
+          container.appendChild(strong);
+        } else if (token.startsWith("~~") && token.endsWith("~~")) {
+          const deleted = document.createElement("del");
+          deleted.textContent = token.slice(2, -2);
+          container.appendChild(deleted);
+        } else if (token.startsWith("`") && token.endsWith("`")) {
+          const code = document.createElement("code");
+          code.className = "inline-code";
+          code.textContent = token.slice(1, -1);
+          container.appendChild(code);
+        } else if (token.startsWith("*") && token.endsWith("*")) {
+          const emphasis = document.createElement("em");
+          emphasis.textContent = token.slice(1, -1);
+          container.appendChild(emphasis);
         }
-        cursor = linkPattern.lastIndex;
+        cursor = tokenPattern.lastIndex;
       }
-      container.appendChild(document.createTextNode(source.slice(cursor)));
+      if (cursor < source.length) container.appendChild(document.createTextNode(source.slice(cursor)));
+    }
+
+    function markdownTableCells(line) {
+      return String(line || "").trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(cell => cell.trim());
+    }
+
+    function isMarkdownTableDivider(line) {
+      const cells = markdownTableCells(line);
+      return cells.length > 1 && cells.every(cell => /^:?-{3,}:?$/.test(cell));
     }
 
     function appendPlainMessageText(container, value) {
-      const paragraphs = String(value || "").split(/\n{2,}/);
-      for (const paragraphText of paragraphs) {
-        if (!paragraphText.trim()) continue;
+      const lines = String(value || "").replace(/\r\n?/g, "\n").split("\n");
+      const isBlockStart = index => {
+        const line = lines[index] || "";
+        return /^\s{0,3}#{1,3}\s+/.test(line) ||
+          /^\s{0,3}(?:[-*_]\s*){3,}$/.test(line) ||
+          /^\s*[-*+]\s+/.test(line) ||
+          /^\s*\d+[.)]\s+/.test(line) ||
+          /^\s*>\s?/.test(line) ||
+          (line.includes("|") && index + 1 < lines.length && isMarkdownTableDivider(lines[index + 1]));
+      };
+      const appendParagraph = paragraphLines => {
+        const text = paragraphLines.join("\n").trim();
+        if (!text) return;
         const paragraph = document.createElement("p");
         paragraph.className = "message-paragraph";
-        appendInlineMessageText(paragraph, paragraphText.trim());
+        appendInlineMessageText(paragraph, text);
         container.appendChild(paragraph);
+      };
+
+      let index = 0;
+      while (index < lines.length) {
+        const line = lines[index];
+        if (!line.trim()) {
+          index++;
+          continue;
+        }
+
+        const heading = line.match(/^\s{0,3}(#{1,3})\s+(.+)$/);
+        if (heading) {
+          const element = document.createElement("h" + heading[1].length);
+          appendInlineMessageText(element, heading[2].trim());
+          container.appendChild(element);
+          index++;
+          continue;
+        }
+
+        if (/^\s{0,3}(?:[-*_]\s*){3,}$/.test(line)) {
+          const divider = document.createElement("hr");
+          divider.style.border = "0";
+          divider.style.borderTop = "1px solid var(--line)";
+          divider.style.margin = "1em 0";
+          container.appendChild(divider);
+          index++;
+          continue;
+        }
+
+        const unordered = line.match(/^\s*[-*+]\s+(.+)$/);
+        const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+        if (unordered || ordered) {
+          const list = document.createElement(ordered ? "ol" : "ul");
+          const pattern = ordered ? /^\s*\d+[.)]\s+(.+)$/ : /^\s*[-*+]\s+(.+)$/;
+          while (index < lines.length) {
+            const itemMatch = lines[index].match(pattern);
+            if (!itemMatch) break;
+            const item = document.createElement("li");
+            appendInlineMessageText(item, itemMatch[1].trim());
+            list.appendChild(item);
+            index++;
+          }
+          container.appendChild(list);
+          continue;
+        }
+
+        if (/^\s*>\s?/.test(line)) {
+          const quote = document.createElement("blockquote");
+          while (index < lines.length && /^\s*>\s?/.test(lines[index])) {
+            const quoteLine = lines[index].replace(/^\s*>\s?/, "");
+            const paragraph = document.createElement("p");
+            paragraph.className = "message-paragraph";
+            appendInlineMessageText(paragraph, quoteLine);
+            quote.appendChild(paragraph);
+            index++;
+          }
+          container.appendChild(quote);
+          continue;
+        }
+
+        if (line.includes("|") && index + 1 < lines.length && isMarkdownTableDivider(lines[index + 1])) {
+          const headers = markdownTableCells(line);
+          const table = document.createElement("table");
+          const thead = document.createElement("thead");
+          const headerRow = document.createElement("tr");
+          for (const value of headers) {
+            const cell = document.createElement("th");
+            appendInlineMessageText(cell, value);
+            headerRow.appendChild(cell);
+          }
+          thead.appendChild(headerRow);
+          table.appendChild(thead);
+          index += 2;
+          const tbody = document.createElement("tbody");
+          while (index < lines.length && lines[index].includes("|") && lines[index].trim()) {
+            const values = markdownTableCells(lines[index]);
+            const row = document.createElement("tr");
+            for (let cellIndex = 0; cellIndex < headers.length; cellIndex++) {
+              const cell = document.createElement("td");
+              appendInlineMessageText(cell, values[cellIndex] || "");
+              row.appendChild(cell);
+            }
+            tbody.appendChild(row);
+            index++;
+          }
+          table.appendChild(tbody);
+          container.appendChild(table);
+          continue;
+        }
+
+        const paragraphLines = [];
+        while (index < lines.length && lines[index].trim() && !isBlockStart(index)) {
+          paragraphLines.push(lines[index]);
+          index++;
+        }
+        if (!paragraphLines.length) {
+          paragraphLines.push(lines[index]);
+          index++;
+        }
+        appendParagraph(paragraphLines);
       }
     }
 
