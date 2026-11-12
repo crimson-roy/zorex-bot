@@ -41,7 +41,7 @@ function createAriDeveloperAccess(options = {}) {
     const env = options.env || process.env;
     const isProduction = options.isProduction ?? env.NODE_ENV === "production";
     const clientId = String(env.GOOGLE_CLIENT_ID || "").trim();
-    const requestedRegistrationMode = String(env.ARI_REGISTRATION_MODE || "restricted").trim().toLowerCase();
+    const requestedRegistrationMode = String(env.ARI_REGISTRATION_MODE || "open").trim().toLowerCase();
     const registrationModeValid = requestedRegistrationMode === "restricted" || requestedRegistrationMode === "open";
     const registrationMode = registrationModeValid ? requestedRegistrationMode : "restricted";
     const allowedEmails = new Set(String(env.ARI_ALLOWED_EMAILS || "").split(",").map(normalizedEmail).filter(Boolean));
@@ -181,7 +181,30 @@ function createAriDeveloperAccess(options = {}) {
     }
 
     function publicUser(session) {
-        return session ? { sub: session.sub, email: session.email, name: session.name } : null;
+        return session ? {
+            sub: session.sub,
+            email: session.email || "",
+            phone: session.phone || "",
+            name: session.name || ""
+        } : null;
+    }
+
+    function createSession(request, response, identity) {
+        const oldSessionId = parseCookies(request.headers.cookie)[SESSION_COOKIE];
+        if (oldSessionId) sessions.delete(hashSessionId(oldSessionId));
+        const sessionId = crypto.randomBytes(32).toString("hex");
+        const session = {
+            sub: String(identity.sub),
+            email: normalizedEmail(identity.email),
+            phone: typeof identity.phone === "string" ? identity.phone : "",
+            name: typeof identity.name === "string" ? identity.name.slice(0, 120) : "",
+            expiresAt: now() + sessionTtlSeconds * 1000,
+        };
+        sessions.set(hashSessionId(sessionId), session);
+        appendCookie(response, `${SESSION_COOKIE}=${sessionId}; ${cookieOptions(sessionTtlSeconds, true)}`);
+        const csrfToken = crypto.randomBytes(32).toString("base64url");
+        setCsrfCookie(response, csrfToken, sessionTtlSeconds);
+        return { authenticated: true, user: publicUser(session), csrfToken };
     }
 
     async function authenticateCredential(request, response, body) {
@@ -229,20 +252,11 @@ function createAriDeveloperAccess(options = {}) {
             throw error;
         }
 
-        const oldSessionId = parseCookies(request.headers.cookie)[SESSION_COOKIE];
-        if (oldSessionId) sessions.delete(hashSessionId(oldSessionId));
-        const sessionId = crypto.randomBytes(32).toString("hex");
-        const session = {
+        return createSession(request, response, {
             sub: claims.sub,
             email,
-            name: typeof claims.name === "string" ? claims.name.slice(0, 120) : "",
-            expiresAt: now() + sessionTtlSeconds * 1000,
-        };
-        sessions.set(hashSessionId(sessionId), session);
-        appendCookie(response, `${SESSION_COOKIE}=${sessionId}; ${cookieOptions(sessionTtlSeconds, true)}`);
-        const csrfToken = crypto.randomBytes(32).toString("base64url");
-        setCsrfCookie(response, csrfToken, sessionTtlSeconds);
-        return { authenticated: true, user: publicUser(session), csrfToken };
+            name: typeof claims.name === "string" ? claims.name.slice(0, 120) : ""
+        });
     }
 
     function logout(request, response) {
@@ -260,7 +274,7 @@ function createAriDeveloperAccess(options = {}) {
     }
 
     function config() {
-        return { clientId, configured, error: configured ? null : configError };
+        return { clientId, configured, error: configured ? null : configError, registrationMode };
     }
 
     function invalidateAll() {

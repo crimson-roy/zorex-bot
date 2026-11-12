@@ -486,7 +486,11 @@ class AriGpuApi:
             inputs = dict(encoded.items())
         else:
             inputs = {"input_ids": encoded}
-        if "input_ids" not in inputs or not callable(getattr(inputs["input_ids"], "shape", None)):
+        input_ids = inputs.get("input_ids")
+        # Tensor.shape is an attribute (for example, torch.Size), not a callable.
+        # BatchEncoding may be mapping-like, so validate the actual tensor shape
+        # instead of incorrectly testing whether the shape attribute is callable.
+        if input_ids is None or getattr(input_ids, "shape", None) is None:
             raise AriGpuApiError(500, "Qwen tokenizer did not return tensor input_ids.")
         inputs = self._move_inputs(inputs, model)
         input_ids = inputs["input_ids"]

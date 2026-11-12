@@ -6,6 +6,9 @@ node_modules/
 .env.*
 !.env.example
 
+# Search-router usage telemetry (runtime only)
+data/searchRouterUsage.json*
+
 # Runtime data written by the bot
 users.json
 owners.json
@@ -41,6 +44,9 @@ npm-debug.log*
 # data/
 
 # Ari developer-only session usage data (never commit private account usage)
+data/ariWorkspace.json
+data/ariLibrary.json*
+data/ariLibrary/
 data/ariDeveloperUsage.json
 data/ariDeveloperUsage.json.tmp-*
 

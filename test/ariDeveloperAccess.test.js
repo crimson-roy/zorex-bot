@@ -27,6 +27,7 @@ const BASE_CLAIMS = {
 function setupAccess(overrides = {}, now = () => 1_900_000_000_000) {
     const env = {
         GOOGLE_CLIENT_ID: CLIENT_ID,
+        ARI_REGISTRATION_MODE: "restricted",
         ARI_ALLOWED_EMAILS: "dev@example.com, Other@Example.com",
         ARI_SESSION_TTL_SECONDS: "120",
         ...overrides.env,
@@ -39,6 +40,8 @@ function setupAccess(overrides = {}, now = () => 1_900_000_000_000) {
             if (credential === "bad") throw new Error("invalid token");
             return claims;
         }),
+        sendEmail: overrides.sendEmail,
+        sendSms: overrides.sendSms,
         isProduction: overrides.isProduction,
     });
     return { access, env };
@@ -68,22 +71,42 @@ async function main() {
     assert.equal(respondAriSelfKnowledge("What is your creator's real name?"), "I was created by Zorex AI. I don't have a personal creator name to share.");
     assert.match(respondAriSelfKnowledge("What are your usage limits?"), /contact the site administrator/i);
     assert.doesNotMatch(respondAriSelfKnowledge("What are your usage limits?"), /\b(?:100|10)\b/);
-    assert.match(respondAriSelfKnowledge("How do I register?"), /verified Google account.*automatically/i);
+    assert.match(respondAriSelfKnowledge("How do I register?"), /verified Google account/i);
+    assert.doesNotMatch(respondAriSelfKnowledge("How do I register?"), /one-time code|phone number|email address/i);
+    assert.match(respondAriSelfKnowledge("Can you search the web?"), /search public web information.*configured and available/i);
     assert.doesNotMatch(respondAriSelfKnowledge("How do I get an invite?"), /invited accounts/i);
     assert.match(ARI_SELF_KNOWLEDGE_POLICY, /never disclose numeric quotas/i);
     const selfKnowledgeDoc = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-self-knowledge.md"), "utf8");
     const developerDoc = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-developer-reference.md"), "utf8");
     assert.match(selfKnowledgeDoc, /Zorex AI/);
-    assert.match(selfKnowledgeDoc, /open registration is enabled/);
+    assert.match(selfKnowledgeDoc, /open registration is the default/);
     assert.doesNotMatch(selfKnowledgeDoc, /invited accounts|contact their inviter/i);
     assert.doesNotMatch(selfKnowledgeDoc, /100 accepted chat requests|10 requests per minute/);
     assert.match(developerDoc, /ARI_DAILY_MESSAGE_LIMIT=100/);
     assert.match(developerDoc, /ARI_MESSAGES_PER_MINUTE=10/);
 
     let current = 1_900_000_000_000;
+    const defaultOpenAccess = createAriDeveloperAccess({
+        env: { GOOGLE_CLIENT_ID: CLIENT_ID, ARI_ALLOWED_EMAILS: "" },
+        now: () => current,
+        verifyIdToken: async () => ({ ...BASE_CLAIMS, email: "public.user@example.com" }),
+    });
+    assert.equal(defaultOpenAccess.config().configured, true);
+    assert.equal(defaultOpenAccess.registrationMode, "open");
+    const defaultOpenCsrfResponse = responseStub();
+    const defaultOpenCsrf = defaultOpenAccess.issueCsrf(request(), defaultOpenCsrfResponse).csrfToken;
+    const defaultOpenLogin = await defaultOpenAccess.authenticateCredential(
+        request({ cookie: `${CSRF_COOKIE}=${defaultOpenCsrf}`, csrf: defaultOpenCsrf }),
+        responseStub(),
+        { credential: "valid" }
+    );
+    assert.equal(defaultOpenLogin.authenticated, true);
+    assert.equal(defaultOpenLogin.user.email, "public.user@example.com");
+
     const { access } = setupAccess({}, () => current);
     assert.equal(access.config().configured, true);
     assert.equal(access.registrationMode, "restricted");
+    assert.equal(access.config().registrationMode, "restricted");
     const restrictedWithoutEmails = setupAccess({ env: { ARI_ALLOWED_EMAILS: "" } }).access;
     assert.equal(restrictedWithoutEmails.config().configured, false);
     const csrfResponse = responseStub();
@@ -147,6 +170,7 @@ async function main() {
     }, () => current).access;
     assert.equal(openRegistration.config().configured, true);
     assert.equal(openRegistration.registrationMode, "open");
+    assert.equal(openRegistration.config().registrationMode, "open");
     for (let signIn = 0; signIn < 2; signIn += 1) {
         const openResponse = responseStub();
         const openLogin = await openRegistration.authenticateCredential(
@@ -236,22 +260,27 @@ async function main() {
     }
 
     const pageSource = fs.readFileSync(path.join(__dirname, "..", "dev", "ari-chat.html"), "utf8");
+    assert.match(pageSource, /isn\x27t on Ari\x27s approved sign-in list/,
+        "the sign-in page should explain that a 403 means the Google account is not allowlisted");
     const historyFunction = pageSource.match(/function historyStorageKey\(sub\) \{([\s\S]*?)\n    \}/);
-    assert.ok(historyFunction, "the browser must scope history using the authenticated Google subject");
+    assert.ok(historyFunction, "the browser must scope history using the authenticated account subject");
     const getHistoryKey = new Function("STORAGE_KEY_PREFIX", `return function historyStorageKey(sub) {${historyFunction[1]}\n}`)("ari-playground-chats-v1:");
     assert.notEqual(getHistoryKey("google-sub-one"), getHistoryKey("google-sub-two"));
     assert.match(getHistoryKey("google-sub-one"), /^ari-playground-chats-v1:/);
     assert.doesNotMatch(pageSource, /localStorage\.(?:getItem|setItem)\(["'](?:ari-playground-chats-v1|google-id-token)/);
+    assert.ok(!pageSource.includes("otp-method-tabs") && !pageSource.includes("otp-request-form") && !pageSource.includes("otp-verify-panel"), "public auth page must expose Google only");
+    assert.ok(pageSource.includes("Create your account with a verified Google account"));
 
     const authDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ari-auth-http-"));
+    const httpAuth = setupAccess().access;
     const server = createServer({
         env: { NODE_ENV: "test", GOOGLE_CLIENT_ID: CLIENT_ID, ARI_ALLOWED_EMAILS: "dev@example.com", ARI_DATA_DIR: authDataDir },
-        authService: setupAccess().access,
+        authService: httpAuth,
         usageStore: createAriDeveloperUsage({ dataDir: authDataDir, dailyLimit: 1, perMinuteLimit: 10 }),
     });
     await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, HOST, resolve); });
     try {
-        const baseUrl = `http://${HOST}:${server.address().port}`;
+        const baseUrl = "http://" + HOST + ":" + server.address().port;
         const unauthenticated = await fetch(baseUrl + "/api/chat", {
             method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: "hello" })
         });
@@ -263,8 +292,28 @@ async function main() {
         const csrfResponseHttp = await fetch(baseUrl + "/api/auth/csrf");
         const csrfData = await csrfResponseHttp.json();
         const csrfSetCookie = csrfResponseHttp.headers.getSetCookie();
-        const csrfCookieHttp = csrfSetCookie.find(value => value.startsWith(`${CSRF_COOKIE}=`)).split(";", 1)[0];
-        const loginHttp = await fetch(baseUrl + "/api/auth/google", {
+        const csrfCookieHttp = csrfSetCookie.find(value => value.startsWith(CSRF_COOKIE + "=")).split(";", 1)[0];
+        const authConfigHttp = await fetch(baseUrl + "/api/auth/config");
+        const authConfigData = await authConfigHttp.json();
+        assert.equal(authConfigData.configured, true);
+        assert.equal(authConfigData.registrationMode, "restricted");
+        assert.equal(Object.hasOwn(authConfigData, "methods"), false);
+
+        for (const route of ["/api/auth/otp/request", "/api/auth/otp/verify"]) {
+            const response = await fetch(baseUrl + route, {
+                method: "POST",
+                headers: {
+                    Origin: baseUrl,
+                    Cookie: csrfCookieHttp,
+                    "X-Ari-CSRF": csrfData.csrfToken,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ method: "email", destination: "dev@example.com", mode: "login", code: "123456" }),
+            });
+            assert.equal(response.status, 404, route + " must remain unavailable while OTP sign-in is disabled");
+        }
+
+            const loginHttp = await fetch(baseUrl + "/api/auth/google", {
             method: "POST",
             headers: {
                 Origin: baseUrl,

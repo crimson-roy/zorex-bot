@@ -4,166 +4,591 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/ari-favicon.png">
-  <title>Ari — Local Playground</title>
+  <title>Ari by Zorex AI | AI workspace for conversations and projects</title>
+  <meta name="description" content="Meet Ari, an AI assistant and personal workspace by Zorex AI for conversations, projects, personal file storage, memory review and supported image understanding.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="{{ARI_ORIGIN}}/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Zorex AI">
+  <meta property="og:title" content="Ari by Zorex AI | AI workspace">
+  <meta property="og:description" content="A thoughtful AI workspace for questions, ideas, projects and ongoing work.">
+  <meta property="og:url" content="{{ARI_ORIGIN}}/">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap');
+    :root {
+      color-scheme: dark;
+      --canvas: #191e1b;
+      --panel: #151a17;
+      --panel-raised: #202722;
+      --surface: #252e29;
+      --surface-hover: #303c35;
+      --line: #303a34;
+      --line-strong: #46534a;
+      --text: #e7eee9;
+      --muted: #9ba99f;
+      --muted-soft: #748178;
+      --accent: #a8c9b6;
+      --accent-strong: #c4dfcf;
+      --danger: #e5a7a0;
+      --sidebar-width: 268px;
+      --sans: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+      --serif: "Newsreader", Georgia, serif;
+    }
     * { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; }
-    body { font: 15px system-ui, sans-serif; color: #171717; background: #fff; }
-    button, input, select, textarea { font: inherit; }
+    html, body { width: 100%; height: 100%; min-height: 100%; margin: 0; }
+    body { overflow: hidden; color: var(--text); background: var(--canvas); font: 14px/1.5 var(--sans); }
+    button, input, select, textarea { color: inherit; font: inherit; }
     button { cursor: pointer; }
-    .app { display: flex; height: 100%; width: 100%; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    [hidden] { display: none !important; }
+    .app { display: flex; width: 100%; height: 100%; min-height: 0; background: var(--canvas); }
     .sidebar {
-      display: flex; flex-direction: column; flex: 0 0 250px; min-width: 0;
-      border-right: 1px solid #e5e5e5; background: #fafafa;
+      display: flex; flex: 0 0 var(--sidebar-width); flex-direction: column; min-width: 0;
+      padding: 18px 14px 14px; border-right: 1px solid var(--line); background: var(--panel);
+      transition: flex-basis .18s ease, width .18s ease, transform .18s ease;
     }
-    .sidebar-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 12px; border-bottom: 1px solid #e5e5e5;
+    .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 3px 7px 22px; }
+    .brand-mark {
+      display: grid; width: 31px; height: 31px; flex: 0 0 auto; place-items: center;
+      border-radius: 11px; color: #18221c; background: var(--accent); font: 600 19px/1 var(--serif);
     }
-    .sidebar-header strong { font-size: 15px; font-weight: 600; }
+    .brand-name { color: var(--text); font: 500 22px/1 var(--serif); letter-spacing: -.4px; }
+    .sidebar-caption { margin-left: auto; color: var(--muted-soft); font-size: 10px; letter-spacing: .11em; text-transform: uppercase; }
     .new-chat {
-      padding: 7px 10px; border: 1px solid #bbb; border-radius: 7px;
-      background: #fff; color: #222;
+      display: flex; width: 100%; align-items: center; justify-content: flex-start; gap: 10px;
+      min-height: 43px; padding: 0 13px; border: 1px solid var(--line-strong); border-radius: 13px;
+      color: var(--text); background: var(--panel-raised); text-align: left; transition: background .15s, border-color .15s;
     }
-    .history-label { padding: 14px 12px 7px; color: #777; font-size: 12px; }
-    #chat-list { display: flex; flex: 1; flex-direction: column; gap: 4px; overflow-y: auto; padding: 4px 8px 12px; }
+    .new-chat:hover { border-color: #68796d; background: var(--surface-hover); }
+    .new-chat .plus { color: var(--accent); font-size: 21px; font-weight: 400; line-height: 1; }
+    .sidebar-navigation { display: flex; flex-direction: column; gap: 4px; padding: 19px 0 18px; }
+    .side-nav {
+      display: flex; width: 100%; min-height: 39px; align-items: center; gap: 11px; padding: 0 11px;
+      border: 0; border-radius: 10px; color: #b5c0b8; background: transparent; text-align: left;
+      transition: color .15s, background .15s;
+    }
+    .side-nav svg { width: 17px; height: 17px; flex: 0 0 auto; color: var(--muted); }
+    .side-nav:hover, .side-nav.active { color: var(--text); background: #252e29; }
+    .side-nav.active svg, .side-nav:hover svg { color: var(--accent); }
+    .history-section { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+    .history-label { padding: 5px 10px 9px; color: var(--muted-soft); font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+    #chat-list { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 3px; overflow-y: auto; padding: 0 1px 10px; scrollbar-width: thin; scrollbar-color: #39443d transparent; }
     .history-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
-    .history-row.pinned::before { content: "◆"; flex: 0 0 auto; padding: 0 2px 0 4px; color: #aaa; font-size: 10px; }
+    .history-row.pinned::before { content: "◆"; flex: 0 0 auto; padding: 0 2px 0 5px; color: var(--accent); font-size: 8px; }
     .history-select {
-      flex: 1; min-width: 0; overflow: hidden; padding: 9px 10px; border: 0;
-      border-radius: 7px; background: transparent; color: #333; text-align: left;
-      text-overflow: ellipsis; white-space: nowrap;
+      flex: 1; min-width: 0; overflow: hidden; padding: 9px 10px; border: 0; border-radius: 9px;
+      color: #b8c3bb; background: transparent; text-align: left; text-overflow: ellipsis; white-space: nowrap;
+      font-size: 12px; transition: color .15s, background .15s;
     }
-    .history-select:hover, .history-select.active { background: #ededed; }
-    .history-actions { position: fixed; z-index: 10; display: flex; min-width: 130px; flex-direction: column; padding: 4px; border: 1px solid #454545; border-radius: 9px; background: #222; box-shadow: 0 8px 25px #0008; }
+    .history-select:hover, .history-select.active { color: var(--text); background: #252e29; }
+    .history-actions {
+      position: fixed; z-index: 30; display: flex; min-width: 150px; flex-direction: column; gap: 2px;
+      padding: 5px; border: 1px solid var(--line-strong); border-radius: 12px; background: #202722;
+      box-shadow: 0 14px 38px #0008;
+    }
     .history-actions[hidden] { display: none; }
-    .history-action { padding: 8px 10px; border: 0; border-radius: 6px; color: #eee; background: transparent; text-align: left; }
-    .history-action:hover, .history-action:focus-visible { background: #3a3a3a; }
-    .history-action.delete { color: #ffb4ab; }
-    .history-empty { padding: 8px 10px; color: #888; font-size: 13px; }
-    .main { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+    .history-action { padding: 9px 10px; border: 0; border-radius: 8px; color: var(--text); background: transparent; text-align: left; font-size: 12px; }
+    .history-action:hover, .history-action:focus-visible { background: var(--surface-hover); }
+    .history-action.delete { color: var(--danger); }
+    .history-empty { padding: 9px 10px; color: var(--muted-soft); font-size: 12px; }
+    .sidebar-footer { position: relative; padding-top: 12px; border-top: 1px solid var(--line); }
+    #account-controls { display: block; min-width: 0; }
+    #account-controls[hidden] { display: none; }
+    #account-menu-toggle {
+      display: flex; width: 100%; min-width: 0; align-items: center; gap: 10px; padding: 8px 7px;
+      border: 0; border-radius: 12px; background: transparent; text-align: left;
+    }
+    #account-menu-toggle:hover, #account-menu-toggle[aria-expanded="true"] { background: #252e29; }
+    .account-avatar {
+      display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center;
+      border-radius: 50%; color: #17221b; background: var(--accent); font-size: 12px; font-weight: 700;
+    }
+    .account-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 1px; }
+    #account-name { overflow: hidden; color: var(--text); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    #account-email { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .account-chevron { color: var(--muted); font-size: 16px; }
+    #account-menu {
+      position: absolute; z-index: 35; right: 0; bottom: calc(100% + 9px); left: 0;
+      display: flex; flex-direction: column; gap: 3px; padding: 7px;
+      border: 1px solid var(--line-strong); border-radius: 15px; background: #202722; box-shadow: 0 16px 44px #0009;
+    }
+    .account-menu-label { padding: 7px 9px 4px; color: var(--muted-soft); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+    .account-menu-item {
+      display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px;
+      border: 0; border-radius: 9px; color: #d8e1da; background: transparent; text-align: left; font-size: 12px;
+    }
+    .account-menu-item:hover { background: var(--surface-hover); }
+    .account-menu-item svg { width: 16px; height: 16px; color: var(--muted); }
+    .account-menu-divider { height: 1px; margin: 4px 2px; background: var(--line); }
+    #sign-out { color: #e4b3ac; }
+    .main { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; background: var(--canvas); }
     .topbar {
-      display: flex; align-items: center; gap: 10px; min-height: 54px;
-      padding: 10px 16px; border-bottom: 1px solid #e5e5e5;
+      display: flex; min-height: 62px; align-items: center; gap: 13px; padding: 0 26px;
+      border-bottom: 1px solid rgba(63,75,67,.48); background: rgba(25,30,27,.92);
     }
-    .topbar h1 { margin: 0; font-size: 17px; font-weight: 600; }
-    #sidebar-toggle { display: grid; flex: 0 0 auto; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid #444; border-radius: 10px; color: #eee; background: #222; }
-    #conversation { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 22px 16px; }
-    #empty-state { position: absolute; inset: 0; display: grid; place-items: center; color: #888; pointer-events: none; }
+    #sidebar-toggle {
+      display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; padding: 0;
+      border: 1px solid transparent; border-radius: 10px; color: var(--muted); background: transparent;
+    }
+    #sidebar-toggle:hover { color: var(--text); background: var(--surface); }
+    .topbar-title { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 0; }
+    .topbar-title h1 { overflow: hidden; margin: 0; color: var(--text); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .topbar-subtitle { color: var(--muted-soft); font-size: 11px; }
+    .topbar-indicator { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #8fb99f; box-shadow: 0 0 0 3px rgba(143,185,159,.1); }
+    #chat-stage { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+    #conversation { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 30px clamp(18px, 4vw, 58px) 22px; scroll-behavior: smooth; }
+    #empty-state {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 24px; color: var(--muted-soft); pointer-events: none; text-align: center;
+    }
     #empty-state[hidden] { display: none; }
-    #messages { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 760px; margin: 0 auto; }
+    #empty-state .empty-inner { max-width: 500px; }
+    .empty-mark {
+      display: grid; width: 48px; height: 48px; margin: 0 auto 17px; place-items: center;
+      border: 1px solid #526459; border-radius: 17px; color: var(--accent); background: #26332b;
+      font: 500 27px/1 var(--serif);
+    }
+    .empty-title { margin: 0 0 8px; color: #dfe8e1; font: 400 clamp(25px, 3.5vw, 35px)/1.2 var(--serif); letter-spacing: -.5px; }
+    .empty-copy { margin: 0; color: var(--muted); font-size: 13px; }
+    #messages { display: flex; width: 100%; max-width: 1080px; min-height: 100%; flex-direction: column; gap: 25px; margin: 0 auto; }
     .message {
-      max-width: 85%; padding: 10px 12px; border: 1px solid #e0e0e0;
-      border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5;
+      position: relative; max-width: min(92%, 900px); padding: 13px 16px; border: 1px solid transparent;
+      border-radius: 17px; line-height: 1.72; overflow-wrap: anywhere; white-space: pre-wrap;
     }
-    .message.user { align-self: flex-end; background: #f4f4f4; }
-    .message.ari { align-self: flex-start; }
-    .message small { display: block; margin-top: 6px; color: #777; font-size: 11px; }
-    #tier-select { max-width: 100%; }
-    #message-input {
-      flex: 1; min-width: 0; padding: 11px 12px; border: 1px solid #aaa;
-      border-radius: 8px; outline-offset: 2px;
+    .message.user { align-self: flex-end; max-width: min(84%, 760px); border-color: #344239; color: #e5eee8; background: #26312b; }
+    .message.ari { align-self: flex-start; width: 100%; max-width: 100%; padding: 1px 42px 3px 1px; border: 0; color: #e2eae4; background: transparent; font: 400 18px/1.68 var(--serif); }
+    .message-content { min-width: 0; }
+    .message-content .message-paragraph { margin: 0 0 .78em; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .message-content .message-paragraph:last-child { margin-bottom: 0; }
+    .message-code { margin: 13px 0; overflow: hidden; border: 1px solid #46554b; border-radius: 13px; background: #151b17; font-family: var(--sans); }
+    .message-code-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 11px; border-bottom:1px solid #354139; color:var(--muted); background:#202722; font:600 10px/1.3 var(--sans); letter-spacing:.06em; text-transform:uppercase; }
+    .message-code-copy { min-height:27px; padding:5px 9px; border:1px solid #46554b; border-radius:7px; color:var(--text); background:#29332d; font:500 10px var(--sans); cursor:pointer; }
+    .message-code-copy:hover { border-color:var(--accent); color:var(--accent-strong); }
+    .message-image { max-width:min(100%,760px); margin:15px 0 18px; }
+    .message-image img { display:block; width:auto; max-width:100%; max-height:520px; border:1px solid #46554b; border-radius:13px; object-fit:contain; background:#151b17; }
+    .message-image figcaption { margin-top:6px; color:var(--muted); font:11px/1.4 var(--sans); }
+    .message-image a { color:var(--accent); text-decoration:none; }
+    .message-image a:hover { text-decoration:underline; }
+    .message-inline-link { color:var(--accent-strong); text-decoration:underline; text-underline-offset:2px; }
+    .message-code pre { max-width:100%; margin:0; padding:13px 14px; overflow:auto; color:#e4eee7; font:12px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; tab-size:2; }
+    .message-code code { color:inherit; white-space:pre; font:inherit; }
+    .message small { display: block; margin-top: 7px; color: var(--muted); font: 11px/1.4 var(--sans); }
+    .message-copy {
+      display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; padding: 5px 8px;
+      border: 1px solid transparent; border-radius: 8px; color: var(--muted-soft); background: transparent;
+      font: 11px var(--sans); opacity: .76;
     }
-    #send { padding: 0 16px; border: 1px solid #333; border-radius: 8px; background: #222; color: #fff; }
-    #send:disabled { opacity: .5; cursor: wait; }
-    @media (max-width: 680px) {
-      .sidebar { position: fixed; z-index: 5; inset: 0 auto 0 0; width: min(280px, 84vw); box-shadow: 8px 0 24px rgba(0,0,0,.08); transform: translateX(-105%); transition: transform .16s ease; }
-      .sidebar.open { transform: translateX(0); }
-      .app.sidebar-collapsed .sidebar { display: flex; }
-      .message { max-width: 94%; }
+    .message-copy:hover { border-color: var(--line); color: var(--text); background: #222b25; opacity: 1; }
+    #composer-wrap { width: min(100%, 1180px); margin: 0 auto; padding: 10px clamp(12px, 3vw, 42px) 15px; }
+    #chat-form {
+      position: relative; display: flex; min-width: 0; align-items: flex-end; gap: 11px; padding: 13px 14px 10px;
+      border: 1px solid #46534a; border-radius: 25px; background: #222a25;
+      box-shadow: 0 10px 34px rgba(0,0,0,.16); transition: border-color .15s, box-shadow .15s;
     }
-
-    /* Integrated composer and low-noise dark theme inspired by the supplied references. */
-    body { color: #ececec; background: #212121; }
-    .sidebar { border-color: #303030; background: #171717; }
-    .sidebar-header, .topbar { border-color: #303030; }
-    .new-chat, #sidebar-toggle { color: #eee; border-color: #444; background: #222; }
-    .history-select { color: #ddd; }
-    .history-select:hover, .history-select.active { background: #2b2b2b; }
-    .history-delete { color: #999; }
-    .history-delete:hover { color: #fff; background: #333; }
-    .history-empty, .history-label { color: #929292; }
-    #conversation { padding-bottom: 16px; }
-    .message { border-color: #383838; border-radius: 16px; }
-    .message.user { background: #303030; }
-    .message.ari { border-color: transparent; }
-    #composer-wrap { width: min(100%, 820px); margin: 0 auto; padding: 10px 16px 12px; }
-    #chat-form { display: flex; align-items: flex-end; gap: 10px; padding: 10px; border: 1px solid #484848; border-top: 1px solid #484848; border-radius: 26px; background: #303030; box-shadow: 0 4px 18px rgba(0,0,0,.16); }
-    #attach-button, #send { display: grid; flex: 0 0 auto; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; }
-    #attach-button { color: #eee; background: transparent; }
-    #attach-button:hover, #attach-button:focus-visible { background: #454545; }
-    #compose-center { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 7px; }
-    #message-input { display: block; flex: 0 0 auto; width: 100%; min-height: 34px; max-height: 180px; resize: none; overflow-y: auto; padding: 7px 2px 2px; border: 0; border-radius: 0; outline: 0; color: #f5f5f5; background: transparent; line-height: 1.45; }
-    #message-input::placeholder { color: #aaa; }
-    #composer-bottom { display: flex; align-items: center; gap: 7px; min-width: 0; }
-    #composer-spacer { flex: 1; }
-    #think-toggle, #tier-select { min-height: 32px; border: 1px solid transparent; border-radius: 16px; color: #ddd; background: transparent; }
-    #think-toggle { padding: 0 11px; }
-    #think-toggle:hover, #think-toggle[aria-pressed="true"] { color: #fff; background: #454545; }
-    #think-toggle[aria-pressed="true"] { border-color: #686868; }
-    #tier-select { width: 112px; max-width: 112px; padding: 0 22px 0 10px; outline-offset: 2px; }
-    #tier-select:hover, #tier-select:focus { background: #454545; }
-    #tier-select option { color: #eee; background: #303030; }
-    #send { width: 38px; height: 38px; color: #fff; background: #f5f5f5; }
-    #send svg { color: #202020; }
-    #send:disabled { opacity: .48; cursor: wait; }
-    #image-input, #audio-input, #file-input { display: none; }
+    #chat-form.has-attachment #compose-center { padding-top: 29px; }
+    #chat-form:focus-within { border-color: #809c88; box-shadow: 0 0 0 3px rgba(168,201,182,.07), 0 10px 34px rgba(0,0,0,.16); }
     .attach-wrap { position: relative; flex: 0 0 auto; }
-    #attach-menu { position: absolute; z-index: 8; bottom: calc(100% + 10px); left: 0; display: flex; width: 165px; flex-direction: column; gap: 2px; padding: 5px; border: 1px solid #484848; border-radius: 12px; background: #292929; box-shadow: 0 8px 24px #0008; }
-    #attach-menu[hidden] { display: none; }
-    .attach-option { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: 8px; color: #eee; background: transparent; text-align: left; }
-    .attach-option:hover, .attach-option:focus-visible { background: #414141; }
-    .attach-option svg { width: 18px; height: 18px; }
-    .app.sidebar-collapsed .sidebar { display: none; }
-    #attachment-chip { display: flex; align-items: center; align-self: flex-start; gap: 8px; max-width: 100%; padding: 5px 8px 5px 11px; border: 1px solid #505050; border-radius: 14px; color: #ddd; background: #272727; font-size: 12px; }
-    #attachment-chip[hidden] { display: none; }
-    #attachment-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #remove-attachment { border: 0; border-radius: 50%; color: #ddd; background: transparent; font-size: 16px; line-height: 1; }
-    #composer-disclaimer { margin: 8px 4px 0; color: #929292; font-size: 11px; text-align: center; }
-    #composer-notice { margin: 8px 4px 0; color: #f0b8b8; font-size: 12px; text-align: center; }
-    @media (max-width: 680px) {
-      #composer-wrap { padding: 8px 10px max(10px, env(safe-area-inset-bottom)); }
-      #chat-form { gap: 5px; padding: 8px; border-radius: 23px; }
-      #attach-button { width: 36px; height: 36px; }
-      #tier-select { width: 112px; max-width: 112px; padding-right: 18px; }
-      #think-toggle { padding: 0 8px; }
-      #composer-bottom { gap: 3px; }
+    #attach-button, #send {
+      display: grid; width: 39px; height: 39px; flex: 0 0 auto; place-items: center; padding: 0;
+      border: 0; border-radius: 50%;
     }
-    #auth-screen { display: grid; min-height: 100%; place-items: center; padding: 24px; background: #212121; }
+    #attach-button { color: var(--accent); background: transparent; }
+    #attach-button:hover, #attach-button[aria-expanded="true"] { color: var(--accent-strong); background: #354139; }
+    #attach-menu {
+      position: absolute; z-index: 25; bottom: calc(100% + 12px); left: 0;
+      display: grid; width: min(326px, calc(100vw - 34px)); grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px; padding: 11px; border: 1px solid var(--line-strong);
+      border-radius: 16px; background: #202722; box-shadow: 0 15px 40px #0009;
+    }
+    #attach-menu[hidden] { display: none; }
+    .attach-menu-heading { grid-column: 1 / -1; padding: 3px 3px 5px; color: var(--muted-soft); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+    .attach-option { display: flex; min-width: 0; min-height: 98px; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 12px 6px; border: 1px solid #3d4a40; border-radius: 12px; color: var(--text); background: #27312a; text-align: center; font-size: 11px; line-height: 1.35; cursor: pointer; }
+    .attach-option:hover, .attach-option:focus-visible { border-color: var(--accent); background: var(--surface-hover); outline: none; }
+    .attach-option svg { width: 25px; height: 25px; color: var(--accent); flex: 0 0 auto; }
+    #image-input, #audio-input, #file-input { display: none; }
+    #compose-center { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 7px; }
+    #attachment-chip {
+      position: absolute; z-index: 2; top: 12px; left: 12px;
+      display: flex; box-sizing: border-box; width: 160px; height: 22px; max-width: min(160px, calc(100% - 24px));
+      min-width: 0; align-items: center; gap: 5px; overflow: hidden;
+      padding: 2px 5px; border: 1px solid #46554b; border-radius: 7px;
+      color: var(--text); background: #29332d;
+    }
+    #attachment-chip[hidden] { display: none; }
+    #attachment-preview, #attachment-kind {
+      display: block; width: 14px; height: 14px; flex: 0 0 14px;
+      border-radius: 3px; object-fit: cover; background: #354139;
+    }
+    #attachment-kind {
+      display: grid; place-items: center; color: var(--accent); font-size: 7px; font-weight: 700;
+    }
+    .attachment-copy { display: flex; min-width: 0; flex: 1; align-items: center; }
+    #attachment-name {
+      display: block; width: 100%; min-width: 0; overflow: hidden; color: #e0e9e2;
+      font-size: 10px; line-height: 1; font-weight: 600; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #attachment-meta { display: none; }
+    #remove-attachment {
+      display: grid; width: 14px; height: 14px; flex: 0 0 14px; place-items: center;
+      margin-left: auto; padding: 0; border: 0; border-radius: 50%;
+      color: var(--muted); background: transparent; font-size: 14px; line-height: 14px;
+    }
+    #remove-attachment:hover { color: var(--text); background: #3a463e; }
+    #paste-card {
+      display: flex; max-width: min(100%, 450px); align-items: center; gap: 10px; padding: 9px 11px;
+      border: 1px solid #46554b; border-radius: 12px; color: var(--text); background: #29332d;
+    }
+    #paste-card .paste-icon {
+      display: grid; width: 36px; height: 40px; flex: 0 0 auto; place-items: center;
+      border-radius: 8px; color: var(--accent); background: #354139;
+    }
+    .paste-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 1px; }
+    #paste-title { color: #e0e9e2; font-size: 11px; font-weight: 600; }
+    #paste-meta { color: var(--muted); font-size: 10px; }
+    #message-input {
+      display: block; width: 100%; min-height: 36px; max-height: 220px; flex: 0 0 auto; resize: none;
+      overflow-y: auto; padding: 7px 2px 3px; border: 0; border-radius: 0; outline: 0;
+      color: var(--text); background: transparent; line-height: 1.55; font-size: 14px;
+    }
+    #message-input:focus-visible { outline: 0; }
+    #message-input::placeholder { color: #91a096; }
+    #composer-bottom { display: flex; min-width: 0; align-items: center; gap: 8px; }
+    #think-toggle, #tier-select { min-height: 31px; border: 1px solid transparent; border-radius: 18px; color: #c4cfc7; background: transparent; font-size: 11px; }
+    #think-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; }
+    #think-toggle:hover, #think-toggle[aria-pressed="true"] { border-color: #4b5c50; color: var(--accent-strong); background: #303c34; }
+    #tier-select { width: 112px; max-width: 112px; padding: 0 21px 0 10px; outline-offset: 2px; }
+    #tier-select:hover, #tier-select:focus { background: #354139; }
+    #tier-select option { color: var(--text); background: #202722; }
+    #composer-spacer { flex: 1; }
+    #send { width: 38px; height: 38px; color: #1b251e; background: var(--accent); transition: background .15s, transform .15s; }
+    #send:hover { background: var(--accent-strong); transform: translateY(-1px); }
+    #send:disabled { opacity: .45; cursor: wait; transform: none; }
+    #composer-notice { margin: 8px 4px 0; color: #e7b2a9; font-size: 11px; text-align: center; }
+    #composer-disclaimer { margin: 9px 5px 0; color: var(--muted-soft); font-size: 10px; text-align: center; }
+    #workspace-screen { flex: 1; min-height: 0; overflow-y: auto; padding: clamp(25px, 5vw, 68px); }
+    .workspace-inner { width: min(100%, 900px); margin: 0 auto; }
+    .workspace-eyebrow { margin: 0 0 9px; color: var(--accent); font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+    .workspace-title { margin: 0; color: var(--text); font: 400 clamp(30px, 4vw, 42px)/1.12 var(--serif); letter-spacing: -.5px; }
+    .workspace-description { max-width: 650px; margin: 12px 0 30px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .workspace-panel { padding: 22px; border: 1px solid var(--line); border-radius: 17px; background: #1d241f; }
+    .workspace-panel h3 { margin: 0 0 7px; color: var(--text); font-size: 13px; font-weight: 600; }
+    .workspace-panel p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .workspace-status { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 13px; color: var(--accent); font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+    .workspace-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .workspace-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-top: 18px; }
+    .workspace-stat { padding: 16px; border: 1px solid var(--line); border-radius: 13px; background: #202722; }
+    .workspace-stat strong { display: block; margin-bottom: 4px; color: var(--text); font: 400 21px var(--serif); }
+    .workspace-stat span { color: var(--muted); font-size: 11px; }
+    .app.sidebar-collapsed .sidebar { display: none; }
+    #landing-screen {
+      display: flex; width: 100%; height: 100%; min-height: 0;
+      flex-direction: column; overflow-y: auto; overscroll-behavior-y: contain;
+      padding: 0 clamp(20px, 6vw, 88px) 40px;
+      background: radial-gradient(ellipse at 72% 18%, rgba(76,105,83,.22), transparent 38%), #191e1b;
+    }
+    #landing-screen[hidden] { display: none; }
+    .landing-nav { display: flex; min-height: 82px; align-items: center; gap: 12px; border-bottom: 1px solid rgba(63,75,67,.5); }
+    .landing-nav .brand-name { font-size: 24px; }
+    .landing-nav-spacer { flex: 1; }
+    .landing-nav-button, .landing-primary, .landing-secondary {
+      min-height: 40px; padding: 0 17px; border: 1px solid var(--line-strong); border-radius: 999px;
+      color: var(--text); background: transparent; font-size: 12px; font-weight: 600;
+    }
+    .landing-nav-button:hover, .landing-secondary:hover { background: var(--surface); }
+    .landing-primary { border-color: var(--accent); color: #17221b; background: var(--accent); }
+    .landing-primary:hover { background: var(--accent-strong); }
+    .landing-main { display: grid; flex: 1; grid-template-columns: minmax(0,1.2fr) minmax(280px,.8fr); align-items: center; gap: clamp(35px,7vw,110px); width: min(100%,1320px); margin: 0 auto; padding: clamp(62px,10vh,112px) 0 75px; }
+    .landing-copy { max-width: 730px; }
+    .landing-eyebrow { display: flex; align-items: center; gap: 9px; margin: 0 0 23px; color: var(--accent); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+    .landing-eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--accent); }
+    .landing-title { margin: 0; color: #e7eee9; font: 400 clamp(43px,6.6vw,76px)/1.02 var(--serif); letter-spacing: -1.7px; }
+    .landing-description { max-width: 560px; margin: 23px 0 30px; color: #aab8ae; font-size: 14px; line-height: 1.85; }
+    .landing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 11px; }
+    .landing-note { margin: 16px 0 0; color: var(--muted-soft); font-size: 10px; }
+    .landing-about { width:min(100%,1320px); margin:0 auto 46px; padding:24px clamp(18px,3vw,30px); border:1px solid #39473e; border-radius:18px; background:rgba(29,36,31,.72); }
+    .landing-about h2 { margin:7px 0 8px; color:#e7eee9; font:400 clamp(24px,3vw,35px)/1.2 var(--serif); }
+    .landing-about p { max-width:850px; margin:0 0 12px; color:#aab8ae; font-size:13px; line-height:1.8; }
+    .landing-about a { display:inline-flex; margin-top:3px; color:var(--accent-strong); font-size:12px; font-weight:600; text-decoration:none; }
+    .landing-about a:hover { text-decoration:underline; }
+    .landing-preview { position: relative; max-width: 470px; justify-self: end; padding: 15px; border: 1px solid #3b4840; border-radius: 24px; background: rgba(29,36,31,.86); box-shadow: 0 26px 80px #0005; transform: rotate(1.2deg); }
+    .landing-preview-bar { display: flex; align-items: center; gap: 6px; padding: 1px 3px 13px; border-bottom: 1px solid var(--line); }
+    .landing-preview-dot { width: 6px; height: 6px; border-radius: 50%; background: #617166; }
+    .landing-preview-label { margin-left: 6px; color: var(--muted-soft); font-size: 10px; }
+    .landing-preview-chat { display: flex; flex-direction: column; gap: 18px; padding: 25px 8px 13px; }
+    .landing-preview-user { align-self: flex-end; max-width: 88%; padding: 10px 13px; border: 1px solid #3b4a40; border-radius: 14px 14px 4px 14px; color: #d9e5dc; background: #29362e; font-size: 11px; }
+    .landing-preview-ari { display: flex; gap: 10px; color: #e1eae3; font: 400 16px/1.55 var(--serif); }
+    .landing-preview-mark { display: grid; width: 25px; height: 25px; flex: 0 0 auto; place-items: center; border-radius: 8px; color: #18221c; background: var(--accent); font: 500 15px var(--serif); }
+    .landing-preview-composer { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; padding: 11px 12px; border: 1px solid #4b5b50; border-radius: 16px; color: var(--muted); background: #252e29; font-size: 10px; }
+    .landing-preview-send { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 50%; color: #18221c; background: var(--accent); font-size: 16px; }
+    .landing-footer { display: flex; justify-content: space-between; gap: 15px; padding-top: 17px; border-top: 1px solid rgba(63,75,67,.45); color: var(--muted-soft); font-size: 10px; }
+    .auth-back { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 18px; padding: 6px 0; border: 0; color: var(--muted); background: transparent; font-size: 11px; }
+    .auth-back:hover { color: var(--text); }
+    .auth-tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 22px 0 19px; padding: 4px; border: 1px solid var(--line); border-radius: 13px; background: #171d19; }
+    .auth-tabs::before { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border: 1px solid #526457; border-radius: 9px; background: #2b3830; content: ""; transition: transform .22s ease; }
+    .auth-tabs[data-mode="signup"]::before { transform: translateX(100%); }
+    .auth-tab { position: relative; z-index: 1; min-height: 36px; border: 0; border-radius: 9px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 600; }
+    .auth-tab[aria-selected="true"] { color: var(--text); }
+    .auth-card .auth-divider { margin-top: 20px; }
+    @media (max-width: 840px) {
+      .landing-main { grid-template-columns: 1fr; gap: 48px; padding-top: 65px; }
+      .landing-preview { width: min(100%,520px); justify-self: start; transform: none; }
+    }
+    @media (max-width: 480px) {
+      #landing-screen { padding: 0 19px 25px; }
+      .landing-nav { min-height: 69px; }
+      .landing-nav .brand-name { font-size: 22px; }
+      .landing-nav-button { min-height: 36px; padding: 0 12px; font-size: 11px; }
+      .landing-main { padding: 64px 0 50px; }
+      .landing-title { font-size: clamp(42px,12vw,55px); }
+      .landing-description { font-size: 13px; }
+      .landing-footer { flex-direction: column; gap: 5px; }
+    }
+    #auth-screen { display: grid; width: 100%; min-height: 100%; place-items: center; overflow-y: auto; padding: 28px 20px; background: radial-gradient(ellipse at 50% 20%, #29362e 0%, #1b211d 45%, #161b18 100%); }
     #auth-screen[hidden] { display: none; }
     .app[hidden] { display: none; }
-    .auth-card { width: min(100%, 420px); padding: 32px; border: 1px solid #383838; border-radius: 20px; background: #252525; box-shadow: 0 16px 44px #0005; text-align: center; }
-    .auth-card h1 { margin: 0 0 10px; font-size: 25px; font-weight: 600; }
-    .auth-card p { color: #b8b8b8; line-height: 1.55; }
-    #google-sign-in { display: flex; justify-content: center; min-height: 44px; margin-top: 22px; }
-    #auth-error { min-height: 20px; color: #ffb4ab !important; font-size: 13px; }
-    #account-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; min-width: 0; }
-    #account-controls[hidden] { display: none; }
-    #account-email { overflow: hidden; color: #aaa; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-    #sign-out { padding: 6px 10px; border: 1px solid #484848; border-radius: 14px; color: #ddd; background: #292929; font-size: 12px; }
-    #sign-out:hover { background: #3b3b3b; }
-    @media (max-width: 480px) { .auth-card { padding: 26px 20px; } #account-email { display: none; } }
+    .auth-shell { width: min(100%, 440px); }
+    .auth-brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 25px; }
+    .auth-brand .brand-mark { width: 36px; height: 36px; }
+    .auth-brand span:last-child { color: var(--text); font: 500 27px/1 var(--serif); }
+    .auth-card { padding: 34px 34px 29px; border: 1px solid #3a463e; border-radius: 22px; background: rgba(29,36,31,.94); box-shadow: 0 22px 65px rgba(0,0,0,.25); text-align: center; }
+    .auth-eyebrow { margin: 0 0 12px !important; color: var(--accent) !important; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+    .auth-card h1 { margin: 0 0 11px; color: var(--text); font: 400 35px/1.1 var(--serif); letter-spacing: -.5px; }
+    .auth-card p { color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .auth-divider { display: flex; align-items: center; gap: 12px; margin: 23px 0 14px; color: var(--muted-soft); font-size: 10px; }
+    .auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+    #google-sign-in { display: flex; min-height: 44px; justify-content: center; margin-top: 5px; }
+    #auth-error { min-height: 20px; margin: 13px 0 0; color: #efb4a8 !important; font-size: 11px; }
+    .auth-footnote { margin: 20px 0 0; padding-top: 17px; border-top: 1px solid var(--line); color: var(--muted-soft) !important; font-size: 10px !important; }
+    @media (max-width: 760px) {
+      .sidebar { position: fixed; z-index: 40; inset: 0 auto 0 0; width: min(var(--sidebar-width), 86vw); max-width: 86vw; box-shadow: 15px 0 38px rgba(0,0,0,.35); transform: translateX(-105%); }
+      .sidebar.open { transform: translateX(0); }
+      .app.sidebar-collapsed .sidebar { display: flex; }
+      .topbar { min-height: 56px; padding: 0 14px; }
+      #conversation { padding: 23px 15px 18px; }
+      .message.ari { font-size: 17px; }
+      #composer-wrap { padding: 8px 10px max(11px, env(safe-area-inset-bottom)); }
+      #chat-form { gap: 6px; padding: 9px; border-radius: 21px; }
+      #attach-button { width: 35px; height: 35px; }
+      #composer-bottom { gap: 3px; }
+      #think-toggle { padding: 0 7px; }
+      #tier-select { width: 102px; max-width: 102px; }
+      #send { width: 35px; height: 35px; }
+      #workspace-screen { padding: 27px 18px; }
+    }
+    @media (max-width: 480px) {
+      .auth-card { padding: 28px 21px 24px; }
+      .topbar-indicator { display: none; }
+      #account-email { max-width: 165px; }
+      .workspace-grid { grid-template-columns: 1fr; }
+      .message.user { max-width: 93%; }
+      #composer-disclaimer { font-size: 9px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  
+    .library-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:22px 0 15px; flex-wrap:wrap; }
+    .library-storage { display:flex; flex-direction:column; gap:8px; padding:15px 17px; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
+    .library-storage-row { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--muted); font-size:12px; }
+    .library-meter { height:7px; overflow:hidden; border-radius:99px; background:var(--surface); }
+    .library-meter-fill { height:100%; border-radius:99px; background:var(--accent); transition:width .2s ease; }
+    .library-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; margin-top:18px; }
+    .library-card { display:flex; min-width:0; flex-direction:column; gap:12px; padding:13px; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
+    .library-card-preview { display:grid; width:100%; aspect-ratio:1.7; place-items:center; overflow:hidden; border-radius:10px; color:var(--accent); background:var(--surface); }
+    .library-card-preview img { width:100%; height:100%; object-fit:cover; }
+    .library-card-preview span { font-size:12px; font-weight:700; letter-spacing:.08em; }
+    .library-card-name { overflow:hidden; color:var(--text); font-size:13px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+    .library-card-meta { color:var(--muted); font-size:11px; }
+    .library-card-actions { display:flex; gap:8px; margin-top:auto; }
+    .library-action { min-height:34px; padding:7px 11px; border:1px solid var(--line); border-radius:9px; color:var(--text); background:var(--surface); font:500 11px var(--sans); cursor:pointer; text-decoration:none; }
+    .library-action:hover { border-color:var(--accent); }
+    .library-action.danger { color:var(--danger); }
+    .library-empty { padding:28px 20px; border:1px dashed var(--line); border-radius:15px; color:var(--muted); text-align:center; font-size:13px; }
+    .library-error { color:var(--danger); }
+    @media (max-width:600px) { .library-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; } .library-card { padding:9px; } .library-card-actions { flex-wrap:wrap; } }
+
+  
+    .project-create-form { display:grid; gap:11px; margin:18px 0 20px; padding:16px; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
+    .project-create-form input, .project-create-form textarea { width:100%; min-width:0; padding:11px 12px; border:1px solid var(--line); border-radius:10px; color:var(--text); background:var(--surface); font:400 13px var(--sans); outline:none; }
+    .project-create-form textarea { min-height:68px; resize:vertical; }
+    .project-create-form input:focus, .project-create-form textarea:focus { border-color:var(--accent); }
+    .project-create-form button, .project-action { min-height:36px; padding:8px 12px; border:1px solid var(--line); border-radius:9px; color:var(--text); background:var(--surface); font:500 12px var(--sans); cursor:pointer; }
+    .project-create-form button { justify-self:start; border-color:var(--accent); background:var(--accent); color:var(--accent-ink,var(--bg)); }
+    .project-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(245px,1fr)); gap:12px; margin-top:16px; }
+    .project-card { display:flex; min-width:0; flex-direction:column; gap:12px; padding:15px; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
+    .project-card h3 { margin:0; overflow-wrap:anywhere; color:var(--text); font:600 15px var(--sans); }
+    .project-card p { margin:0; min-height:34px; color:var(--muted); font-size:12px; line-height:1.55; }
+    .project-card-meta { color:var(--muted); font-size:11px; }
+    .project-card-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:auto; }
+    .project-action.primary { border-color:var(--accent); color:var(--accent-ink,var(--bg)); background:var(--accent); }
+    .project-action.danger { color:var(--danger); }
+    .project-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
+    .project-chat-list { display:grid; gap:9px; margin-top:15px; }
+    .project-chat-row { display:flex; width:100%; align-items:center; justify-content:space-between; gap:12px; padding:13px 15px; border:1px solid var(--line); border-radius:12px; text-align:left; color:var(--text); background:var(--panel); cursor:pointer; }
+    .project-chat-row:hover, .project-card:hover { border-color:var(--accent); }
+    .project-chat-row span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .project-chat-row span:last-child { flex:none; color:var(--muted); font-size:11px; }
+    @media (max-width:600px) { .project-grid { grid-template-columns:1fr; } }
+
+  
+    .memory-review-note { margin:14px 0 18px; padding:13px 15px; border:1px solid var(--line); border-radius:12px; color:var(--muted); background:var(--panel); font-size:12px; line-height:1.6; }
+    .memory-create-form { display:grid; gap:10px; margin:16px 0 22px; padding:16px; border:1px solid var(--line); border-radius:15px; background:var(--panel); }
+    .memory-create-form textarea { width:100%; min-height:76px; padding:11px 12px; border:1px solid var(--line); border-radius:10px; color:var(--text); background:var(--surface); font:400 13px var(--sans); resize:vertical; outline:none; }
+    .memory-create-form textarea:focus { border-color:var(--accent); }
+    .memory-create-form button, .memory-action { min-height:34px; padding:7px 11px; border:1px solid var(--line); border-radius:9px; color:var(--text); background:var(--surface); font:500 11px var(--sans); cursor:pointer; }
+    .memory-create-form button { justify-self:start; border-color:var(--accent); background:var(--accent); color:var(--accent-ink,var(--bg)); }
+    .memory-group { display:grid; gap:10px; margin-top:20px; }
+    .memory-group h3 { margin:0; color:var(--text); font:600 14px var(--sans); }
+    .memory-item { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:13px 15px; border:1px solid var(--line); border-radius:13px; background:var(--panel); }
+    .memory-item-copy { min-width:0; display:grid; gap:6px; }
+    .memory-item-copy p { margin:0; color:var(--text); font-size:13px; line-height:1.55; overflow-wrap:anywhere; }
+    .memory-item-copy small { color:var(--muted); font-size:10px; }
+    .memory-item-actions { display:flex; flex:none; flex-wrap:wrap; gap:7px; }
+    .memory-action.primary { border-color:var(--accent); background:var(--accent); color:var(--accent-ink,var(--bg)); }
+    .memory-action.danger { color:var(--danger); }
+    @media (max-width:600px) { .memory-item { flex-direction:column; } .memory-item-actions { width:100%; } }
+
   </style>
 </head>
 <body>
+  <section id="landing-screen" aria-labelledby="landing-title">
+    <nav class="landing-nav" aria-label="Ari homepage">
+      <span class="brand-mark">A</span>
+      <span class="brand-name">Ari</span>
+      <span class="landing-nav-spacer"></span>
+      <button class="landing-nav-button" id="landing-login" type="button">Log in</button>
+      <button class="landing-primary" id="landing-signup" type="button">Get started</button>
+    </nav>
+    <main class="landing-main">
+      <div class="landing-copy">
+        <p class="landing-eyebrow">A personal workspace by Zorex AI</p>
+        <h1 class="landing-title" id="landing-title">A calmer space for thinking, creating and getting things done.</h1>
+        <p class="landing-description">Ari is being built as a thoughtful AI workspace for conversations, ideas and the projects that grow from them. Bring your questions, explore a problem and keep your work moving in one place.</p>
+        <div class="landing-actions">
+          <button class="landing-primary" id="landing-primary" type="button">Get started <span aria-hidden="true">↗</span></button>
+          <button class="landing-secondary" id="landing-secondary" type="button">I already have an account</button>
+        </div>
+        <p class="landing-note" id="landing-note">Google sign-in is currently the available account method. Email verification is not active yet.</p>
+      </div>
+      <div class="landing-preview" aria-label="Illustrative preview of the Ari chat workspace">
+        <div class="landing-preview-bar">
+          <span class="landing-preview-dot"></span><span class="landing-preview-dot"></span><span class="landing-preview-dot"></span>
+          <span class="landing-preview-label">Ari workspace</span>
+        </div>
+        <div class="landing-preview-chat">
+          <div class="landing-preview-user">Help me make sense of this idea.</div>
+          <div class="landing-preview-ari">
+            <span class="landing-preview-mark">A</span>
+            <span>Let's break it into parts, look at what matters and work through it clearly.</span>
+          </div>
+          <div class="landing-preview-composer">
+            <span>Message Ari...</span><span class="landing-preview-send">↑</span>
+          </div>
+        </div>
+      </div>
+    </main>
+    <section class="landing-about" aria-labelledby="landing-about-title">
+      <p class="landing-eyebrow">About Ari by Zorex AI</p>
+      <h2 id="landing-about-title">Built with curiosity, persistence and a practical purpose.</h2>
+      <p>Ari is an AI assistant created by Zorex AI. It is an independently developed project with roots in Nigeria, built by a Nigerian developer with a laptop and years of accumulated learning, experimentation and problem-solving. Ari brings conversations and personal work organization together in one accessible workspace.</p>
+      <a href="/about">Discover more about Ari ↗</a>
+      <p style="margin:15px 0 5px">Support, feedback or enquiries? <a href="https://wa.me/2348059889871" rel="noopener noreferrer">Message 08059889871</a>.</p>
+    </section>
+    <footer class="landing-footer">
+      <span>© Zorex AI · Ari</span>
+      <a href="/about">About Ari</a>
+      <span>A workspace for the way ideas develop.</span>
+    </footer>
+  </section>
+
   <section id="auth-screen" aria-labelledby="auth-title" hidden>
-    <div class="auth-card">
-      <h1 id="auth-title">Ari Developer Playground</h1>
-      <p>Sign in with your Google account to use Ari. When open registration is enabled, your Ari account is created automatically.</p>
-      <div id="google-sign-in"></div>
-      <p id="auth-error" role="status" aria-live="polite"></p>
+    <div class="auth-shell">
+      <button class="auth-back" id="auth-back" type="button"><span aria-hidden="true">←</span> Back to Ari</button>
+      <div class="auth-brand"><span class="brand-mark">A</span><span>Ari</span></div>
+      <div class="auth-card">
+        <p class="auth-eyebrow">Your personal AI workspace</p>
+        <h1 id="auth-title">Welcome back.</h1>
+        <p id="auth-description">Sign in to continue to your conversations, projects and workspace.</p>
+        <div class="auth-tabs" id="auth-tabs" data-mode="login" role="tablist" aria-label="Account access">
+          <button class="auth-tab" id="login-tab" type="button" role="tab" aria-selected="true">Log in</button>
+          <button class="auth-tab" id="signup-tab" type="button" role="tab" aria-selected="false">Sign up</button>
+        </div>
+        <div class="auth-divider">Continue with Google</div>
+        <div id="google-sign-in"></div>
+        <p id="auth-error" role="status" aria-live="polite"></p>
+        <p class="auth-footnote">Use your Google account to securely sign in or create your Ari account.</p>
+      </div>
     </div>
   </section>
+
   <div class="app" id="ari-app" hidden>
-    <aside class="sidebar" id="sidebar" aria-label="Chat history">
-      <div class="sidebar-header">
-        <strong>Chats</strong>
-        <button class="new-chat" id="new-chat" type="button">+ New chat</button>
+    <aside class="sidebar" id="sidebar" aria-label="Ari navigation">
+      <div class="sidebar-brand">
+        <span class="brand-mark">A</span>
+        <span class="brand-name">Ari</span>
+        <span class="sidebar-caption">Workspace</span>
       </div>
-      <div class="history-label">Recent</div>
-      <nav id="chat-list" aria-label="Previous chats">
-        <div class="history-empty">No previous chats yet.</div>
+
+      <button class="new-chat" id="new-chat" type="button">
+        <span class="plus" aria-hidden="true">+</span>
+        <span>New chat</span>
+      </button>
+
+      <nav class="sidebar-navigation" aria-label="Workspace">
+        <button class="side-nav" id="library-nav" type="button" data-view="library">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v13A2.5 2.5 0 0 1 6.5 16H20"/></svg>
+          <span>Library</span>
+        </button>
+        <button class="side-nav" id="projects-nav" type="button" data-view="projects">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>
+          <span>Projects</span>
+        </button>
       </nav>
+
+      <div class="history-section">
+        <div class="history-label">Recent chats</div>
+        <nav id="chat-list" aria-label="Previous chats">
+          <div class="history-empty">No previous chats yet.</div>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <div id="account-controls" hidden>
+          <button id="account-menu-toggle" type="button" aria-haspopup="menu" aria-expanded="false">
+            <span class="account-avatar" id="account-avatar">A</span>
+            <span class="account-copy">
+              <span id="account-name">Your account</span>
+              <span id="account-email"></span>
+            </span>
+            <span class="account-chevron" aria-hidden="true">⌃</span>
+          </button>
+          <div id="account-menu" role="menu" hidden>
+            <div class="account-menu-label">Your account</div>
+            <button class="account-menu-item" type="button" role="menuitem" data-account-view="profile">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+              <span>Profile / About You</span>
+            </button>
+            <button class="account-menu-item" type="button" role="menuitem" data-account-view="memory">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M8.2 14.5A6.5 6.5 0 1 1 15.8 14.5c-.8.6-1.3 1.2-1.5 2h-4.6c-.2-.8-.7-1.4-1.5-2Z"/></svg>
+              <span>Memory</span>
+            </button>
+            <button class="account-menu-item" type="button" role="menuitem" data-account-view="settings">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.2 1-1.2 2.1-1.5-.5a8 8 0 0 1-1.6.9l-.3 1.6h-2.4l-.3-1.6a8 8 0 0 1-1.6-.9l-1.5.5-1.2-2.1 1.2-1a8 8 0 0 1 0-1.9l-1.2-1 1.2-2.1 1.5.5a8 8 0 0 1 1.6-.9l.3-1.6h2.4l.3 1.6a8 8 0 0 1 1.6.9l1.5-.5 1.2 2.1-1.2 1a8 8 0 0 1-.1 1.9Z"/></svg>
+              <span>Settings</span>
+            </button>
+            <div class="account-menu-divider"></div>
+            <button class="account-menu-item" type="button" role="menuitem" data-account-view="delete">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg>
+              <span>Delete account</span>
+            </button>
+            <button class="account-menu-item" id="sign-out" type="button" role="menuitem">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>
+              <span>Sign out</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </aside>
 
     <section class="main">
@@ -171,57 +596,95 @@
         <button id="sidebar-toggle" type="button" aria-label="Collapse chat sidebar" title="Collapse chat sidebar" aria-expanded="true">
           <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M14 9l-3 3 3 3"/></svg>
         </button>
-        <h1>Ari</h1>
-        <div id="account-controls" hidden>
-          <span id="account-email"></span>
-          <button id="sign-out" type="button">Sign out</button>
+        <div class="topbar-title">
+          <h1 id="topbar-heading">New chat</h1>
+          <span class="topbar-subtitle" id="topbar-subtitle">Ari workspace</span>
         </div>
+        <div class="topbar-indicator"><span class="status-dot"></span><span>Ari workspace</span></div>
       </header>
 
-      <main id="conversation" aria-live="polite">
-        <div id="empty-state">Type to get started with Ari</div>
-        <div id="messages"></div>
-      </main>
+      <div id="chat-stage">
+        <main id="conversation" aria-live="polite">
+          <div id="empty-state">
+            <div class="empty-inner">
+              <div class="empty-mark">A</div>
+              <h2 class="empty-title">Where should we begin?</h2>
+              <p class="empty-copy">Ask a question, explore an idea or continue something you're working on.</p>
+            </div>
+          </div>
+          <div id="messages"></div>
+        </main>
 
-      <div id="composer-wrap">
-        <form id="chat-form" aria-label="Message Ari">
-          <div class="attach-wrap">
-          <button id="attach-button" type="button" aria-label="Add an attachment" title="Add an attachment" aria-haspopup="menu" aria-expanded="false">
-            <svg aria-hidden="true" viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          </button>
-          <div id="attach-menu" role="menu" hidden>
-            <button class="attach-option" type="button" role="menuitem" data-picker="image-input">Images</button>
-            <button class="attach-option" type="button" role="menuitem" data-picker="audio-input">Audio</button>
-            <button class="attach-option" type="button" role="menuitem" data-picker="file-input">Files</button>
-          </div>
-          </div>
-          <input id="image-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose an image">
-          <input id="audio-input" type="file" accept="audio/*" aria-label="Choose audio">
-          <input id="file-input" type="file" aria-label="Choose a file">
-          <div id="compose-center">
-            <div id="attachment-chip" hidden>
-              <span id="attachment-name"></span>
-              <button id="remove-attachment" type="button" aria-label="Remove attached image">×</button>
-            </div>
-            <textarea id="message-input" placeholder="Message Ari..." rows="1" maxlength="2000" required aria-label="Message Ari"></textarea>
-            <div id="composer-bottom">
-              <button id="think-toggle" type="button" aria-pressed="false" title="Enable deeper reasoning">Think</button>
-              <span id="composer-spacer"></span>
-              <select id="tier-select" aria-label="Choose Ari model">
-                <option value="mini">Mini</option>
-                <option value="medium">Medium</option>
-                <option value="max">Max</option>
-                <option value="ultra">Ultra</option>
-              </select>
-              <button id="send" type="submit" aria-label="Send message" title="Send message">
-                <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+        <div id="composer-wrap">
+          <form id="chat-form" aria-label="Message Ari">
+            <div class="attach-wrap">
+              <button id="attach-button" type="button" aria-label="Add an attachment" title="Add an attachment" aria-haspopup="menu" aria-expanded="false">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
               </button>
+              <div id="attach-menu" role="menu" hidden>
+                <div class="attach-menu-heading">Add to your message</div>
+                <button class="attach-option" type="button" role="menuitem" data-picker="image-input">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                  <span>Photos and images</span>
+                </button>
+                <button class="attach-option" type="button" role="menuitem" data-picker="file-input">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10z"/><path d="M13 3v7h7M8 15h8M8 18h6"/></svg>
+                  <span>Documents and files</span>
+                </button>
+                <button class="attach-option" type="button" role="menuitem" data-picker="audio-input">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></svg>
+                  <span>Audio</span>
+                </button>
+              </div>
             </div>
-          </div>
-        </form>
-        <p id="composer-notice" role="status" hidden></p>
-        <p id="composer-disclaimer">Ari is AI and can make mistakes. Please double-check important information.</p>
+            <input id="image-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose an image">
+            <input id="audio-input" type="file" accept="audio/*" aria-label="Choose audio">
+            <input id="file-input" type="file" aria-label="Choose a file">
+            <div id="compose-center">
+              <div id="attachment-chip" hidden>
+                <img id="attachment-preview" alt="Selected image preview" hidden>
+                <span id="attachment-kind" hidden>FILE</span>
+                <span class="attachment-copy">
+                  <span id="attachment-name"></span>
+                  <span id="attachment-meta"></span>
+                </span>
+                <button id="remove-attachment" type="button" aria-label="Remove attachment">×</button>
+              </div>
+              <div id="paste-card" hidden>
+                <span class="paste-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10z"/><path d="M13 3v7h7M8 15h8M8 18h6"/></svg>
+                </span>
+                <span class="paste-copy"><span id="paste-title">Pasted text</span><span id="paste-meta"></span></span>
+              </div>
+              <textarea id="message-input" placeholder="Message Ari..." rows="1" maxlength="2000" required aria-label="Message Ari"></textarea>
+              <div id="composer-bottom">
+                <button id="think-toggle" type="button" aria-pressed="false" title="Enable deeper reasoning">Think</button>
+                <span id="composer-spacer"></span>
+                <select id="tier-select" aria-label="Choose Ari model">
+                  <option value="mini">Mini</option>
+                  <option value="medium">Medium</option>
+                  <option value="max">Max</option>
+                  <option value="ultra">Ultra</option>
+                </select>
+                <button id="send" type="submit" aria-label="Send message" title="Send message">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+                </button>
+              </div>
+            </div>
+          </form>
+          <p id="composer-notice" role="status" hidden></p>
+          <p id="composer-disclaimer">Ari is AI and can make mistakes. Please double-check important information.</p>
+        </div>
       </div>
+
+      <section id="workspace-screen" hidden aria-live="polite">
+        <div class="workspace-inner">
+          <p class="workspace-eyebrow" id="workspace-eyebrow">Workspace</p>
+          <h2 class="workspace-title" id="workspace-title">Library</h2>
+          <p class="workspace-description" id="workspace-description"></p>
+          <div id="workspace-content"></div>
+        </div>
+      </section>
     </section>
   </div>
 
@@ -231,6 +694,18 @@
     const STORAGE_KEY_PREFIX = "ari-playground-chats-v1:";
     const appElement = document.getElementById("ari-app");
     const authScreen = document.getElementById("auth-screen");
+    const landingScreen = document.getElementById("landing-screen");
+    const landingLoginButton = document.getElementById("landing-login");
+    const landingSignupButton = document.getElementById("landing-signup");
+    const landingPrimaryButton = document.getElementById("landing-primary");
+    const landingSecondaryButton = document.getElementById("landing-secondary");
+    const landingNote = document.getElementById("landing-note");
+    const authBackButton = document.getElementById("auth-back");
+    const authTabs = document.getElementById("auth-tabs");
+    const loginTab = document.getElementById("login-tab");
+    const signupTab = document.getElementById("signup-tab");
+    const authTitle = document.getElementById("auth-title");
+    const authDescription = document.getElementById("auth-description");
     const authError = document.getElementById("auth-error");
     const googleSignIn = document.getElementById("google-sign-in");
     const accountControls = document.getElementById("account-controls");
@@ -249,15 +724,47 @@
     const app = document.querySelector(".app");
     const tierSelect = document.getElementById("tier-select");
     const imageInput = document.getElementById("image-input");
+    const fileInput = document.getElementById("file-input");
     const attachButton = document.getElementById("attach-button");
     const attachMenu = document.getElementById("attach-menu");
     const attachmentInputs = [document.getElementById("image-input"), document.getElementById("audio-input"), document.getElementById("file-input")];
     const attachmentChip = document.getElementById("attachment-chip");
     const attachmentName = document.getElementById("attachment-name");
+    const attachmentMeta = document.getElementById("attachment-meta");
+    const attachmentPreview = document.getElementById("attachment-preview");
+    const attachmentKind = document.getElementById("attachment-kind");
+    const pasteCard = document.getElementById("paste-card");
+    const pasteMeta = document.getElementById("paste-meta");
+    const accountMenuToggle = document.getElementById("account-menu-toggle");
+    const accountMenu = document.getElementById("account-menu");
+    const accountName = document.getElementById("account-name");
+    const accountAvatar = document.getElementById("account-avatar");
+    const libraryNav = document.getElementById("library-nav");
+    const projectsNav = document.getElementById("projects-nav");
+    const chatStage = document.getElementById("chat-stage");
+    const workspaceScreen = document.getElementById("workspace-screen");
+    const workspaceEyebrow = document.getElementById("workspace-eyebrow");
+    const workspaceTitle = document.getElementById("workspace-title");
+    const workspaceDescription = document.getElementById("workspace-description");
+    const workspaceContent = document.getElementById("workspace-content");
+    const topbarHeading = document.getElementById("topbar-heading");
+    const topbarSubtitle = document.getElementById("topbar-subtitle");
     const removeAttachmentButton = document.getElementById("remove-attachment");
     const thinkToggle = document.getElementById("think-toggle");
     const composerNotice = document.getElementById("composer-notice");
     let activeAttachmentInput = imageInput;
+    let attachmentObjectUrl = null;
+    let activeWorkspaceView = "chat";
+    let activeProjectId = null;
+    let projects = [];
+    let projectLoadToken = 0;
+    let memoryLoadToken = 0;
+    let selectedLibraryFile = null;
+    let attachmentUploadError = "";
+    let attachmentUploadPromise = Promise.resolve(null);
+    let attachmentUploadToken = 0;
+    let libraryLoadToken = 0;
+    let uploadPickerFromLibrary = false;
 
     let storageKey = null;
     let chats = [];
@@ -265,6 +772,14 @@
     let thinkEnabled = false;
     let csrfToken = "";
     let authenticatedUser = null;
+    let registrationMode = "open";
+    let authConfigurationError = "";
+    let googleClientId = "";
+    let googleScriptLoading = false;
+    let googleScriptLoaded = false;
+    let authMode = "login";
+    let workspaceSyncReady = false;
+    let chatSyncQueue = Promise.resolve();
 
     function historyStorageKey(sub) {
       return STORAGE_KEY_PREFIX + encodeURIComponent(String(sub));
@@ -272,17 +787,73 @@
 
     function setAuthVisible(visible) {
       authScreen.hidden = !visible;
+      landingScreen.hidden = true;
       appElement.hidden = visible;
       accountControls.hidden = visible;
     }
 
+    function showLanding() {
+      landingScreen.hidden = false;
+      authScreen.hidden = true;
+      appElement.hidden = true;
+      accountControls.hidden = true;
+      if (authenticatedUser) {
+        landingPrimaryButton.textContent = "Open Ari workspace ↗";
+        landingSecondaryButton.hidden = true;
+        landingNote.textContent = "You're signed in. Open your workspace to continue.";
+      } else {
+        landingPrimaryButton.textContent = "Get started ↗";
+        landingSecondaryButton.hidden = false;
+        landingNote.textContent = googleClientId && !authConfigurationError
+          ? "Sign in or create your Ari account with Google."
+          : "Ari sign-in is temporarily unavailable. Please contact the site administrator.";
+      }
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode === "signup" ? "signup" : "login";
+      const signingUp = authMode === "signup";
+      authTabs.dataset.mode = authMode;
+      loginTab.setAttribute("aria-selected", String(!signingUp));
+      signupTab.setAttribute("aria-selected", String(signingUp));
+      authTitle.textContent = signingUp ? "Create your Ari account." : "Welcome back.";
+      authDescription.textContent = signingUp
+        ? "Create your account with a verified Google account."
+        : "Sign in to continue to your conversations, projects and workspace.";
+      authError.textContent = "";
+      if (signingUp && registrationMode !== "open") {
+        authError.textContent = "New account registration is currently restricted in this Ari environment.";
+        googleSignIn.replaceChildren();
+      } else if (!googleClientId || authConfigurationError) {
+        googleSignIn.replaceChildren();
+        authError.textContent = authConfigurationError || "Google sign-in is not configured yet. Please contact Ari's administrator.";
+      } else {
+        renderGoogleIdentityButton();
+      }
+    }
+
+    function openAuthScreen(mode = "login") {
+      setAuthVisible(true);
+      setAuthMode(mode);
+      if (googleClientId && !authConfigurationError && !googleScriptLoaded && !(mode === "signup" && registrationMode !== "open")) {
+        loadGoogleIdentity(googleClientId);
+      }
+    }
+
     function clearAccountMemory() {
+      projectLoadToken++;
+      libraryLoadToken++;
+      memoryLoadToken++;
       chats = [];
+      projects = [];
+      activeProjectId = null;
       currentChatId = null;
       thinkEnabled = false;
       authenticatedUser = null;
+      workspaceSyncReady = false;
       storageKey = null;
       input.value = "";
+      updatePastedTextCard();
       sendButton.disabled = false;
       imageInput.value = "";
       for (const attachmentInput of attachmentInputs) attachmentInput.value = "";
@@ -297,18 +868,25 @@
     }
 
     function restoreAccount(user) {
+      workspaceSyncReady = false;
       authenticatedUser = user;
+      const displayName = String(user.name || user.email || user.phone || "Your account").trim();
+      accountName.textContent = displayName || "Your account";
+      accountAvatar.textContent = displayName ? displayName.charAt(0).toUpperCase() : "A";
       storageKey = historyStorageKey(user.sub);
       chats = loadChats();
       currentChatId = null;
       const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
       if (mostRecent) currentChatId = mostRecent.id;
-      accountEmail.textContent = user.email || "";
+      accountEmail.textContent = user.email || user.phone || "";
       renderHistory();
       renderConversation(mostRecent || null);
+      showChatView();
       setAuthVisible(false);
       resizeComposer();
       input.focus();
+      workspaceSyncReady = false;
+      void syncChatsFromServer(user.sub);
     }
 
     async function fetchCsrf() {
@@ -334,7 +912,7 @@
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
           authError.textContent = response.status === 403
-            ? "This Google account cannot access Ari in the current setup. Contact the site administrator if you think this is a mistake."
+            ? "This Google account isn't on Ari's approved sign-in list. Try the Google account that was approved, or ask the site administrator to add this account."
             : response.status === 503
               ? "Google sign-in is temporarily unavailable. Please try again later."
               : "Google couldn't verify your sign-in. Please try again.";
@@ -347,46 +925,73 @@
       }
     }
 
+    function renderGoogleIdentityButton() {
+      if (!googleScriptLoaded || !window.google?.accounts?.id || !googleClientId || authConfigurationError) return;
+      if (authMode === "signup" && registrationMode !== "open") return;
+      googleSignIn.replaceChildren();
+      window.google.accounts.id.initialize({ client_id: googleClientId, callback: onGoogleCredential });
+      window.google.accounts.id.renderButton(googleSignIn, {
+        type: "standard", theme: "filled_black", size: "large", shape: "pill",
+        text: authMode === "signup" ? "signup_with" : "signin_with"
+      });
+    }
+
     function loadGoogleIdentity(clientId) {
       if (!clientId) return;
+      googleClientId = clientId;
+      if (window.google?.accounts?.id) {
+        googleScriptLoaded = true;
+        renderGoogleIdentityButton();
+        return;
+      }
+      if (googleScriptLoading) return;
+      googleScriptLoading = true;
       const script = document.createElement("script");
       script.src = "https://accounts.google.com/gsi/client";
       script.async = true;
       script.defer = true;
       script.onload = () => {
+        googleScriptLoading = false;
         if (!window.google?.accounts?.id) {
           authError.textContent = "Google sign-in is temporarily unavailable. Please try again later.";
           return;
         }
-        window.google.accounts.id.initialize({ client_id: clientId, callback: onGoogleCredential });
-        window.google.accounts.id.renderButton(googleSignIn, {
-          type: "standard", theme: "filled_black", size: "large", shape: "pill", text: "signin_with"
-        });
+        googleScriptLoaded = true;
+        renderGoogleIdentityButton();
       };
-      script.onerror = () => { authError.textContent = "Google sign-in is temporarily unavailable. Please try again later."; };
+      script.onerror = () => {
+        googleScriptLoading = false;
+        authError.textContent = "Google sign-in is temporarily unavailable. Please try again later.";
+      };
       document.head.appendChild(script);
     }
 
     async function initializeAuthentication() {
-      setAuthVisible(true);
-      authError.textContent = "";
+      showLanding();
       try {
         const configResponse = await fetch("/api/auth/config", { credentials: "same-origin", cache: "no-store" });
         const config = await configResponse.json();
+        registrationMode = config.registrationMode === "open" ? "open" : "restricted";
+        authConfigurationError = config.configured
+          ? ""
+          : (config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.");
+        googleClientId = typeof config.clientId === "string" ? config.clientId : "";
         await fetchCsrf();
         const meResponse = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
         const me = await meResponse.json();
         if (me.authenticated && me.user) {
           restoreAccount(me.user);
+          if (window.location.pathname === "/homepage") showLanding();
           return;
         }
+        showLanding();
         if (!config.configured) {
-          authError.textContent = config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.";
-          return;
+          landingNote.textContent = authConfigurationError;
         }
-        loadGoogleIdentity(config.clientId);
       } catch (_) {
-        authError.textContent = "Ari sign-in is temporarily unavailable. Refresh the page to try again.";
+        showLanding();
+        landingNote.textContent = "Ari sign-in is temporarily unavailable. Please refresh the page to try again.";
+        authConfigurationError = "Ari sign-in is temporarily unavailable. Please refresh the page to try again.";
       }
     }
 
@@ -416,13 +1021,66 @@
       }
     }
 
-    function saveChats() {
+    function saveChats(options = {}) {
       if (!storageKey) return false;
       try {
         localStorage.setItem(storageKey, JSON.stringify(chats));
+        if (options.remote !== false) queueChatsForServerSync();
         return true;
       } catch (error) {
         return false;
+      }
+    }
+
+    function queueChatsForServerSync() {
+      if (!workspaceSyncReady || !authenticatedUser || !csrfToken) return;
+      const subject = authenticatedUser.sub;
+      const payload = JSON.stringify({ chats });
+      chatSyncQueue = chatSyncQueue.catch(() => undefined).then(async () => {
+        if (!authenticatedUser || authenticatedUser.sub !== subject || !workspaceSyncReady) return;
+        const response = await fetch("/api/workspace/chats", {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: csrfHeaders({ "Content-Type": "application/json" }),
+          body: payload
+        });
+        if (!response.ok) throw new Error("Ari could not sync conversation history.");
+      });
+      void chatSyncQueue.catch(() => undefined);
+    }
+
+    async function syncChatsFromServer(subject) {
+      try {
+        const response = await fetch("/api/workspace/chats", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store"
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!authenticatedUser || authenticatedUser.sub !== subject || !Array.isArray(data.chats)) return;
+
+        const merged = new Map();
+        for (const chat of data.chats) {
+          if (chat && typeof chat.id === "string" && Array.isArray(chat.messages)) merged.set(chat.id, chat);
+        }
+        for (const chat of chats) {
+          if (!chat || typeof chat.id !== "string" || !Array.isArray(chat.messages)) continue;
+          const existing = merged.get(chat.id);
+          if (!existing || Number(chat.updatedAt || 0) >= Number(existing.updatedAt || 0)) merged.set(chat.id, chat);
+        }
+        chats = [...merged.values()].sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+        if (!chats.some(chat => chat.id === currentChatId)) currentChatId = chats[0]?.id || null;
+        saveChats({ remote: false });
+        workspaceSyncReady = true;
+        renderHistory();
+        if (activeWorkspaceView === "chat") {
+          renderConversation(currentChat());
+          showChatView();
+        }
+        queueChatsForServerSync();
+      } catch (_) {
+        // The browser copy remains available when the server store is temporarily unreachable.
       }
     }
 
@@ -463,15 +1121,160 @@
       }
     }
 
+    function appendInlineMessageText(container, value) {
+      const source = String(value || "");
+      const linkPattern = /\[([^\]]{1,160})\]\((https:\/\/[^)\s]+)\)/g;
+      let cursor = 0;
+      let match;
+      while ((match = linkPattern.exec(source)) !== null) {
+        container.appendChild(document.createTextNode(source.slice(cursor, match.index)));
+        let safeUrl = null;
+        try {
+          const parsed = new URL(match[2]);
+          const host = parsed.hostname.toLowerCase();
+          const ipLiteral = /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host) || /^\\[[0-9a-f:]+\\]$/i.test(host);
+          const localHost = host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal");
+          if (parsed.protocol === "https:" && !parsed.username && !parsed.password && !ipLiteral && !localHost) safeUrl = parsed.toString();
+        } catch { /* Invalid links remain plain text. */ }
+        if (safeUrl) {
+          const link = document.createElement("a");
+          link.className = "message-inline-link";
+          link.href = safeUrl;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = match[1];
+          container.appendChild(link);
+        } else {
+          container.appendChild(document.createTextNode(match[0]));
+        }
+        cursor = linkPattern.lastIndex;
+      }
+      container.appendChild(document.createTextNode(source.slice(cursor)));
+    }
+
+    function appendPlainMessageText(container, value) {
+      const paragraphs = String(value || "").split(/\n{2,}/);
+      for (const paragraphText of paragraphs) {
+        if (!paragraphText.trim()) continue;
+        const paragraph = document.createElement("p");
+        paragraph.className = "message-paragraph";
+        appendInlineMessageText(paragraph, paragraphText.trim());
+        container.appendChild(paragraph);
+      }
+    }
+
+    function appendMessageText(container, value) {
+      const source = String(value || "");
+      const imagePattern = /!\[([^\]]*)\]\((https:\/\/[^)\s]+)\)/g;
+      let cursor = 0;
+      let match;
+      while ((match = imagePattern.exec(source)) !== null) {
+        appendPlainMessageText(container, source.slice(cursor, match.index));
+        let imageUrl = null;
+        try {
+          const parsed = new URL(match[2]);
+          const host = parsed.hostname.toLowerCase();
+          const ipLiteral = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(host) || /^\[[0-9a-f:]+\]$/i.test(host);
+          const localHost = host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal");
+          if (parsed.protocol === "https:" && !parsed.username && !parsed.password && !ipLiteral && !localHost) imageUrl = parsed.toString();
+        } catch { /* Invalid image URLs remain ordinary text. */ }
+        if (!imageUrl) {
+          appendPlainMessageText(container, match[0]);
+          cursor = imagePattern.lastIndex;
+          continue;
+        }
+        const figure = document.createElement("figure");
+        figure.className = "message-image";
+        const image = document.createElement("img");
+        image.src = imageUrl;
+        image.alt = String(match[1] || "Image from website").slice(0, 240);
+        image.loading = "lazy";
+        image.decoding = "async";
+        image.referrerPolicy = "no-referrer";
+        image.addEventListener("error", () => figure.remove(), { once: true });
+        const caption = document.createElement("figcaption");
+        const sourceLink = document.createElement("a");
+        sourceLink.href = imageUrl;
+        sourceLink.target = "_blank";
+        sourceLink.rel = "noopener noreferrer";
+        sourceLink.textContent = "Open image source";
+        caption.appendChild(sourceLink);
+        figure.append(image, caption);
+        container.appendChild(figure);
+        cursor = imagePattern.lastIndex;
+      }
+      appendPlainMessageText(container, source.slice(cursor));
+    }
+
+    function renderAriContent(container, value) {
+      const source = String(value || "");
+      const fence = /```([^\r\n`]{0,32})\r?\n([\s\S]*?)\r?\n?```/g;
+      container.replaceChildren();
+      let cursor = 0;
+      let match;
+      while ((match = fence.exec(source)) !== null) {
+        appendMessageText(container, source.slice(cursor, match.index));
+        const block = document.createElement("section");
+        block.className = "message-code";
+        const header = document.createElement("div");
+        header.className = "message-code-header";
+        const language = document.createElement("span");
+        language.textContent = match[1].trim() || "Code";
+        const copy = document.createElement("button");
+        copy.type = "button";
+        copy.className = "message-code-copy";
+        copy.textContent = "Copy";
+        const codeText = match[2];
+        copy.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(codeText);
+            copy.textContent = "Copied";
+          } catch (_) {
+            copy.textContent = "Copy unavailable";
+          }
+        });
+        header.append(language, copy);
+        const pre = document.createElement("pre");
+        const code = document.createElement("code");
+        code.textContent = codeText;
+        pre.appendChild(code);
+        block.append(header, pre);
+        container.appendChild(block);
+        cursor = fence.lastIndex;
+      }
+      appendMessageText(container, source.slice(cursor));
+      if (!container.childNodes.length) container.textContent = source;
+    }
+
     function addMessage(text, speaker, imageName) {
       const bubble = document.createElement("div");
       bubble.className = "message " + speaker;
-      bubble.textContent = text;
+      const content = document.createElement("div");
+      content.className = "message-content";
+      if (speaker === "ari") renderAriContent(content, text);
+      else content.textContent = text;
+      bubble.appendChild(content);
 
       if (imageName) {
         const meta = document.createElement("small");
         meta.textContent = "Image attached: " + imageName;
         bubble.appendChild(meta);
+      }
+
+      if (speaker === "ari") {
+        const copy = document.createElement("button");
+        copy.type = "button";
+        copy.className = "message-copy";
+        copy.textContent = "Copy response";
+        copy.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            copy.textContent = "Copied";
+          } catch (_) {
+            copy.textContent = "Copy unavailable";
+          }
+        });
+        bubble.appendChild(copy);
       }
 
       messagesElement.appendChild(bubble);
@@ -492,12 +1295,12 @@
 
     function renderHistory() {
       chatList.replaceChildren();
-      const sorted = [...chats].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || (b.updatedAt || 0) - (a.updatedAt || 0));
+      const sorted = [...chats].filter(chat => !chat.projectId).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || (b.updatedAt || 0) - (a.updatedAt || 0));
 
       if (!sorted.length) {
         const empty = document.createElement("div");
         empty.className = "history-empty";
-        empty.textContent = "No previous chats yet.";
+        empty.textContent = chats.some(chat => chat.projectId) ? "Project chats live inside their projects." : "No previous chats yet.";
         chatList.appendChild(empty);
         return;
       }
@@ -512,7 +1315,10 @@
         select.textContent = chat.title || "New chat";
         select.title = chat.title || "New chat";
         select.addEventListener("click", () => {
+          activeProjectId = null;
+          showChatView();
           currentChatId = chat.id;
+          topbarHeading.textContent = chat.title || "New chat";
           renderConversation(chat);
           renderHistory();
           sidebar.classList.remove("open");
@@ -588,6 +1394,696 @@
       return menu;
     }
 
+    function showChatView() {
+      activeWorkspaceView = "chat";
+      chatStage.hidden = false;
+      workspaceScreen.hidden = true;
+      const selectedChat = currentChat();
+      if (!activeProjectId && selectedChat?.projectId) activeProjectId = selectedChat.projectId;
+      const activeProject = projects.find(project => project.id === activeProjectId) || null;
+      topbarSubtitle.textContent = activeProject ? "Project · " + activeProject.name : activeProjectId ? "Project workspace" : "Ari workspace";
+      topbarHeading.textContent = currentChat()?.title || "New chat";
+      libraryNav.classList.remove("active");
+      projectsNav.classList.toggle("active", Boolean(activeProject));
+      accountMenu.hidden = true;
+      accountMenuToggle.setAttribute("aria-expanded", "false");
+    }
+
+    function showWorkspaceView(view) {
+      const pages = {
+        library: {
+          eyebrow: "Your workspace",
+          title: "Library",
+          description: "A home for the images, documents and other files you keep with Ari.",
+          status: "Your private file space",
+          heading: "Your saved files",
+          copy: "Files you add from the message bar are saved to this account's private Library. You can download or delete them here."
+        },
+        projects: {
+          eyebrow: "Your workspace",
+          title: "Projects",
+          description: "Keep related conversations together in focused workspaces.",
+          status: "Your project spaces",
+          heading: "Keep related work together",
+          copy: "Create a project for each ongoing area of work. Its conversations stay inside the project instead of appearing in Recent Chats."
+        },
+        profile: {
+          eyebrow: "Your account",
+          title: "Profile / About You",
+          description: "Review the account identity currently used to sign in to Ari.",
+          status: "Account information",
+          heading: "Your sign-in profile",
+          copy: "This page currently displays the identity supplied by Google sign-in. Editable profile fields and saved personal details will be connected to the account database."
+        },
+        memory: {
+          eyebrow: "Personalisation",
+          title: "Memory",
+          description: "Choose what Ari may remember to make future conversations more useful.",
+          status: "Review mode",
+          heading: "Your memory stays under your control",
+          copy: "Add useful notes, inspect pending suggestions, and edit or remove memories at any time. Automatic model-generated suggestions are not connected yet."
+        },
+        settings: {
+          eyebrow: "Preferences",
+          title: "Settings",
+          description: "Manage how Ari looks and how your account works.",
+          status: "Settings foundation",
+          heading: "Workspace preferences",
+          copy: "The visual theme and responsive layout are in place. Persistent appearance preferences, notification controls, data export and account security settings will be wired to the account service in a later step."
+        },
+        delete: {
+          eyebrow: "Account",
+          title: "Delete account",
+          description: "Account deletion must be verified and must remove the account's stored data.",
+          status: "Not available yet",
+          heading: "Deletion is not enabled",
+          copy: "Ari does not yet have the verification and account-data deletion endpoint required to do this safely. No account data has been deleted. This control will only become active after the account database and verification flow are implemented."
+        }
+      };
+      const page = pages[view];
+      if (!page) return;
+      activeWorkspaceView = view;
+      activeProjectId = null;
+      chatStage.hidden = true;
+      workspaceScreen.hidden = false;
+      workspaceEyebrow.textContent = page.eyebrow;
+      workspaceTitle.textContent = page.title;
+      workspaceDescription.textContent = page.description;
+      topbarHeading.textContent = page.title;
+      topbarSubtitle.textContent = page.eyebrow;
+      libraryNav.classList.toggle("active", view === "library");
+      projectsNav.classList.toggle("active", view === "projects");
+      accountMenu.hidden = true;
+      accountMenuToggle.setAttribute("aria-expanded", "false");
+      workspaceContent.replaceChildren();
+
+      const panel = document.createElement("div");
+      panel.className = "workspace-panel";
+      const status = document.createElement("div");
+      status.className = "workspace-status";
+      status.textContent = page.status;
+      const heading = document.createElement("h3");
+      heading.textContent = page.heading;
+      const copy = document.createElement("p");
+      copy.textContent = page.copy;
+      panel.append(status, heading, copy);
+
+      if (view === "profile") {
+        const grid = document.createElement("div");
+        grid.className = "workspace-grid";
+        const details = [
+          ["Display name", authenticatedUser?.name || "Not supplied by Google"],
+          ["Email", authenticatedUser?.email || "Not supplied"]
+        ];
+        for (const [label, value] of details) {
+          const item = document.createElement("div");
+          item.className = "workspace-stat";
+          const strong = document.createElement("strong");
+          strong.textContent = value;
+          const span = document.createElement("span");
+          span.textContent = label;
+          item.append(strong, span);
+          grid.appendChild(item);
+        }
+        workspaceContent.append(panel, grid);
+        return;
+      }
+      workspaceContent.appendChild(panel);
+      if (view === "library") void loadLibraryView();
+      if (view === "projects") void loadProjectsView();
+      if (view === "memory") void loadMemoryView();
+    }
+
+    libraryNav.addEventListener("click", () => showWorkspaceView("library"));
+    projectsNav.addEventListener("click", () => showWorkspaceView("projects"));
+    accountMenuToggle.addEventListener("click", () => {
+      const open = accountMenu.hidden;
+      accountMenu.hidden = !open;
+      accountMenuToggle.setAttribute("aria-expanded", String(open));
+    });
+    accountMenu.addEventListener("click", event => {
+      const item = event.target.closest("[data-account-view]");
+      if (!item) return;
+      showWorkspaceView(item.dataset.accountView);
+    });
+
+
+
+
+    async function loadMemoryView() {
+      const token = ++memoryLoadToken;
+      const subject = authenticatedUser?.sub;
+      if (!subject) return;
+      try {
+        const response = await fetch("/api/workspace/memory", { credentials: "same-origin", cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (token !== memoryLoadToken || activeWorkspaceView !== "memory" ||
+            !authenticatedUser || authenticatedUser.sub !== subject) return;
+        if (response.status === 401) {
+          clearAccountMemory();
+          showLanding();
+          return;
+        }
+        if (!response.ok || !Array.isArray(data.memories)) {
+          throw new Error(data.error || "Ari could not load your memories.");
+        }
+
+        const existingPanel = workspaceContent.querySelector(".workspace-panel");
+        workspaceContent.replaceChildren();
+        if (existingPanel) workspaceContent.appendChild(existingPanel);
+
+        const note = document.createElement("div");
+        note.className = "memory-review-note";
+        note.textContent = "Review mode is active. Notes you add here are saved to your account. Automatic suggestions from Ari's model are not connected yet. Do not save passwords, access keys or highly private information.";
+        workspaceContent.appendChild(note);
+
+        const form = document.createElement("form");
+        form.className = "memory-create-form";
+        const field = document.createElement("textarea");
+        field.name = "memory";
+        field.maxLength = 500;
+        field.required = true;
+        field.placeholder = "Add a useful, non-sensitive note for future conversations…";
+        field.setAttribute("aria-label", "New memory");
+        const save = document.createElement("button");
+        save.type = "submit";
+        save.textContent = "Save memory";
+        form.append(field, save);
+        form.addEventListener("submit", async event => {
+          event.preventDefault();
+          save.disabled = true;
+          try {
+            const result = await fetch("/api/workspace/memory", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: csrfHeaders({ "Content-Type": "application/json" }),
+              body: JSON.stringify({ text: field.value })
+            });
+            const payload = await result.json().catch(() => ({}));
+            if (!result.ok) throw new Error(payload.error || "Ari could not save this memory.");
+            await loadMemoryView();
+          } catch (error) {
+            showWorkspaceNotice(error.message);
+          } finally {
+            save.disabled = false;
+          }
+        });
+        workspaceContent.appendChild(form);
+
+        const makeGroup = (headingText, items, pending) => {
+          const group = document.createElement("section");
+          group.className = "memory-group";
+          const heading = document.createElement("h3");
+          heading.textContent = headingText;
+          group.appendChild(heading);
+          if (!items.length) {
+            const empty = document.createElement("div");
+            empty.className = "library-empty";
+            empty.textContent = pending ? "No suggestions are waiting for review." : "No saved memories yet.";
+            group.appendChild(empty);
+            workspaceContent.appendChild(group);
+            return;
+          }
+          for (const memory of items) {
+            const row = document.createElement("article");
+            row.className = "memory-item";
+            const copy = document.createElement("div");
+            copy.className = "memory-item-copy";
+            const text = document.createElement("p");
+            text.textContent = memory.text;
+            const meta = document.createElement("small");
+            meta.textContent = (memory.source === "ari" ? "Suggested by Ari" : "Added by you") +
+              " · " + new Date(memory.updatedAt || memory.createdAt || Date.now()).toLocaleDateString();
+            copy.append(text, meta);
+            const actions = document.createElement("div");
+            actions.className = "memory-item-actions";
+            const edit = document.createElement("button");
+            edit.type = "button";
+            edit.className = "memory-action";
+            edit.textContent = "Edit";
+            edit.addEventListener("click", async () => {
+              const nextText = window.prompt("Edit memory", memory.text);
+              if (nextText === null || !nextText.trim() || nextText.trim() === memory.text) return;
+              edit.disabled = true;
+              try {
+                const result = await fetch("/api/workspace/memory/" + encodeURIComponent(memory.id), {
+                  method: "PATCH",
+                  credentials: "same-origin",
+                  headers: csrfHeaders({ "Content-Type": "application/json" }),
+                  body: JSON.stringify({ text: nextText.trim() })
+                });
+                const payload = await result.json().catch(() => ({}));
+                if (!result.ok) throw new Error(payload.error || "Ari could not update this memory.");
+                await loadMemoryView();
+              } catch (error) {
+                showWorkspaceNotice(error.message);
+                edit.disabled = false;
+              }
+            });
+            actions.appendChild(edit);
+
+            if (pending) {
+              const approve = document.createElement("button");
+              approve.type = "button";
+              approve.className = "memory-action primary";
+              approve.textContent = "Keep memory";
+              approve.addEventListener("click", async () => {
+                approve.disabled = true;
+                try {
+                  const result = await fetch("/api/workspace/memory/" + encodeURIComponent(memory.id), {
+                    method: "PATCH",
+                    credentials: "same-origin",
+                    headers: csrfHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ status: "active" })
+                  });
+                  const payload = await result.json().catch(() => ({}));
+                  if (!result.ok) throw new Error(payload.error || "Ari could not approve this memory.");
+                  await loadMemoryView();
+                } catch (error) {
+                  showWorkspaceNotice(error.message);
+                  approve.disabled = false;
+                }
+              });
+              actions.appendChild(approve);
+            }
+
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "memory-action danger";
+            remove.textContent = pending ? "Dismiss" : "Delete";
+            remove.addEventListener("click", async () => {
+              if (!window.confirm(pending ? "Dismiss this memory suggestion?" : "Delete this saved memory?")) return;
+              remove.disabled = true;
+              try {
+                const result = await fetch("/api/workspace/memory/" + encodeURIComponent(memory.id), {
+                  method: "DELETE",
+                  credentials: "same-origin",
+                  headers: csrfHeaders()
+                });
+                const payload = await result.json().catch(() => ({}));
+                if (!result.ok) throw new Error(payload.error || "Ari could not delete this memory.");
+                await loadMemoryView();
+              } catch (error) {
+                showWorkspaceNotice(error.message);
+                remove.disabled = false;
+              }
+            });
+            actions.appendChild(remove);
+            row.append(copy, actions);
+            group.appendChild(row);
+          }
+          workspaceContent.appendChild(group);
+        };
+
+        const pending = data.memories.filter(memory => memory.status === "pending");
+        const active = data.memories.filter(memory => memory.status !== "pending");
+        makeGroup("Needs your review", pending, true);
+        makeGroup("Saved memories", active, false);
+      } catch (error) {
+        if (token !== memoryLoadToken || activeWorkspaceView !== "memory" ||
+            !authenticatedUser || authenticatedUser.sub !== subject) return;
+        showWorkspaceNotice(error.message || "Ari could not load your memories.");
+      }
+    }
+
+    async function loadProjectsView() {
+      const token = ++projectLoadToken;
+      const subject = authenticatedUser?.sub;
+      if (!subject) return;
+      try {
+        const response = await fetch("/api/workspace/projects", { credentials: "same-origin", cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (token !== projectLoadToken || activeWorkspaceView !== "projects" ||
+            !authenticatedUser || authenticatedUser.sub !== subject) return;
+        if (response.status === 401) {
+          clearAccountMemory();
+          showLanding();
+          return;
+        }
+        if (!response.ok || !Array.isArray(data.projects)) {
+          throw new Error(data.error || "Ari could not load your projects.");
+        }
+        projects = data.projects;
+        const existingPanel = workspaceContent.querySelector(".workspace-panel");
+        workspaceContent.replaceChildren();
+        if (existingPanel) workspaceContent.appendChild(existingPanel);
+
+        const createForm = document.createElement("form");
+        createForm.className = "project-create-form";
+        const name = document.createElement("input");
+        name.type = "text";
+        name.name = "name";
+        name.maxLength = 80;
+        name.placeholder = "Project name";
+        name.setAttribute("aria-label", "Project name");
+        name.required = true;
+        const description = document.createElement("textarea");
+        description.name = "description";
+        description.maxLength = 500;
+        description.placeholder = "What is this project about? (optional)";
+        description.setAttribute("aria-label", "Project description");
+        const create = document.createElement("button");
+        create.type = "submit";
+        create.textContent = "Create project";
+        createForm.append(name, description, create);
+        createForm.addEventListener("submit", async event => {
+          event.preventDefault();
+          create.disabled = true;
+          try {
+            const result = await fetch("/api/workspace/projects", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: csrfHeaders({ "Content-Type": "application/json" }),
+              body: JSON.stringify({ name: name.value, description: description.value })
+            });
+            const payload = await result.json().catch(() => ({}));
+            if (!result.ok) throw new Error(payload.error || "Ari could not create this project.");
+            name.value = "";
+            description.value = "";
+            await loadProjectsView();
+          } catch (error) {
+            showWorkspaceNotice(error.message);
+          } finally {
+            create.disabled = false;
+          }
+        });
+        workspaceContent.appendChild(createForm);
+
+        if (!projects.length) {
+          const empty = document.createElement("div");
+          empty.className = "library-empty";
+          empty.textContent = "No projects yet. Create one above to keep its conversations together.";
+          workspaceContent.appendChild(empty);
+          return;
+        }
+
+        const grid = document.createElement("div");
+        grid.className = "project-grid";
+        for (const project of projects) {
+          const card = document.createElement("article");
+          card.className = "project-card";
+          const title = document.createElement("h3");
+          title.textContent = project.name;
+          const copy = document.createElement("p");
+          copy.textContent = project.description || "A focused space for related conversations.";
+          const count = document.createElement("div");
+          count.className = "project-card-meta";
+          const chatCount = chats.filter(chat => chat.projectId === project.id).length;
+          count.textContent = chatCount + (chatCount === 1 ? " conversation" : " conversations");
+          const actions = document.createElement("div");
+          actions.className = "project-card-actions";
+          const open = document.createElement("button");
+          open.type = "button";
+          open.className = "project-action primary";
+          open.textContent = "Open project";
+          open.addEventListener("click", () => openProjectDetail(project));
+          const rename = document.createElement("button");
+          rename.type = "button";
+          rename.className = "project-action";
+          rename.textContent = "Rename";
+          rename.addEventListener("click", async () => {
+            const nextName = window.prompt("Project name", project.name);
+            if (nextName === null || !nextName.trim() || nextName.trim() === project.name) return;
+            rename.disabled = true;
+            try {
+              const result = await fetch("/api/workspace/projects/" + encodeURIComponent(project.id), {
+                method: "PATCH",
+                credentials: "same-origin",
+                headers: csrfHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify({ name: nextName.trim() })
+              });
+              const payload = await result.json().catch(() => ({}));
+              if (!result.ok) throw new Error(payload.error || "Ari could not rename this project.");
+              await loadProjectsView();
+            } catch (error) {
+              showWorkspaceNotice(error.message);
+              rename.disabled = false;
+            }
+          });
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "project-action danger";
+          remove.textContent = "Delete";
+          remove.addEventListener("click", async () => {
+            if (!window.confirm("Delete " + project.name + "? Its conversations will be kept in Recent Chats.")) return;
+            remove.disabled = true;
+            try {
+              const result = await fetch("/api/workspace/projects/" + encodeURIComponent(project.id), {
+                method: "DELETE",
+                credentials: "same-origin",
+                headers: csrfHeaders()
+              });
+              const payload = await result.json().catch(() => ({}));
+              if (!result.ok) throw new Error(payload.error || "Ari could not delete this project.");
+              await syncChatsFromServer(authenticatedUser.sub);
+              projects = projects.filter(item => item.id !== project.id);
+              await loadProjectsView();
+            } catch (error) {
+              showWorkspaceNotice(error.message);
+              remove.disabled = false;
+            }
+          });
+          actions.append(open, rename, remove);
+          card.append(title, copy, count, actions);
+          grid.appendChild(card);
+        }
+        workspaceContent.appendChild(grid);
+      } catch (error) {
+        if (token !== projectLoadToken || activeWorkspaceView !== "projects" ||
+            !authenticatedUser || authenticatedUser.sub !== subject) return;
+        showWorkspaceNotice(error.message || "Ari could not load your projects.");
+      }
+    }
+
+    function showWorkspaceNotice(message) {
+      let notice = workspaceContent.querySelector(".project-notice");
+      if (!notice) {
+        notice = document.createElement("p");
+        notice.className = "library-error project-notice";
+        workspaceContent.prepend(notice);
+      }
+      notice.textContent = message;
+    }
+
+    function openProjectDetail(project) {
+      activeWorkspaceView = "project-detail";
+      activeProjectId = project.id;
+      chatStage.hidden = true;
+      workspaceScreen.hidden = false;
+      workspaceEyebrow.textContent = "Your project";
+      workspaceTitle.textContent = project.name;
+      workspaceDescription.textContent = project.description || "A focused space for related conversations.";
+      topbarHeading.textContent = project.name;
+      topbarSubtitle.textContent = "Project workspace";
+      libraryNav.classList.remove("active");
+      projectsNav.classList.add("active");
+      accountMenu.hidden = true;
+      accountMenuToggle.setAttribute("aria-expanded", "false");
+      workspaceContent.replaceChildren();
+
+      const toolbar = document.createElement("div");
+      toolbar.className = "project-toolbar";
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "project-action";
+      back.textContent = "← All projects";
+      back.addEventListener("click", () => showWorkspaceView("projects"));
+      const create = document.createElement("button");
+      create.type = "button";
+      create.className = "project-action primary";
+      create.textContent = "New project chat";
+      create.addEventListener("click", () => createChat());
+      toolbar.append(back, create);
+
+      const heading = document.createElement("h3");
+      heading.className = "workspace-section-heading";
+      heading.textContent = "Conversations";
+      const list = document.createElement("div");
+      list.className = "project-chat-list";
+      const projectChats = chats.filter(chat => chat.projectId === project.id)
+        .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+      if (!projectChats.length) {
+        const empty = document.createElement("div");
+        empty.className = "library-empty";
+        empty.textContent = "No conversations in this project yet. Start one with New project chat.";
+        list.appendChild(empty);
+      }
+      for (const chat of projectChats) {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "project-chat-row";
+        const title = document.createElement("span");
+        title.textContent = chat.title || "New chat";
+        const date = document.createElement("span");
+        date.textContent = new Date(chat.updatedAt || chat.createdAt || Date.now()).toLocaleDateString();
+        row.append(title, date);
+        row.addEventListener("click", () => {
+          currentChatId = chat.id;
+          showChatView();
+          renderConversation(chat);
+          input.focus();
+        });
+        list.appendChild(row);
+      }
+      workspaceContent.append(toolbar, heading, list);
+    }
+
+    async function loadLibraryView() {
+      const token = ++libraryLoadToken;
+      const subject = authenticatedUser?.sub;
+      if (!subject) return;
+      workspaceContent.replaceChildren();
+      const loading = document.createElement("div");
+      loading.className = "library-empty";
+      loading.textContent = "Loading your Library…";
+      workspaceContent.appendChild(loading);
+      try {
+        const response = await fetch("/api/library/files", { credentials: "same-origin", cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (token !== libraryLoadToken || activeWorkspaceView !== "library" ||
+            !authenticatedUser || authenticatedUser.sub !== subject) return;
+        if (response.status === 401) {
+          clearAccountMemory();
+          showLanding();
+          return;
+        }
+        if (!response.ok) throw new Error(data.error || "Ari could not load your Library.");
+        workspaceContent.replaceChildren();
+
+        const toolbar = document.createElement("div");
+        toolbar.className = "library-toolbar";
+        const count = document.createElement("span");
+        count.className = "library-card-meta";
+        count.textContent = data.files.length + (data.files.length === 1 ? " saved file" : " saved files");
+        const upload = document.createElement("button");
+        upload.type = "button";
+        upload.className = "library-action";
+        upload.textContent = "Upload a file";
+        upload.addEventListener("click", () => {
+          uploadPickerFromLibrary = true;
+          activeAttachmentInput = fileInput;
+          fileInput.click();
+        });
+        toolbar.append(count, upload);
+
+        const storage = document.createElement("div");
+        storage.className = "library-storage";
+        const storageRow = document.createElement("div");
+        storageRow.className = "library-storage-row";
+        const used = document.createElement("span");
+        used.textContent = formatFileSize(data.usedBytes || 0) + " used";
+        const quota = document.createElement("span");
+        quota.textContent = formatFileSize(data.quotaBytes || 0) + " account limit";
+        storageRow.append(used, quota);
+        const meter = document.createElement("div");
+        meter.className = "library-meter";
+        const fill = document.createElement("div");
+        fill.className = "library-meter-fill";
+        fill.style.width = Math.min(100, data.quotaBytes ? (data.usedBytes / data.quotaBytes) * 100 : 0) + "%";
+        meter.appendChild(fill);
+        storage.append(storageRow, meter);
+        workspaceContent.append(toolbar, storage);
+
+        if (!Array.isArray(data.files) || !data.files.length) {
+          const empty = document.createElement("div");
+          empty.className = "library-empty";
+          empty.textContent = "Nothing saved yet. Use the + button in the message bar or Upload a file to add something to your Library.";
+          workspaceContent.appendChild(empty);
+          return;
+        }
+
+        const grid = document.createElement("div");
+        grid.className = "library-grid";
+        for (const file of data.files) {
+          const card = document.createElement("article");
+          card.className = "library-card";
+          const preview = document.createElement("div");
+          preview.className = "library-card-preview";
+          if (["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"].includes(file.mimeType)) {
+            const image = document.createElement("img");
+            image.alt = "";
+            image.loading = "lazy";
+            image.src = "/api/library/files/" + encodeURIComponent(file.id) + "/preview";
+            preview.appendChild(image);
+          } else {
+            const type = document.createElement("span");
+            const ext = String(file.name || "").split(".").pop().slice(0, 8).toUpperCase();
+            type.textContent = ext && ext !== file.name.toUpperCase() ? ext : "FILE";
+            preview.appendChild(type);
+          }
+          const name = document.createElement("div");
+          name.className = "library-card-name";
+          name.textContent = file.name;
+          name.title = file.name;
+          const meta = document.createElement("div");
+          meta.className = "library-card-meta";
+          meta.textContent = formatFileSize(file.size) + " · " + new Date(file.createdAt).toLocaleDateString();
+          const actions = document.createElement("div");
+          actions.className = "library-card-actions";
+          const download = document.createElement("a");
+          download.className = "library-action";
+          download.href = "/api/library/files/" + encodeURIComponent(file.id) + "/download";
+          download.textContent = "Download";
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "library-action danger";
+          remove.textContent = "Delete";
+          remove.addEventListener("click", async () => {
+            if (!window.confirm("Delete " + file.name + " from your Library?")) return;
+            remove.disabled = true;
+            try {
+              const result = await fetch("/api/library/files/" + encodeURIComponent(file.id), {
+                method: "DELETE",
+                credentials: "same-origin",
+                headers: csrfHeaders()
+              });
+              const payload = await result.json().catch(() => ({}));
+              if (!result.ok) throw new Error(payload.error || "Ari could not delete this file.");
+              await loadLibraryView();
+            } catch (error) {
+              remove.disabled = false;
+              const message = document.createElement("p");
+              message.className = "library-error";
+              message.textContent = error.message;
+              card.appendChild(message);
+            }
+          });
+          actions.append(download, remove);
+          card.append(preview, name, meta, actions);
+          grid.appendChild(card);
+        }
+        workspaceContent.appendChild(grid);
+      } catch (error) {
+        if (token !== libraryLoadToken || activeWorkspaceView !== "library" ||
+            !authenticatedUser || authenticatedUser.sub !== subject) return;
+        workspaceContent.replaceChildren();
+        const message = document.createElement("div");
+        message.className = "library-empty library-error";
+        message.textContent = error.message || "Ari could not load your Library.";
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "library-action";
+        retry.textContent = "Try again";
+        retry.addEventListener("click", () => void loadLibraryView());
+        workspaceContent.append(message, retry);
+      }
+    }
+
+    async function uploadAttachmentToLibrary(file) {
+      const response = await fetch("/api/library/files", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: csrfHeaders({
+          "Content-Type": file.type || "application/octet-stream",
+          "X-Ari-Filename": encodeURIComponent(file.name || "uploaded-file")
+        }),
+        body: file
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.file) throw new Error(data.error || "Ari could not save this file to your Library.");
+      return data.file;
+    }
+
     function showHistoryActions(chat, x, y) {
       const menu = ensureHistoryActions();
       menu.dataset.chatId = chat.id;
@@ -606,13 +2102,24 @@
     document.addEventListener("click", event => {
       if (!event.target.closest(".history-actions")) hideHistoryActions();
       if (!event.target.closest(".attach-wrap")) setAttachMenuOpen(false);
+      if (!event.target.closest("#account-controls")) {
+        accountMenu.hidden = true;
+        accountMenuToggle.setAttribute("aria-expanded", "false");
+      }
     });
     document.addEventListener("keydown", event => {
-      if (event.key === "Escape") { hideHistoryActions(); setAttachMenuOpen(false); }
+      if (event.key === "Escape") {
+        hideHistoryActions();
+        setAttachMenuOpen(false);
+        accountMenu.hidden = true;
+        accountMenuToggle.setAttribute("aria-expanded", "false");
+        if (window.matchMedia("(max-width: 760px)").matches) sidebar.classList.remove("open");
+      }
     });
 
     function createChat() {
       currentChatId = null;
+      showChatView();
       renderConversation(null);
       renderHistory();
       sidebar.classList.remove("open");
@@ -626,10 +2133,45 @@
       input.style.height = Math.min(input.scrollHeight, 180) + "px";
     }
 
+    function formatFileSize(bytes) {
+      const size = Number(bytes) || 0;
+      if (size < 1024) return size + " B";
+      if (size < 1024 * 1024) return (size / 1024).toFixed(1) + " KB";
+      return (size / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
     function updateAttachmentChip() {
       const file = activeAttachmentInput.files && activeAttachmentInput.files[0];
       attachmentChip.hidden = !file;
+      const composerForm = attachmentChip.closest("#chat-form");
+      if (composerForm) composerForm.classList.toggle("has-attachment", Boolean(file));
       attachmentName.textContent = file ? file.name : "";
+      attachmentMeta.textContent = "";
+      attachmentPreview.hidden = true;
+      attachmentKind.hidden = !file;
+      if (attachmentObjectUrl) {
+        URL.revokeObjectURL(attachmentObjectUrl);
+        attachmentObjectUrl = null;
+      }
+      if (file && file.type.startsWith("image/")) {
+        attachmentObjectUrl = URL.createObjectURL(file);
+        attachmentPreview.src = attachmentObjectUrl;
+        attachmentPreview.hidden = false;
+        attachmentKind.hidden = true;
+      } else if (file) {
+        const extension = String(file.name || "").split(".").pop().slice(0, 7).toUpperCase();
+        const type = file.type.startsWith("audio/") ? "AUDIO" : (extension && extension !== file.name.toUpperCase() ? extension : "FILE");
+        attachmentKind.textContent = type;
+      } else {
+        attachmentPreview.removeAttribute("src");
+      }
+    }
+
+    function updatePastedTextCard() {
+      const length = input.value.trim().length;
+      const show = length >= 700;
+      pasteCard.hidden = !show;
+      if (show) pasteMeta.textContent = length.toLocaleString() + " characters · Included in your message";
     }
 
     function setAttachMenuOpen(open) {
@@ -653,10 +2195,49 @@
     for (const attachmentInput of attachmentInputs) attachmentInput.addEventListener("change", () => {
       for (const other of attachmentInputs) if (other !== attachmentInput) other.value = "";
       activeAttachmentInput = attachmentInput;
+      const file = attachmentInput.files && attachmentInput.files[0];
+      const token = ++attachmentUploadToken;
+      selectedLibraryFile = null;
+      attachmentUploadError = "";
       updateAttachmentChip();
+      if (!file) {
+        attachmentUploadPromise = Promise.resolve(null);
+        sendButton.disabled = false;
+        return;
+      }
+      sendButton.disabled = true;
+      composerNotice.textContent = "";
+      composerNotice.hidden = true;
+      attachmentUploadPromise = uploadAttachmentToLibrary(file).then(record => {
+        if (token !== attachmentUploadToken) return record;
+        selectedLibraryFile = record;
+        composerNotice.textContent = "";
+        composerNotice.hidden = true;
+        updateAttachmentChip();
+        if (activeWorkspaceView === "library") void loadLibraryView();
+        uploadPickerFromLibrary = false;
+        return record;
+      }).catch(error => {
+        if (token === attachmentUploadToken) {
+          attachmentUploadError = "Upload failed";
+          composerNotice.textContent = error.message || "Ari could not save this file.";
+          composerNotice.hidden = false;
+          updateAttachmentChip();
+          uploadPickerFromLibrary = false;
+        }
+        throw error;
+      }).finally(() => {
+        if (token === attachmentUploadToken) sendButton.disabled = false;
+      });
+      attachmentUploadPromise.catch(() => undefined);
     });
     removeAttachmentButton.addEventListener("click", () => {
+      attachmentUploadToken++;
       activeAttachmentInput.value = "";
+      selectedLibraryFile = null;
+      attachmentUploadError = "";
+      attachmentUploadPromise = Promise.resolve(null);
+      sendButton.disabled = false;
       updateAttachmentChip();
     });
     thinkToggle.addEventListener("click", () => {
@@ -664,7 +2245,16 @@
       thinkToggle.setAttribute("aria-pressed", String(thinkEnabled));
       thinkToggle.title = thinkEnabled ? "Deeper reasoning is on" : "Enable deeper reasoning";
     });
-    input.addEventListener("input", resizeComposer);
+    input.addEventListener("input", () => {
+      resizeComposer();
+      updatePastedTextCard();
+    });
+    input.addEventListener("paste", () => {
+      window.setTimeout(() => {
+        resizeComposer();
+        updatePastedTextCard();
+      }, 0);
+    });
     input.addEventListener("keydown", event => {
       if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
         event.preventDefault();
@@ -679,6 +2269,7 @@
           id: createId(),
           title: makeTitle(firstMessage),
           messages: [],
+          projectId: activeProjectId || null,
           createdAt: Date.now(),
           updatedAt: Date.now()
         };
@@ -686,6 +2277,7 @@
         currentChatId = chat.id;
       }
       if (!chat.messages.length) chat.title = makeTitle(firstMessage);
+      topbarHeading.textContent = chat.title || "New chat";
       return chat;
     }
 
@@ -710,12 +2302,20 @@
 
       const tier = tierSelect.value;
       const selectedFile = activeAttachmentInput.files && activeAttachmentInput.files[0] ? activeAttachmentInput.files[0] : null;
+      if (selectedFile && !selectedLibraryFile) {
+        showComposerMessage(attachmentUploadError || "Wait until the file has finished saving to your Library.");
+        return;
+      }
       if (selectedFile && activeAttachmentInput !== imageInput) {
-        showComposerMessage("Audio and file uploads will be available after Ari's server supports them. Image uploads are ready now.");
+        showComposerMessage("This file is saved in your Library, but Ari cannot analyse documents or audio yet. Remove it from the composer to send your text.");
         return;
       }
       const selectedImage = selectedFile;
       if (selectedImage) {
+        if (selectedImage.size > 8 * 1024 * 1024) {
+          showComposerMessage("This image is saved in your Library, but image chat input is limited to 8 MiB. Choose a smaller image to ask Ari about it.");
+          return;
+        }
         if (tier === "mini") {
           showComposerMessage("Choose Medium, Max, or Ultra to ask about an image.");
           return;
@@ -748,6 +2348,7 @@
 
       input.value = "";
       resizeComposer();
+      updatePastedTextCard();
       sendButton.disabled = true;
       const waiting = addMessage("Thinking…", "ari");
 
@@ -774,7 +2375,7 @@
         if (!response.ok) {
           if (response.status === 401) {
             clearAccountMemory();
-            setAuthVisible(true);
+            showLanding();
           }
           throw new Error(data.error || "The local Ari server returned an error.");
         }
@@ -792,7 +2393,7 @@
           saveChats();
         }
         if (currentChatId === chatId) {
-          waiting.textContent = reply;
+          renderAriContent(waiting.querySelector(".message-content"), reply);
           renderHistory();
         }
 
@@ -800,6 +2401,7 @@
           void generateChatTitle(tier, prompt, reply).then(generatedTitle => {
           if (generatedTitle && chats.includes(targetChat)) {
             targetChat.title = generatedTitle;
+            if (currentChatId === targetChat.id) topbarHeading.textContent = generatedTitle;
             targetChat.updatedAt = Date.now();
             saveChats();
             renderHistory();
@@ -819,17 +2421,37 @@
           targetChat.updatedAt = Date.now();
           saveChats();
         }
-        if (currentChatId === chatId) waiting.textContent = errorText;
+        if (currentChatId === chatId) waiting.querySelector('.message-content').textContent = errorText;
       } finally {
         activeAttachmentInput.value = "";
         activeAttachmentInput = imageInput;
+        selectedLibraryFile = null;
+        attachmentUploadError = "";
+        attachmentUploadPromise = Promise.resolve(null);
         updateAttachmentChip();
         sendButton.disabled = false;
         input.focus();
       }
     });
 
-    newChatButton.addEventListener("click", createChat);
+    landingLoginButton.addEventListener("click", () => openAuthScreen("login"));
+    landingSignupButton.addEventListener("click", () => openAuthScreen("signup"));
+    landingSecondaryButton.addEventListener("click", () => openAuthScreen("login"));
+    landingPrimaryButton.addEventListener("click", () => {
+      if (authenticatedUser) {
+        setAuthVisible(false);
+        showChatView();
+      } else {
+        openAuthScreen("signup");
+      }
+    });
+    authBackButton.addEventListener("click", showLanding);
+    loginTab.addEventListener("click", () => setAuthMode("login"));
+    signupTab.addEventListener("click", () => setAuthMode("signup"));
+    newChatButton.addEventListener("click", () => {
+      activeProjectId = null;
+      createChat();
+    });
     signOutButton.addEventListener("click", async () => {
       signOutButton.disabled = true;
       try {
@@ -842,7 +2464,7 @@
         if (!response.ok) throw new Error("Ari could not sign out safely. Refresh the page and try again.");
         csrfToken = result.csrfToken || csrfToken;
         clearAccountMemory();
-        setAuthVisible(true);
+        showLanding();
         authError.textContent = "";
       } catch (error) {
         composerNotice.textContent = error.message;
@@ -852,7 +2474,7 @@
       }
     });
     sidebarToggle.addEventListener("click", () => {
-      if (window.matchMedia("(max-width: 680px)").matches) {
+      if (window.matchMedia("(max-width: 760px)").matches) {
         const open = !sidebar.classList.contains("open");
         sidebar.classList.toggle("open", open);
         sidebarToggle.setAttribute("aria-expanded", String(open));
@@ -868,6 +2490,7 @@
 
     renderHistory();
     renderConversation(null);
+    showChatView();
     initializeAuthentication();
   </script>
 </body>
