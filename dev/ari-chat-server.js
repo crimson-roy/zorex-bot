@@ -25,6 +25,7 @@ const MODEL_PORT = 4174;
 const MAX_BODY_BYTES = 16 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
+const MAX_TEXT_ATTACHMENT_CHARS = 16_000;
 const ALLOWED_IMAGE_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ALLOWED_AUDIO_MIME = new Set([
     "audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3", "audio/webm",
@@ -1362,6 +1363,40 @@ function createServer(options = {}) {
                     }
                     generationOptions = normalizeGpuOptions(body.options);
                 }
+                if (body.textAttachment !== undefined && body.textAttachment !== null) {
+                    if (typeof body.textAttachment !== "string") {
+                        sendJson(response, 400, { error: "A text attachment must contain readable text." });
+                        return;
+                    }
+                    const attachedText = body.textAttachment.trim();
+                    if (!attachedText) {
+                        sendJson(response, 400, { error: "The text attachment is empty." });
+                        return;
+                    }
+                    const maxText = tier === "mini" ? 1_600 : MAX_TEXT_ATTACHMENT_CHARS;
+                    if (attachedText.length > maxText) {
+                        sendJson(response, 413, {
+                            error: tier === "mini"
+                                ? "Mini text attachments are limited to 1,600 characters. Choose Medium or Max for a larger text attachment."
+                                : "Text attachments are limited to 16,000 characters per message."
+                        });
+                        return;
+                    }
+                    const chunkSize = tier === "mini" ? 1_400 : 5_400;
+                    const chunks = [];
+                    for (let offset = 0; offset < attachedText.length; offset += chunkSize) {
+                        chunks.push(attachedText.slice(offset, offset + chunkSize));
+                    }
+                    const latest = messages[messages.length - 1];
+                    const previous = messages.slice(0, -1).slice(-2);
+                    const attachmentTurns = chunks.map((chunk, index) => ({
+                        role: "user",
+                        content: "Attached text file" + (body.textAttachmentName ? " (" + String(body.textAttachmentName).slice(0, 100) + ")" : "") +
+                            " — part " + (index + 1) + " of " + chunks.length + ":\n" + chunk
+                    }));
+                    messages = [...previous, ...attachmentTurns, latest].slice(-8);
+                }
+
                 if (isRestrictedSearchIntent(body.message)) {
                     sendJson(response, 200, {
                         reply: "I can't help find or access restricted or dangerous products, services, or activities. I can help with general safety-focused information instead.",
