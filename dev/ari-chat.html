@@ -344,22 +344,6 @@
     .auth-divider { display: flex; align-items: center; gap: 12px; margin: 23px 0 14px; color: var(--muted-soft); font-size: 10px; }
     .auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
     #google-sign-in { display: flex; min-height: 44px; justify-content: center; margin-top: 5px; }
-    .otp-method-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 15px 0 13px; }
-    .otp-method-tabs button { min-height: 38px; border: 1px solid var(--line); border-radius: 11px; color: var(--muted); background: #171d19; font-size: 11px; font-weight: 600; }
-    .otp-method-tabs button[aria-pressed="true"] { border-color: #657b6a; color: var(--text); background: #2b3830; }
-    .otp-method-tabs button:disabled { opacity: .4; cursor: not-allowed; }
-    .otp-form { display: grid; gap: 9px; text-align: left; }
-    .otp-form label { color: var(--muted); font-size: 10px; font-weight: 600; }
-    .otp-form input { width: 100%; min-height: 43px; padding: 0 13px; border: 1px solid #46554a; border-radius: 11px; outline: none; color: var(--text); background: #171d19; font: inherit; font-size: 13px; }
-    .otp-form input:focus { border-color: var(--accent); }
-    .otp-primary { min-height: 43px; border: 1px solid #91a88f; border-radius: 11px; color: #172019; background: var(--accent); font-size: 11px; font-weight: 700; }
-    .otp-primary:disabled { opacity: .45; cursor: not-allowed; }
-    .otp-secondary { min-height: 34px; border: 0; color: var(--muted); background: transparent; font-size: 10px; }
-    .otp-secondary:disabled { opacity: .4; }
-    #otp-verify-panel { display: grid; gap: 9px; margin-top: 12px; }
-    #otp-verify-panel[hidden] { display: none; }
-    #otp-code { text-align: center; font-size: 20px; font-weight: 700; letter-spacing: .35em; }
-    #otp-status { min-height: 18px; margin: 7px 0 0; color: var(--muted) !important; font-size: 10px !important; }
     #auth-error { min-height: 20px; margin: 13px 0 0; color: #efb4a8 !important; font-size: 11px; }
     .auth-footnote { margin: 20px 0 0; padding-top: 17px; border-top: 1px solid var(--line); color: var(--muted-soft) !important; font-size: 10px !important; }
     @media (max-width: 760px) {
@@ -518,25 +502,8 @@
         </div>
         <div class="auth-divider">Continue with Google</div>
         <div id="google-sign-in"></div>
-        <div class="auth-divider">or use a verification code</div>
-        <div class="otp-method-tabs" role="group" aria-label="Verification method">
-          <button id="otp-email-method" type="button" aria-pressed="true">Email</button>
-          <button id="otp-sms-method" type="button" aria-pressed="false">Phone / SMS</button>
-        </div>
-        <form id="otp-request-form" class="otp-form">
-          <label id="otp-destination-label" for="otp-destination">Email address</label>
-          <input id="otp-destination" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required>
-          <button class="otp-primary" id="otp-send" type="submit">Send verification code</button>
-        </form>
-        <div id="otp-verify-panel" hidden>
-          <label for="otp-code">Six-digit verification code</label>
-          <input id="otp-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000">
-          <button class="otp-primary" id="otp-verify" type="button">Verify and continue</button>
-          <button class="otp-secondary" id="otp-resend" type="button">Send another code</button>
-        </div>
-        <p id="otp-status" role="status" aria-live="polite"></p>
         <p id="auth-error" role="status" aria-live="polite"></p>
-        <p class="auth-footnote" id="auth-footnote">Google sign-in is available. Email and SMS verification will appear when their delivery services are configured.</p>
+        <p class="auth-footnote">Use your Google account to securely sign in or create your Ari account.</p>
       </div>
     </div>
   </section>
@@ -727,18 +694,6 @@
     const authDescription = document.getElementById("auth-description");
     const authError = document.getElementById("auth-error");
     const googleSignIn = document.getElementById("google-sign-in");
-    const otpEmailMethod = document.getElementById("otp-email-method");
-    const otpSmsMethod = document.getElementById("otp-sms-method");
-    const otpRequestForm = document.getElementById("otp-request-form");
-    const otpDestination = document.getElementById("otp-destination");
-    const otpDestinationLabel = document.getElementById("otp-destination-label");
-    const otpSendButton = document.getElementById("otp-send");
-    const otpVerifyPanel = document.getElementById("otp-verify-panel");
-    const otpCode = document.getElementById("otp-code");
-    const otpVerifyButton = document.getElementById("otp-verify");
-    const otpResendButton = document.getElementById("otp-resend");
-    const otpStatus = document.getElementById("otp-status");
-    const authFootnote = document.getElementById("auth-footnote");
     const accountControls = document.getElementById("account-controls");
     const accountEmail = document.getElementById("account-email");
     const signOutButton = document.getElementById("sign-out");
@@ -809,9 +764,6 @@
     let googleScriptLoading = false;
     let googleScriptLoaded = false;
     let authMode = "login";
-    let otpMethods = { emailOtp: false, smsOtp: false };
-    let otpMethod = "email";
-    let otpChallengeActive = false;
     let workspaceSyncReady = false;
     let chatSyncQueue = Promise.resolve();
 
@@ -838,12 +790,8 @@
       } else {
         landingPrimaryButton.textContent = "Get started ↗";
         landingSecondaryButton.hidden = false;
-        const availableMethods = [];
-        if (googleClientId && !authConfigurationError) availableMethods.push("Google");
-        if (otpMethods.emailOtp) availableMethods.push("email");
-        if (otpMethods.smsOtp) availableMethods.push("phone verification");
-        landingNote.textContent = availableMethods.length
-          ? "Sign in with " + availableMethods.join(", ") + "."
+        landingNote.textContent = googleClientId && !authConfigurationError
+          ? "Sign in or create your Ari account with Google."
           : "Ari sign-in is temporarily unavailable. Please contact the site administrator.";
       }
     }
@@ -856,7 +804,7 @@
       signupTab.setAttribute("aria-selected", String(signingUp));
       authTitle.textContent = signingUp ? "Create your Ari account." : "Welcome back.";
       authDescription.textContent = signingUp
-        ? "Verify an email address or phone number to create your account. Existing users can use the same method to sign in."
+        ? "Create your account with a verified Google account."
         : "Sign in to continue to your conversations, projects and workspace.";
       authError.textContent = "";
       if (signingUp && registrationMode !== "open") {
@@ -864,13 +812,10 @@
         googleSignIn.replaceChildren();
       } else if (!googleClientId || authConfigurationError) {
         googleSignIn.replaceChildren();
-        if (!otpMethods.emailOtp && !otpMethods.smsOtp) {
-          authError.textContent = authConfigurationError || "Google sign-in is not configured yet. Please contact Ari's administrator.";
-        }
+        authError.textContent = authConfigurationError || "Google sign-in is not configured yet. Please contact Ari's administrator.";
       } else {
         renderGoogleIdentityButton();
       }
-      renderOtpMethods();
     }
 
     function openAuthScreen(mode = "login") {
@@ -939,106 +884,6 @@
 
     function csrfHeaders(extra = {}) {
       return { ...extra, "X-Ari-CSRF": csrfToken };
-    }
-
-    function renderOtpMethods() {
-      const emailReady = Boolean(otpMethods.emailOtp);
-      const smsReady = Boolean(otpMethods.smsOtp);
-      otpEmailMethod.disabled = !emailReady;
-      otpSmsMethod.disabled = !smsReady;
-      if (otpMethod === "email" && !emailReady && smsReady) otpMethod = "sms";
-      if (otpMethod === "sms" && !smsReady && emailReady) otpMethod = "email";
-      otpEmailMethod.setAttribute("aria-pressed", String(otpMethod === "email"));
-      otpSmsMethod.setAttribute("aria-pressed", String(otpMethod === "sms"));
-      const isEmail = otpMethod === "email";
-      otpDestination.type = isEmail ? "email" : "tel";
-      otpDestination.inputMode = isEmail ? "email" : "tel";
-      otpDestination.autocomplete = isEmail ? "email" : "tel";
-      otpDestination.maxLength = isEmail ? 254 : 24;
-      otpDestination.placeholder = isEmail ? "you@example.com" : "+234 801 234 5678";
-      otpDestinationLabel.textContent = isEmail ? "Email address" : "Phone number";
-      otpDestination.value = "";
-      otpDestination.disabled = !(isEmail ? emailReady : smsReady);
-      otpSendButton.disabled = !(isEmail ? emailReady : smsReady);
-      otpVerifyPanel.hidden = !otpChallengeActive;
-      otpCode.value = "";
-      if (!emailReady && !smsReady) {
-        otpStatus.textContent = "Email and SMS verification are not configured yet.";
-        authFootnote.textContent = "Google sign-in remains available. Email and SMS options will activate after delivery services are connected.";
-      } else {
-        otpStatus.textContent = otpChallengeActive ? otpStatus.textContent : "";
-        authFootnote.textContent = "Ari sends a one-time code to verify that you own the email address or phone number. No password is needed.";
-      }
-    }
-
-    function selectOtpMethod(method) {
-      otpMethod = method === "sms" ? "sms" : "email";
-      otpChallengeActive = false;
-      otpVerifyPanel.hidden = true;
-      otpStatus.textContent = "";
-      authError.textContent = "";
-      renderOtpMethods();
-    }
-
-    async function onOtpRequest(event) {
-      event.preventDefault();
-      const destination = otpDestination.value.trim();
-      otpErrorReset();
-      otpSendButton.disabled = true;
-      try {
-        const response = await fetch("/api/auth/otp/request", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: csrfHeaders({ "Content-Type": "application/json" }),
-          body: JSON.stringify({ method: otpMethod, destination, mode: authMode })
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || "Ari could not send the verification code.");
-        otpChallengeActive = true;
-        otpVerifyPanel.hidden = false;
-        otpCode.value = "";
-        otpCode.focus();
-        otpStatus.textContent = "A verification code was sent to " + result.maskedDestination + ". It expires in " +
-          Math.ceil(Number(result.expiresInSeconds || 300) / 60) + " minutes.";
-      } catch (error) {
-        authError.textContent = error.message || "Ari could not send the verification code.";
-      } finally {
-        otpSendButton.disabled = !(otpMethod === "email" ? otpMethods.emailOtp : otpMethods.smsOtp);
-      }
-    }
-
-    function otpErrorReset() {
-      authError.textContent = "";
-      otpStatus.textContent = "";
-    }
-
-    async function onOtpVerify() {
-      const destination = otpDestination.value.trim();
-      const code = otpCode.value.trim();
-      otpErrorReset();
-      otpVerifyButton.disabled = true;
-      try {
-        const response = await fetch("/api/auth/otp/verify", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: csrfHeaders({ "Content-Type": "application/json" }),
-          body: JSON.stringify({ method: otpMethod, destination, code })
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || "Ari could not verify that code.");
-        csrfToken = result.csrfToken || csrfToken;
-        restoreAccount(result.user);
-      } catch (error) {
-        authError.textContent = error.message || "Ari could not verify that code.";
-      } finally {
-        otpVerifyButton.disabled = false;
-      }
-    }
-
-    function resendOtp() {
-      if (!otpChallengeActive) return;
-      if (typeof otpRequestForm.requestSubmit === "function") otpRequestForm.requestSubmit();
-      else otpSendButton.click();
     }
 
     async function onGoogleCredential(credentialResponse) {
@@ -1117,10 +962,6 @@
           ? ""
           : (config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.");
         googleClientId = typeof config.clientId === "string" ? config.clientId : "";
-        otpMethods = config.methods && typeof config.methods === "object"
-          ? { emailOtp: Boolean(config.methods.emailOtp), smsOtp: Boolean(config.methods.smsOtp) }
-          : { emailOtp: false, smsOtp: false };
-        renderOtpMethods();
         await fetchCsrf();
         const meResponse = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
         const me = await meResponse.json();
@@ -1130,7 +971,7 @@
           return;
         }
         showLanding();
-        if (!config.configured && !otpMethods.emailOtp && !otpMethods.smsOtp) {
+        if (!config.configured) {
           landingNote.textContent = authConfigurationError;
         }
       } catch (_) {
@@ -2595,15 +2436,6 @@
     authBackButton.addEventListener("click", showLanding);
     loginTab.addEventListener("click", () => setAuthMode("login"));
     signupTab.addEventListener("click", () => setAuthMode("signup"));
-    otpEmailMethod.addEventListener("click", () => selectOtpMethod("email"));
-    otpSmsMethod.addEventListener("click", () => selectOtpMethod("sms"));
-    otpRequestForm.addEventListener("submit", onOtpRequest);
-    otpVerifyButton.addEventListener("click", onOtpVerify);
-    otpResendButton.addEventListener("click", resendOtp);
-    otpCode.addEventListener("input", () => {
-      otpCode.value = otpCode.value.replace(/\D/g, "").slice(0, 6);
-    });
-
     newChatButton.addEventListener("click", () => {
       activeProjectId = null;
       createChat();
