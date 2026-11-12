@@ -9,6 +9,7 @@ const { createServer, respondToMessage, respondWithGpuModel, respondWithModel, s
 const { AriGpuClient } = require("../dev/ariGpuClient");
 const { createAriWorkspaceStore } = require("../dev/ariWorkspaceStore");
 const { createAriAnalyticsStore } = require("../dev/ariAnalyticsStore");
+const { createAriExperienceStore } = require("../dev/ariExperienceStore");
 
 function createTestServer(options = {}) {
     const authService = {
