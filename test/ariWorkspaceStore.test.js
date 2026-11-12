@@ -48,6 +48,48 @@ async function main() {
         const restarted = createAriWorkspaceStore({ dataDir: directory, now: () => now + 10 });
         assert.deepEqual(restarted.getChats("google-subject-a"), sample, "saved chats must survive store recreation");
 
+        assert.equal(restarted.getProfile("google-subject-a").personality, "neutral");
+        const profile = await restarted.updateProfile("google-subject-a", {
+            preferredNickname: "D",
+            occupation: "Student",
+            hobbies: "Writing and editing",
+            aboutYou: "Prefers clear explanations.",
+            personality: "professional",
+            emojiUse: "none"
+        });
+        assert.equal(profile.preferredNickname, "D");
+        assert.equal(profile.personality, "professional");
+        assert.equal(profile.emojiUse, "none");
+        assert.equal(restarted.getProfile("google-subject-b").preferredNickname, "");
+        await assert.rejects(
+            restarted.updateProfile("google-subject-a", { personality: "rude" }),
+            { statusCode: 400 }
+        );
+
+        assert.deepEqual(restarted.getSettings("google-subject-a"), {
+            accessPreviousChats: false,
+            accessLastChat: false,
+            activeExperienceLearning: true
+        });
+        const settings = await restarted.updateSettings("google-subject-a", {
+            accessPreviousChats: true,
+            accessLastChat: false,
+            activeExperienceLearning: false
+        });
+        assert.equal(settings.accessPreviousChats, true);
+        assert.equal(settings.activeExperienceLearning, false);
+        assert.equal(restarted.getSettings("google-subject-b").accessPreviousChats, false);
+        await assert.rejects(
+            restarted.updateSettings("google-subject-a", { accessLastChat: "yes" }),
+            { statusCode: 400 }
+        );
+
+        const chatMatches = restarted.searchChats("google-subject-a", "local-first", { limit: 5 });
+        assert.equal(chatMatches.length, 1);
+        assert.equal(chatMatches[0].chatId, "chat-1");
+        assert.match(chatMatches[0].excerpt, /local-first/i);
+        assert.deepEqual(restarted.searchChats("google-subject-b", "local-first"), []);
+
         await restarted.replaceChats("google-subject-a", []);
         assert.deepEqual(first.getChats("google-subject-a"), [], "an empty list should sync local deletions");
 
