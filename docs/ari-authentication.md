@@ -1,55 +1,20 @@
-# Ari Email and Phone Verification
+# Ari Authentication
 
-Ari keeps authentication separate from the assistant conversation model. The Node authentication backend generates and validates verification codes; the AI model never generates, receives, or checks OTPs.
+Ari currently uses Google Identity Services for both account creation and sign-in. The browser receives a Google credential, and the Ari Node backend verifies the ID token before creating an Ari session.
 
-## Providers
+## Configuration
 
-- Email delivery uses the Resend Email API.
-- SMS delivery uses the Termii SMS API. Use the account-specific Termii base URL shown in its dashboard.
+- `GOOGLE_CLIENT_ID`: the Google OAuth client ID used by the browser and backend.
+- `ARI_REGISTRATION_MODE=open`: allows any Google account with a verified email identity to create an Ari account and sign in.
+- `ARI_REGISTRATION_MODE=restricted`: limits access to the Google accounts listed in `ARI_ALLOWED_EMAILS`.
+- `ARI_ALLOWED_EMAILS`: comma-separated Google email addresses; used only in restricted mode.
+- `ARI_PUBLIC_ORIGIN`: the exact HTTPS origin of the deployed Ari site.
+- `ARI_SESSION_TTL_SECONDS`: absolute session lifetime; defaults to 28,800 seconds.
 
-No provider credentials are included in the repository. Configure them as server-side environment secrets only.
+Email OTP and phone/SMS OTP are currently disabled. The sign-in interface does not expose those methods, and the Ari HTTP server does not offer OTP request or verification endpoints. They can be reintroduced after the email or messaging delivery setup is ready.
 
-## Required server settings
+## Session safeguards
 
-### Shared OTP settings
+Ari validates the Google token audience, issuer, expiry and verified-email claim. Session cookies are HTTP-only, same-site and secure in production. Mutating authentication requests use same-origin and CSRF checks.
 
-- ARI_OTP_SECRET: a unique random secret of at least 32 characters. Generate one with openssl rand -hex 32.
-- ARI_OTP_TTL_SECONDS=300: code lifetime; accepted range is 120–900 seconds.
-- ARI_OTP_RESEND_SECONDS=60: minimum time between sends to the same destination; accepted range is 30–600 seconds.
-- ARI_OTP_MAX_ATTEMPTS=5: wrong-code limit; accepted range is 3–10 attempts.
-
-### Email
-
-- RESEND_API_KEY: API key from the Resend dashboard.
-- ARI_EMAIL_FROM: sender address configured and verified in Resend. Resend requires a verified sending domain before sending from that domain.
-
-### SMS
-
-- TERMII_API_KEY: API key from the Termii dashboard.
-- TERMII_SENDER_ID: sender ID configured for the Termii account.
-- TERMII_BASE_URL: account-specific base URL; defaults to https://api.ng.termii.com.
-- TERMII_CHANNEL: defaults to dnd. Termii recommends its DND/transactional route for OTPs; this route must be activated on your Termii account before it can deliver to DND-restricted numbers.
-
-### Restricted registration
-
-- ARI_REGISTRATION_MODE=restricted continues to use ARI_ALLOWED_EMAILS for email identities.
-- ARI_ALLOWED_PHONE_NUMBERS is a comma-separated list of phone numbers in international format for SMS identities.
-- In open mode, the contact method can register after successful verification.
-
-## Flow and safeguards
-
-1. The browser sends the chosen method and destination to /api/auth/otp/request over same-origin HTTPS with the Ari CSRF token.
-2. The backend validates the destination, checks provider configuration and registration policy, creates a cryptographically random six-digit code, stores an HMAC digest, and sends the code through the provider.
-3. The code expires after five minutes by default. A destination can request another code only after the configured cooldown.
-4. The backend checks the submitted code in constant time, permits a limited number of attempts, and creates the usual Ari session after successful verification.
-5. OTP values are never returned to the browser, included in logs, or passed to the assistant model.
-
-Ari accepts Nigerian local 11-digit phone numbers beginning with 0 and converts them to +234; international numbers should include their + country code.
-
-## Account identity note
-
-Google, email and phone sign-ins currently create stable identities within their own methods. A Google identity is not automatically linked to an email or phone identity, even when the contact details appear to belong to the same person. Account linking is a separate feature and must require proof of control of both methods.
-
-## Runtime note
-
-OTP challenges and login sessions currently live in the Ari Node process memory. They are removed on restart, and this setup assumes one Ari process. Before adding multiple application instances, move challenges, send throttles and sessions to a shared store with atomic expiry and rate-limit operations.
+Google ID tokens and server session IDs are not written to the usage store. Session records currently live in the Node process; a process restart requires users to sign in again.
