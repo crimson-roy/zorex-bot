@@ -387,6 +387,10 @@ async function main() {
         const loadedWorkspace = await fetch(baseUrl + "/api/workspace/chats");
         assert.deepEqual((await loadedWorkspace.json()).chats, sampleChats);
 
+        const initialProfile = await fetch(baseUrl + "/api/workspace/profile");
+        assert.equal(initialProfile.status, 200);
+        assert.equal((await initialProfile.json()).profile.personality, "neutral");
+
         const feedbackResponse = await fetch(baseUrl + "/api/feedback", {
             method: "POST",
             headers: {
