@@ -985,30 +985,6 @@ function createServer(options = {}) {
             return;
         }
 
-        if (request.method === "POST" && url.pathname === "/api/auth/otp/request") {
-            try {
-                const body = await readJsonBody(request, 8 * 1024);
-                const result = await auth.requestOtp(request, body);
-                sendAuthJson(response, 200, result);
-            } catch (error) {
-                const status = Number.isInteger(error.statusCode) ? error.statusCode : 502;
-                sendAuthJson(response, status, { error: error.message || "Ari could not send a verification code." });
-            }
-            return;
-        }
-
-        if (request.method === "POST" && url.pathname === "/api/auth/otp/verify") {
-            try {
-                const body = await readJsonBody(request, 8 * 1024);
-                const result = await auth.authenticateOtp(request, response, body);
-                sendAuthJson(response, 200, result);
-            } catch (error) {
-                const status = Number.isInteger(error.statusCode) ? error.statusCode : 401;
-                sendAuthJson(response, status, { error: error.message || "Ari could not verify that code." });
-            }
-            return;
-        }
-
         if (request.method === "POST" && url.pathname === "/api/auth/google") {
             try {
                 auth.assertOriginAndCsrf(request);
