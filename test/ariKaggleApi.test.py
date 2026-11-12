@@ -466,8 +466,9 @@ class KaggleApiTests(unittest.TestCase):
         self.assertEqual(service.chat(gemma_request)["reply"], "Gemma parsed final.")
 
     def test_audio_routes_to_gemma_on_max_and_is_rejected_on_medium(self):
+        observed = []
         service = self.make_service(
-            runner=lambda kind, model, processor, messages, options: "Gemma audio response."
+            runner=lambda kind, model, processor, messages, options: observed.append((kind, messages)) or "Gemma audio response."
         )
         audio_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         audio_path = audio_file.name
@@ -479,7 +480,8 @@ class KaggleApiTests(unittest.TestCase):
         result = service.chat(request)
         self.assertEqual(result["reply"], "Gemma audio response.")
         self.assertEqual(result["route"], "gemma_audio")
-        audio_part = service.namespace["ARI_E2B_PROCESSOR"].last_messages[-1]["content"][-1]
+        self.assertEqual(observed[0][0], "gemma")
+        audio_part = observed[0][1][-1]["content"][-1]
         self.assertEqual(audio_part["type"], "audio")
         self.assertEqual(audio_part["url"], audio_path)
         self.assertFalse(os.path.exists(audio_path), "temporary audio must be deleted after inference")
