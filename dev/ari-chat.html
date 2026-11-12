@@ -37,6 +37,11 @@
     * { box-sizing: border-box; }
     html, body { width: 100%; height: 100%; min-height: 100%; margin: 0; }
     body { overflow: hidden; color: var(--text); background: var(--canvas); font: 14px/1.5 var(--sans); }
+    body.auth-checking::before {
+      position: fixed; z-index: 10000; inset: 0; display: grid; place-items: center;
+      padding: 24px; color: var(--text); background: var(--canvas);
+      content: "Restoring your Ari workspace…"; font: 500 16px/1.5 var(--sans);
+    }
     button, input, select, textarea { color: inherit; font: inherit; }
     button { cursor: pointer; }
     button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -207,6 +212,19 @@
     .message-image img { display:block; width:auto; max-width:100%; max-height:520px; border:1px solid #46554b; border-radius:13px; object-fit:contain; background:#151b17; }
     .message-image figcaption { margin-top:6px; color:var(--muted); font:11px/1.4 var(--sans); }
     .message-image a { color:var(--accent); text-decoration:none; }
+    .message-content h1, .message-content h2, .message-content h3 {
+      margin: 1.05em 0 .42em; color: #e9f0eb; font-family: var(--serif); font-weight: 500; line-height: 1.25;
+    }
+    .message-content h1 { font-size: 1.45em; }
+    .message-content h2 { font-size: 1.28em; }
+    .message-content h3 { font-size: 1.12em; }
+    .message-content ul, .message-content ol { margin: .5em 0 .9em; padding-left: 1.45em; }
+    .message-content li { margin: .24em 0; padding-left: .16em; }
+    .message-content blockquote { margin: .8em 0; padding: .25em 0 .25em 13px; border-left: 2px solid #657b6a; color: #bdc9c0; }
+    .message-content table { width: 100%; margin: .8em 0; border-collapse: collapse; font: 12px/1.5 var(--sans); }
+    .message-content th, .message-content td { padding: 8px 9px; border: 1px solid var(--line-strong); text-align: left; vertical-align: top; }
+    .message-content th { color: var(--accent-strong); background: #252e29; }
+    .message-content code.inline-code { padding: .12em .32em; border-radius: 5px; color: #e2ece5; background: #303a34; font: .82em ui-monospace, SFMono-Regular, Consolas, monospace; }
     .message-image a:hover { text-decoration:underline; }
     .message-inline-link { color:var(--accent-strong); text-decoration:underline; text-underline-offset:2px; }
     .message-code pre { max-width:100%; margin:0; padding:13px 14px; overflow:auto; color:#e4eee7; font:12px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; tab-size:2; }
@@ -256,7 +274,11 @@
       border: 1px solid #46534a; border-radius: 25px; background: #222a25;
       box-shadow: 0 10px 34px rgba(0,0,0,.16); transition: border-color .15s, box-shadow .15s;
     }
-    #chat-form.has-attachment #compose-center { padding-top: 29px; }
+    #chat-form.has-attachment #compose-center { padding-top: 51px; }
+    @media (max-width: 520px) {
+      #attachment-chip { width: 248px; height: 44px; }
+      #chat-form.has-attachment #compose-center { padding-top: 49px; }
+    }
     #chat-form:focus-within { border-color: #809c88; box-shadow: 0 0 0 3px rgba(168,201,182,.07), 0 10px 34px rgba(0,0,0,.16); }
     .attach-wrap { position: relative; flex: 0 0 auto; }
     #attach-button, #send {
@@ -279,30 +301,30 @@
     #image-input, #audio-input, #file-input { display: none; }
     #compose-center { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 7px; }
     #attachment-chip {
-      position: absolute; z-index: 2; top: 12px; left: 12px;
-      display: flex; box-sizing: border-box; width: 160px; height: 22px; max-width: min(160px, calc(100% - 24px));
-      min-width: 0; align-items: center; gap: 5px; overflow: hidden;
-      padding: 2px 5px; border: 1px solid #46554b; border-radius: 7px;
-      color: var(--text); background: #29332d;
+      position: absolute; z-index: 2; top: 11px; left: 12px;
+      display: flex; box-sizing: border-box; width: 270px; height: 46px; max-width: min(270px, calc(100% - 24px));
+      min-width: 0; align-items: center; gap: 9px; overflow: hidden;
+      padding: 6px 9px; border: 1px solid #4b5c50; border-radius: 11px;
+      color: var(--text); background: #29332d; box-shadow: 0 4px 14px #0002;
     }
     #attachment-chip[hidden] { display: none; }
     #attachment-preview, #attachment-kind {
-      display: block; width: 14px; height: 14px; flex: 0 0 14px;
-      border-radius: 3px; object-fit: cover; background: #354139;
+      display: block; width: 30px; height: 30px; flex: 0 0 30px;
+      border-radius: 7px; object-fit: cover; background: #354139;
     }
     #attachment-kind {
-      display: grid; place-items: center; color: var(--accent); font-size: 7px; font-weight: 700;
+      display: grid; place-items: center; color: var(--accent); font-size: 9px; font-weight: 700;
     }
-    .attachment-copy { display: flex; min-width: 0; flex: 1; align-items: center; }
+    .attachment-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; justify-content: center; gap: 3px; }
     #attachment-name {
       display: block; width: 100%; min-width: 0; overflow: hidden; color: #e0e9e2;
-      font-size: 10px; line-height: 1; font-weight: 600; text-overflow: ellipsis; white-space: nowrap;
+      font-size: 12px; line-height: 1.25; font-weight: 600; text-overflow: ellipsis; white-space: nowrap;
     }
-    #attachment-meta { display: none; }
+    #attachment-meta { display: block; overflow: hidden; color: var(--muted); font-size: 10px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
     #remove-attachment {
-      display: grid; width: 14px; height: 14px; flex: 0 0 14px; place-items: center;
-      margin-left: auto; padding: 0; border: 0; border-radius: 50%;
-      color: var(--muted); background: transparent; font-size: 14px; line-height: 14px;
+      display: grid; width: 24px; height: 24px; flex: 0 0 24px; place-items: center;
+      margin-left: auto; padding: 0; border: 0; border-radius: 7px;
+      color: var(--muted); background: transparent; font-size: 18px; line-height: 1;
     }
     #remove-attachment:hover { color: var(--text); background: #3a463e; }
     #paste-card {
@@ -521,7 +543,7 @@
 
   </style>
 </head>
-<body>
+<body class="auth-checking">
   <section id="landing-screen" aria-labelledby="landing-title">
     <nav class="landing-nav" aria-label="Ari homepage">
       <span class="brand-mark">A</span>
@@ -957,6 +979,7 @@
       const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
       if (mostRecent) currentChatId = mostRecent.id;
       accountEmail.textContent = user.email || user.phone || "";
+      document.body.classList.remove("auth-checking");
       if (analyticsMenuItem) analyticsMenuItem.hidden = user.isAdmin !== true;
       if (!window.__ariActivityHeartbeat) {
         const sendActivityHeartbeat = () => {
@@ -968,6 +991,7 @@
           }).catch(() => {});
         };
         window.__ariActivityHeartbeat = window.setInterval(sendActivityHeartbeat, 60 * 1000);
+        sendActivityHeartbeat();
       }
       renderHistory();
       renderConversation(mostRecent || null);
@@ -1057,7 +1081,7 @@
     }
 
     async function initializeAuthentication() {
-      showLanding();
+      document.body.classList.add("auth-checking");
       try {
         const configResponse = await fetch("/api/auth/config", { credentials: "same-origin", cache: "no-store" });
         const config = await configResponse.json();
@@ -1071,14 +1095,14 @@
         const me = await meResponse.json();
         if (me.authenticated && me.user) {
           restoreAccount(me.user);
-          if (window.location.pathname === "/homepage") showLanding();
+          document.body.classList.remove("auth-checking");
           return;
         }
+        document.body.classList.remove("auth-checking");
         showLanding();
-        if (!config.configured) {
-          landingNote.textContent = authConfigurationError;
-        }
+        if (!config.configured) landingNote.textContent = authConfigurationError;
       } catch (_) {
+        document.body.classList.remove("auth-checking");
         showLanding();
         landingNote.textContent = "Ari sign-in is temporarily unavailable. Please refresh the page to try again.";
         authConfigurationError = "Ari sign-in is temporarily unavailable. Please refresh the page to try again.";
