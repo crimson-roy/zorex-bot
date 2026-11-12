@@ -1,94 +1,68 @@
-# Ari Local Chat Playground
+# Ari Playground
 
-A minimal browser chat interface for testing Ari's local runtime without starting the WhatsApp bot.
+Ari Playground is the browser workspace for the Zorex AI assistant. It runs from `dev/ari-chat-server.js` and is separate from the WhatsApp bot process.
 
-## Start it
+## Start it locally
 
-From the repository root, run:
+From the repository root:
 
 ```bash
 npm run ari:dev
 ```
 
-Then open:
+Open `http://127.0.0.1:4173`. The server binds to loopback by default. Use the deployment's process manager and reverse proxy for a hosted environment; do not expose the loopback service directly to the public internet.
 
-```text
-http://127.0.0.1:4173
-```
+## Accounts and saved work
 
-To use another local port:
+Google sign-in identifies each account. Ari stores chat history, profile details, privacy settings, memories, projects and Library metadata in the configured private data directory. Account keys are hashed in the data stores. The Library stores file bytes separately from metadata.
 
-```bash
-ARI_DEV_PORT=4174 npm run ari:dev
-```
+The Library computes a SHA-256 digest for each uploaded file and reuses an existing account file when the same bytes are uploaded again. Duplicate uploads do not consume additional Library quota.
 
-The server binds to `127.0.0.1`, so it is intended for use in a browser on the same computer. It uses Node's built-in HTTP server and adds no dependencies.
+## Profile and preferences
 
-## Chat history
+The Profile / About You page lets each account edit a preferred nickname, occupation, hobbies, additional context, Ari's personality and emoji preference. The choices are:
 
-- Previous conversations are saved in this browser's `localStorage` on this computer.
-- The latest conversation is reopened when the page loads again.
-- **New chat** starts a separate conversation; it does not delete older chats.
-- Select a conversation in the history panel to revisit it.
-- Use the × beside a conversation to delete it from this browser.
-- Clearing browser site data or using a different browser profile removes or hides this local history.
-- Conversations are not uploaded to the VPS or an AI provider by the playground's history feature.
+- Personality: Overly cheerful, Cheerful, Neutral, Sarcastic or Professional.
+- Emoji use: Zero emojis, Balanced or More emojis.
 
-## Check the WordNet installation
+Settings includes independent controls for:
+- **Access to previous chats:** Ari may search all saved chats when asked about a past conversation.
+- **Access to last chat:** Ari may refer only to the most recently updated conversation.
+- **Active Experience Learning:** Mini may use de-identified answer-pattern signals learned from explicitly rated Medium/Max responses.
 
-Run this from the repository root:
+The sidebar's chat search searches the signed-in user's own saved conversations. This local search works independently of the permission that controls whether Ari itself may retrieve prior chat context.
 
-```bash
-npm run ari:check-wordnet
-```
+## Active Experience Learning
 
-The diagnostic reports whether the WordNet 2.1 dictionary files were found and tests the terms `persistence` and `persistenca`. It runs entirely locally.
+Ari does not update Mini's model weights after each response. Instead, it stores only general task categories, response-structure signals and like/dislike outcomes from Medium and Max. It does not copy raw prompts, answer text or personal facts into the experience library. Mini can retrieve the reusable patterns as guidance for similar tasks. Accounts can turn this feature off in Settings.
 
-If automatic Windows path detection fails, PowerShell can set the path before starting the playground:
+## Audio and text attachments
 
-```powershell
-$env:WORDNET_DICT_DIR = "C:\\Program Files (x86)\\WordNet\\2.1\\dict"
-npm run ari:dev
-```
+The chat composer supports images on supported GPU tiers, readable text attachments and audio attachments on Max/Ultra. Gemma 4 E2B/E4B accepts audio input; the Kaggle API cell converts uploads to mono 16 kHz audio and enforces an 8 MiB file limit and a 30-second clip limit. Max/Ultra availability still depends on the corresponding Gemma model being loaded in the current Kaggle session.
 
-## Local language capabilities
+Large text pasted into the composer is detached into a separate text-file attachment, so it no longer remains duplicated in the message field. Text attachments are limited to 16,000 characters on GPU tiers and 1,600 on Mini. PDF and Word document parsing are not enabled by this change; Docling remains a separate integration.
 
-The playground now has a rule-based local language layer; it does not call an AI API.
+To enable audio on a running Kaggle session, update the existing Ari GPU API cell using `dev/ari-kaggle-api-cell.py` from the same branch, then restart that API cell. This change does not download or replace the loaded model.
 
-- Greetings such as `Hi Ari` and simple small talk such as `Hi Ari, how are you?` receive local rule-based responses.
-- Definition requests such as `define persistence`, `what is persistence`, and `what does persistence mean` are recognised.
-- Likely one-character misspellings such as `persistenca` can trigger a cautious `Did you mean persistence?` suggestion.
-- Letter-analysis requests such as `count letters in banana` are handled by Ari's local text tokenizer.
-- The tokenizer identifies Unicode letters, numbers, punctuation and word tokens; it does not train a neural model.
-- The WordNet reader loads the ASCII dictionary files directly from the installed `dict` folder.
-- On Windows it checks the WordNet 2.1 locations under Program Files, including `C:\\Program Files (x86)\\WordNet\\2.1\\dict`.
-- To use a different location, set `WORDNET_DICT_DIR` to the full dictionary folder before starting the server.
-- It reads WordNet senses, glosses, synonyms, common inflections and cautious one-character spelling suggestions.
+## Admin analytics
 
-For a local WordNet check, start the playground and open `http://127.0.0.1:4173/api/health`. The `wordNetAvailable` field reports whether the dictionary files were found.
+Set `ARI_ADMIN_EMAILS` to a comma-separated list of administrator Google email addresses in the server environment. This list is separate from `ARI_ALLOWED_EMAILS`, which controls sign-in access. Only administrators see the Admin analytics page.
 
-## Preparing OASST1 examples
+The dashboard reports unique registered accounts, heartbeat-based activity windows and the percentage of unique rated responses that are likes or dislikes. A response rating can be changed; changing it updates the existing rating rather than adding another vote.
 
-Place the ready conversation-tree archive here:
+## Tests
 
-```text
-data/datasets/oasst1/2023-04-12_oasst_ready.trees.jsonl.gz
-```
-
-Then run:
+Run the full repository test suite from the repository root:
 
 ```bash
-npm run ari:prepare-oasst
+npm test
 ```
 
-This uses Node's built-in gzip and JSONL streaming; no extra package is needed. It writes English conversation paths to `data/processed/oasst1-en/train.jsonl` and `validation.jsonl`.
+The Ari-specific test files include `test/ariChatServer.test.js`, `test/ariWorkspaceStore.test.js`, `test/ariLibraryStore.test.js`, `test/ariExperienceStore.test.js` and `test/ariKaggleApi.test.py`.
 
-The preparation step filters deleted/rejected messages, non-English messages and messages with positive flagged-content labels. It is only a candidate-data preparation step. Inspect and review the exported examples before using them for fine-tuning; it does not train a model.
+## Safety and deployment notes
 
-## Current limitations
-
-- WordNet is a lexical database, not a conversational model. It provides dictionary definitions and word relationships, not general explanations or open-ended conversation.
-- OASST1 is a collection of example conversations, not a ready-to-run language model.
-- Ari does not yet have a connected local language model.
-- The playground does not call Azure, WhatsApp, or another AI API.
-- No image/document upload or user authentication is included.
+- The feature branch is not deployed automatically by these changes.
+- The WhatsApp bot is a separate process and should not be restarted to deploy Ari.
+- Never commit Google credentials, GPU API keys, session secrets or provider keys.
+- Audio conversion requires `ffmpeg` in the Kaggle runtime and a Transformers version that supports Gemma 4 audio processing.
