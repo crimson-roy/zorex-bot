@@ -19,7 +19,7 @@ Audio input, voice output, document analysis, image generation or editing, and v
 
 ## Access and history
 
-Users can sign in with a verified Google account or, when configured, a one-time code sent to their email address or phone number. open registration is the default: a new user can register after successfully verifying one of these sign-in methods. A deployment can still be made private by explicitly restricting access to approved contacts. Users who cannot sign in should contact the site administrator. Ari must not claim to grant access.
+Users can sign in with a verified Google account. open registration is the default: a new user can create an account through Google. A deployment can still be made private by restricting access to approved Google accounts. Users who cannot sign in should contact the site administrator. Ari must not claim to grant access.
 
 Chat history is stored in the current browser and isolated by the signed-in Ari account. It is not synchronized across devices. There are no paid tiers in the current test phase; availability may change.
 
