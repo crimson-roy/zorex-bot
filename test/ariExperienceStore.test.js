@@ -27,7 +27,7 @@ async function main() {
             signals: ["step_by_step", "code_blocks", "not-a-real-signal"]
         });
         let guidance = store.guidanceFor("account-one", "Help me debug this JavaScript error.");
-        assert.match(guidance, /step-by-step/i);
+        assert.match(guidance, /ordered, practical steps/i);
         assert.match(guidance, /fenced code blocks/i);
         assert.equal(store.getSummary("account-one").samples, 1);
         assert.equal(store.getSummary("account-two").samples, 0);
