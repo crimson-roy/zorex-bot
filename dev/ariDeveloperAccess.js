@@ -3,7 +3,6 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
-const { createAriOtpAuth, normalizedPhone } = require("./ariOtpAuth");
 
 const SESSION_COOKIE = "ari_session";
 const CSRF_COOKIE = "ari_csrf";
@@ -46,7 +45,6 @@ function createAriDeveloperAccess(options = {}) {
     const registrationModeValid = requestedRegistrationMode === "restricted" || requestedRegistrationMode === "open";
     const registrationMode = registrationModeValid ? requestedRegistrationMode : "restricted";
     const allowedEmails = new Set(String(env.ARI_ALLOWED_EMAILS || "").split(",").map(normalizedEmail).filter(Boolean));
-    const allowedPhoneNumbers = new Set(String(env.ARI_ALLOWED_PHONE_NUMBERS || "").split(",").map(normalizedPhone).filter(Boolean));
     const sessionTtlSeconds = integerSetting(env.ARI_SESSION_TTL_SECONDS, 28800, 60, 2592000);
     const publicOrigin = String(env.ARI_PUBLIC_ORIGIN || "").trim();
     let validPublicOrigin = false;
@@ -209,26 +207,6 @@ function createAriDeveloperAccess(options = {}) {
         return { authenticated: true, user: publicUser(session), csrfToken };
     }
 
-    const otpAuth = createAriOtpAuth({
-        env,
-        now,
-        fetch: options.fetch,
-        sendEmail: options.sendEmail,
-        sendSms: options.sendSms,
-        isProduction,
-        validPublicOrigin,
-        sessionTtlSeconds,
-        assertOriginAndCsrf,
-        createSession,
-        isAuthorized: (method, destination) => {
-            if (!registrationModeValid) return false;
-            if (registrationMode !== "restricted") return true;
-            return method === "email"
-                ? allowedEmails.has(destination)
-                : allowedPhoneNumbers.has(destination);
-        }
-    });
-
     async function authenticateCredential(request, response, body) {
         assertOriginAndCsrf(request);
         if (!configured) {
@@ -296,14 +274,11 @@ function createAriDeveloperAccess(options = {}) {
     }
 
     function config() {
-        return { clientId, configured, error: configured ? null : configError, registrationMode, methods: otpAuth.methods() };
+        return { clientId, configured, error: configured ? null : configError, registrationMode };
     }
 
     function invalidateAll() {
         sessions.clear();
-        otpAuth.challenges.clear();
-        otpAuth.sentAt.clear();
-        otpAuth.sendHistory.clear();
     }
 
     return {
@@ -312,8 +287,6 @@ function createAriDeveloperAccess(options = {}) {
         sameOrigin,
         assertOriginAndCsrf,
         authenticateCredential,
-        requestOtp: otpAuth.requestOtp,
-        authenticateOtp: otpAuth.authenticateOtp,
         logout,
         requireSession,
         publicUser,
