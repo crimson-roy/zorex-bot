@@ -64,6 +64,21 @@ async function main() {
         assert.equal(saved.file.size, document.length);
         assert.equal(saved.storage.usedBytes, document.length);
 
+        const duplicateUpload = await fetch(baseUrl + "/api/library/files", {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain",
+                "X-Ari-Filename": encodeURIComponent("same-content-renamed.txt")
+            },
+            body: document
+        });
+        assert.equal(duplicateUpload.status, 201);
+        const duplicate = await duplicateUpload.json();
+        assert.equal(duplicate.file.id, saved.file.id, "identical bytes reuse the first stored Library file");
+        assert.equal(duplicate.file.duplicate, true);
+        assert.equal(duplicate.storage.files.length, 1);
+        assert.equal(duplicate.storage.usedBytes, document.length);
+
         const list = await fetch(baseUrl + "/api/library/files");
         const listed = await list.json();
         assert.equal(listed.files.length, 1);
