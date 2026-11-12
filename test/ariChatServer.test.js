@@ -452,6 +452,7 @@ async function main() {
         assert.equal(changedFeedback.status, 200);
         assert.equal(analyticsStore.getDashboard().responses.totalRatings, 1);
         assert.equal(analyticsStore.getDashboard().responses.dislikeRate, 100);
+        assert.deepEqual(experienceStore.getSummary("test-google-sub"), { samples: 1, likes: 0, dislikes: 1 });
 
         const initialProjects = await fetch(baseUrl + "/api/workspace/projects");
         assert.equal(initialProjects.status, 200);
