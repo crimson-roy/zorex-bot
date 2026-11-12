@@ -402,6 +402,21 @@ async function main() {
         assert.equal(editedProfile.status, 200);
         assert.equal((await editedProfile.json()).profile.preferredNickname, "D");
 
+        const initialSettings = await fetch(baseUrl + "/api/workspace/settings");
+        assert.equal(initialSettings.status, 200);
+        assert.equal((await initialSettings.json()).settings.accessPreviousChats, false);
+        const settingsUpdated = await fetch(baseUrl + "/api/workspace/settings", {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": baseUrl,
+                "X-Ari-CSRF": "test-csrf"
+            },
+            body: JSON.stringify({ settings: { accessPreviousChats: true, accessLastChat: false } })
+        });
+        assert.equal(settingsUpdated.status, 200);
+        assert.equal((await settingsUpdated.json()).settings.accessPreviousChats, true);
+
         const feedbackResponse = await fetch(baseUrl + "/api/feedback", {
             method: "POST",
             headers: {
