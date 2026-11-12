@@ -454,6 +454,31 @@ async function main() {
         assert.equal(analyticsStore.getDashboard().responses.dislikeRate, 100);
         assert.deepEqual(experienceStore.getSummary("test-google-sub"), { samples: 1, likes: 0, dislikes: 1 });
 
+        const activityResponse = await fetch(baseUrl + "/api/activity", {
+            method: "POST",
+            headers: { "Origin": baseUrl, "X-Ari-CSRF": "test-csrf" }
+        });
+        assert.equal(activityResponse.status, 200);
+        const deniedAnalytics = await fetch(baseUrl + "/api/admin/analytics");
+        assert.equal(deniedAnalytics.status, 403);
+
+        const adminApp = createTestServer({ analyticsStore, isAdmin: true });
+        await new Promise((resolve, reject) => {
+            adminApp.once("error", reject);
+            adminApp.listen(0, HOST, resolve);
+        });
+        try {
+            const adminResponse = await fetch("http://" + HOST + ":" + adminApp.address().port + "/api/admin/analytics");
+            assert.equal(adminResponse.status, 200);
+            const adminData = await adminResponse.json();
+            assert.equal(adminData.accounts.registered, 1);
+            assert.equal(adminData.accounts.activeNow, 1);
+            assert.equal(adminData.responses.likeRate, 0);
+            assert.equal(adminData.responses.dislikeRate, 100);
+        } finally {
+            await new Promise(resolve => adminApp.close(resolve));
+        }
+
         const initialProjects = await fetch(baseUrl + "/api/workspace/projects");
         assert.equal(initialProjects.status, 200);
         assert.deepEqual((await initialProjects.json()).projects, []);
