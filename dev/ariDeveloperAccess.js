@@ -45,6 +45,7 @@ function createAriDeveloperAccess(options = {}) {
     const registrationModeValid = requestedRegistrationMode === "restricted" || requestedRegistrationMode === "open";
     const registrationMode = registrationModeValid ? requestedRegistrationMode : "restricted";
     const allowedEmails = new Set(String(env.ARI_ALLOWED_EMAILS || "").split(",").map(normalizedEmail).filter(Boolean));
+    const adminEmails = new Set(String(env.ARI_ADMIN_EMAILS || "").split(",").map(normalizedEmail).filter(Boolean));
     const sessionTtlSeconds = integerSetting(env.ARI_SESSION_TTL_SECONDS, 28800, 60, 2592000);
     const publicOrigin = String(env.ARI_PUBLIC_ORIGIN || "").trim();
     let validPublicOrigin = false;
@@ -180,12 +181,17 @@ function createAriDeveloperAccess(options = {}) {
         return session;
     }
 
+    function isAdmin(session) {
+        return Boolean(session && normalizedEmail(session.email) && adminEmails.has(normalizedEmail(session.email)));
+    }
+
     function publicUser(session) {
         return session ? {
             sub: session.sub,
             email: session.email || "",
             phone: session.phone || "",
-            name: session.name || ""
+            name: session.name || "",
+            isAdmin: isAdmin(session)
         } : null;
     }
 
@@ -290,6 +296,7 @@ function createAriDeveloperAccess(options = {}) {
         logout,
         requireSession,
         publicUser,
+        isAdmin,
         invalidateAll,
         sessions,
         sessionTtlSeconds,
