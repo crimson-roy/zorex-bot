@@ -390,6 +390,17 @@ async function main() {
         const initialProfile = await fetch(baseUrl + "/api/workspace/profile");
         assert.equal(initialProfile.status, 200);
         assert.equal((await initialProfile.json()).profile.personality, "neutral");
+        const editedProfile = await fetch(baseUrl + "/api/workspace/profile", {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": baseUrl,
+                "X-Ari-CSRF": "test-csrf"
+            },
+            body: JSON.stringify({ profile: { preferredNickname: "D", personality: "sarcastic", emojiUse: "none" } })
+        });
+        assert.equal(editedProfile.status, 200);
+        assert.equal((await editedProfile.json()).profile.preferredNickname, "D");
 
         const feedbackResponse = await fetch(baseUrl + "/api/feedback", {
             method: "POST",
