@@ -128,6 +128,13 @@ async function main() {
         assert.match(html, /id="workspace-page"/);
         assert.match(html, /data-workspace-page="library"/);
         assert.match(html, /data-workspace-page="projects"/);
+        assert.match(html, /id="nav-upscale" data-workspace-page="upscale"/);
+        assert.match(html, /function renderUpscaleWorkspace\(\)/);
+        assert.match(html, /id="upscale-file" class="upscale-file-input"/);
+        assert.match(html, /id="upscale-export" type="button"/);
+        assert.match(html, /data-upscale-mode="auto"/);
+        assert.match(html, /id="upscale-export-modal"/);
+        assert.match(html, /Export queue/);
         assert.match(html, /data-account-page="memory"/);
         assert.match(html, /id="attachment-image-preview"/);
         assert.match(html, /Newsreader/);
