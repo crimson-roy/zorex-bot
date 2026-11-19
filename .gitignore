@@ -39,3 +39,9 @@ npm-debug.log*
 # Intentionally tracked source/config:
 # shop.json
 # data/
+
+# Live card catalogue: lives only on the server, never in git (a pull/reset once wiped 200+ imported cards)
+card.json
+card.json.bak-*
+card.json.tmp
+missing-cards.json
