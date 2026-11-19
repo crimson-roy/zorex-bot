@@ -1,0 +1,134 @@
+name: Import missing cards (parallel)
+
+# Imports the cards listed in ci-import/remaining.json across several runners
+# at once, then pushes the new card.json entries + media to the
+# `card-import-results` branch for the VPS to merge. Never touches main.
+
+on:
+  push:
+    branches: [ci/import-missing]
+    paths: [ci-import/remaining.json, .github/workflows/import-missing-parallel.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: import-missing-parallel
+  cancel-in-progress: true
+
+env:
+  SHARDS: 10
+
+jobs:
+  import:
+    name: Shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    steps:
+      - name: Check out importer only (skip the 1 GB cards folder)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: |
+            tools
+            ci-import
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install FFmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Prepare isolated workdir
+        run: |
+          set -euo pipefail
+          mkdir -p w/tools w/cards
+          cp tools/importCard.js w/tools/
+          echo '{}' > w/card.json
+          node -e '
+            const all = require("./ci-import/remaining.json");
+            const n = Number(process.env.SHARDS), s = Number(process.argv[1]);
+            const mine = all.filter((_, i) => i % n === s);
+            require("fs").writeFileSync("w/missing-cards.json", JSON.stringify(mine));
+            console.log(`shard ${s}: ${mine.length} cards`);
+          ' ${{ matrix.shard }}
+          cd w && npm init -y >/dev/null && npm i --no-audit --no-fund sharp@^0.35.3
+
+      - name: Import
+        working-directory: w
+        run: timeout 50m node tools/importCard.js --import-missing --tier UR,SSR || echo "importer exited with $?"
+
+      - name: Upload shard result
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.shard }}
+          path: |
+            w/card.json
+            w/cards/
+          if-no-files-found: error
+          retention-days: 3
+
+  merge:
+    name: Merge shards and publish results
+    needs: import
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: shards
+
+      - name: Merge
+        run: |
+          set -euo pipefail
+          mkdir -p out/cards
+          node - <<'NODE'
+          const fs = require("fs"), path = require("path"), crypto = require("crypto");
+          const merged = {}, seenMazoku = new Set();
+          let dupes = 0, renamed = 0;
+          for (const dir of fs.readdirSync("shards").sort()) {
+            const base = path.join("shards", dir);
+            const cards = JSON.parse(fs.readFileSync(path.join(base, "card.json"), "utf8"));
+            for (let [id, card] of Object.entries(cards)) {
+              const m = String(card.mazokuId || "").toLowerCase();
+              if (m && seenMazoku.has(m)) { dupes++; continue; }
+              seenMazoku.add(m);
+              let newId = id;
+              while (merged[newId]) { newId = crypto.randomBytes(4).toString("hex"); renamed++; }
+              for (const key of ["image", "video"]) {
+                if (!card[key]) continue;
+                const src = path.join(base, card[key].replace(/^\.\//, ""));
+                if (!fs.existsSync(src)) throw new Error(`missing media ${src}`);
+                const ext = path.extname(src);
+                fs.copyFileSync(src, path.join("out/cards", newId + ext));
+                card[key] = `./cards/${newId}${ext}`;
+              }
+              merged[newId] = card;
+            }
+          }
+          fs.writeFileSync("out/new-cards.json", JSON.stringify(merged, null, 2));
+          const tiers = {};
+          for (const c of Object.values(merged)) tiers[c.tier] = (tiers[c.tier] || 0) + 1;
+          const summary = `Imported ${Object.keys(merged).length} cards ${JSON.stringify(tiers)} (duplicates skipped: ${dupes}, ids renamed: ${renamed})`;
+          console.log(summary);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## ${summary}\n`);
+          NODE
+          du -sh out/cards
+
+      - name: Push to card-import-results branch
+        run: |
+          set -euo pipefail
+          cd out
+          git init -q -b card-import-results
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -q -m "Card import results (run ${{ github.run_id }})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" card-import-results
