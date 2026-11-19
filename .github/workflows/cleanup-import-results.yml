@@ -15,6 +15,6 @@ jobs:
     steps:
       - name: Delete card-import-results branch
         run: |
-          git ls-remote --exit-code "https://github.com/${{ github.repository }}.git" refs/heads/card-import-results >/dev/null \
-            && git push "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" --delete card-import-results \
-            || echo "Branch already gone."
+          set -x
+          git init -q tmp && cd tmp
+          git push "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" --delete card-import-results
