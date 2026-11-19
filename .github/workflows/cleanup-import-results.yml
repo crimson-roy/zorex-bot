@@ -1,0 +1,20 @@
+name: Clean up card import results
+
+on:
+  push:
+    branches: [ci/import-missing]
+    paths: [ci-import/cleanup]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  delete-results-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete card-import-results branch
+        run: |
+          git ls-remote --exit-code "https://github.com/${{ github.repository }}.git" refs/heads/card-import-results >/dev/null \
+            && git push "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" --delete card-import-results \
+            || echo "Branch already gone."
