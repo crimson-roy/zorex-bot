@@ -12,11 +12,13 @@ const { createZcutProjectStore } = require("../dev/zcutProjectStore");
         const store = createZcutProjectStore({ dataDir: root, now: () => 123456 });
         const item = { id: "project_123", name: "Mobile edit", currentComp: "main",
             project: { n: 0, comps: { main: { id: "main", name: "Main", layers: [] } } },
-            media: [{ id: "media123", name: "clip.mp4", type: "video", duration: 3, width: 1920, height: 1080 }] };
+            media: [{ id: "media123", name: "clip.mp4", type: "video", duration: 3, width: 1920, height: 1080, size: 2048, lastModified: 123456789 }] };
         const saved = await store.saveProject("account-a", item);
         assert.equal(saved.name, "Mobile edit");
         assert.equal((await store.listProjects("account-a")).length, 1);
         assert.equal((await store.getProject("account-a", item.id)).media[0].name, "clip.mp4");
+        assert.equal((await store.getProject("account-a", item.id)).media[0].size, 2048);
+        assert.equal((await store.getProject("account-a", item.id)).media[0].lastModified, 123456789);
         assert.equal(await store.getProject("account-b", item.id), null);
         await store.saveProject("account-a", { ...item, name: "Renamed" });
         assert.equal((await store.listProjects("account-a"))[0].name, "Renamed");
