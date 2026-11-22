@@ -5,6 +5,10 @@ on:
     paths:
       - "dev/ari-chat.html"
       - "dev/ari-chat-server.js"
+      - "dev/zcut.html"
+      - "dev/zcutBridge.js"
+      - "tools/zcut.js"
+      - "test/zcutBridge.test.js"
       - "dev/ariDeveloperAccess.js"
       - "dev/ariWorkspaceStore.js"
       - "test/ariChatServer.test.js"
@@ -19,6 +23,10 @@ on:
     paths:
       - "dev/ari-chat.html"
       - "dev/ari-chat-server.js"
+      - "dev/zcut.html"
+      - "dev/zcutBridge.js"
+      - "tools/zcut.js"
+      - "test/zcutBridge.test.js"
       - "dev/ariDeveloperAccess.js"
       - "dev/ariWorkspaceStore.js"
       - "test/ariChatServer.test.js"
@@ -49,6 +57,12 @@ jobs:
           if (!match) throw new Error("Ari page has no inline script.");
           new Function(match[1]);
           NODE
+      - name: Check Z_Cut bridge and CLI syntax
+        run: |
+          node --check dev/zcutBridge.js
+          node --check tools/zcut.js
+      - name: Test Z_Cut routes and bridge
+        run: node test/zcutBridge.test.js
       - name: Test persistent sessions and auth
         run: node test/ariDeveloperAccess.test.js
       - name: Test account-scoped conversation storage
