@@ -11,6 +11,7 @@ const { createAriGpuClient, AriGpuClientError, REMOTE_TIERS } = require("./ariGp
 const { createAriDeveloperAccess, createAriDeveloperUsage } = require("./ariDeveloperAccess");
 const { respondAriSelfKnowledge } = require("./ariSelfKnowledge");
 const { createAriWorkspaceStore } = require("./ariWorkspaceStore");
+const { createZcutBridge } = require("./zcutBridge");
 
 const wordNet = new WordNetDictionary();
 
@@ -395,8 +396,12 @@ function createServer(options = {}) {
         dataDir,
         ...(options.now ? { now: options.now } : {})
     });
+    const zcut = options.zcutBridge || createZcutBridge();
     const server = http.createServer(async (request, response) => {
         const url = new URL(request.url, "http://" + HOST);
+
+        // Z_Cut editor page (/zcut) and its AI API (/api/zcut/*)
+        if (await zcut.handle(request, response, url)) return;
 
         if (request.method === "GET" && url.pathname === "/ari-favicon.png") {
             try {
