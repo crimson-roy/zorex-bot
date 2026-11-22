@@ -49,7 +49,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .lrow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sw{width:26px;height:26px;border-radius:6px;display:none;place-items:center;color:#5a6070;font:800 10px Manrope,sans-serif}
 .sw.on{color:var(--ink)}.sw.mbon,.sw.tdon{color:#ffd34d}.sw.solo.on{color:var(--blade)}
-.sw.eye{display:grid}
+.sw.eye,.sw.audio{display:grid}.sw.audio{font-size:15px;color:#5a6070}.sw.audio.on{color:var(--aud)}
 .sw svg.i{width:16px;height:16px}
 .llane{height:var(--laneh);display:flex;align-items:center;gap:4px;padding:0 8px 0 22px;font-size:10.5px;color:var(--mute);border-bottom:1px solid #1a1c21;background:#14161a;white-space:nowrap;overflow:hidden}
 .area{position:relative;flex:1}
@@ -866,7 +866,7 @@ function makeThumb(url) {
     v.onerror = () => res(null); setTimeout(() => res(null), 4000);
   });
 }
-const newLayer = o => ({ id: uid(), start: 0, in: 0, dur: 3, speed: 1, props: {}, sw: { eye: true, solo: false, lock: false, mb: false, td: false }, ...o });
+const newLayer = o => ({ id: uid(), start: 0, in: 0, dur: 3, speed: 1, props: {}, sw: { eye: true, audio: true, solo: false, lock: false, mb: false, td: false }, ...o });
 async function addMedia(f, forcedId = null) {
   const type = f.type.startsWith("image/") ? "image" : f.type.startsWith("audio/") ? "audio" : f.type.startsWith("video/") ? "video" : null;
   if (!type) { toast("Skipped " + f.name); return; }
@@ -1060,7 +1060,7 @@ function freeze() {
 }
 function setSpeed(c, s) { const srcLen = c.dur * c.speed, old = c.dur; c.speed = s; c.dur = srcLen / s; const r = c.dur / old; for (const k in c.props) for (const q of c.props[k].keys) q.t = +(q.t * r).toFixed(3); }
 function moveLayer(c, dir) { const i = L().indexOf(c), j = clamp(i + dir, 0, L().length - 1); if (i === j) return; commit(); L().splice(i, 1); L().splice(j, 0, c); render(); }
-function toggleSw(c, k) { commit(); c.sw[k] = !c.sw[k]; if (k === "td" && !c.sw.td) for (const [p] of PROPS.three) delete c.props[p]; render(); refreshSheet(); }
+function toggleSw(c, k) { commit(); c.sw[k] = k === "audio" ? c.sw.audio === false : !c.sw[k]; if (k === "td" && !c.sw.td) for (const [p] of PROPS.three) delete c.props[p]; render(); refreshSheet(); }
 
 // ---------- rendering the timeline ----------
 const PAD = () => 14;
@@ -1118,6 +1118,7 @@ function render() {
       <div class="h l" data-h="l"></div><div class="h r" data-h="r"></div></div></div>`;
     lp += `<div class="lrow${isSel || multi.has(c.id) ? " sel" : ""}" data-id="${c.id}"><button class="tw${c.open ? " open" : ""}${hasKeys ? "" : " nokeys"}" data-tw aria-label="Show properties"><svg class="i"><use href="#i-twirl"/></svg></button><span class="num">${i + 1}</span>
       <button class="sw eye${s.eye ? " on" : ""}" data-sw="eye" aria-label="Show or hide"><svg class="i"><use href="#i-${s.eye ? "eye" : "eyeoff"}"/></svg></button>
+      <button class="sw audio${s.audio !== false ? " on" : ""}" data-sw="audio" aria-label="Toggle audio" title="Toggle audio">♪</button>
       <span class="nm">${esc(c.name)}</span>
       <button class="sw solo${s.solo ? " on" : ""}" data-sw="solo" aria-label="Solo"><svg class="i"><use href="#i-solo"/></svg></button>
       <button class="sw${s.lock ? " on" : ""}" data-sw="lock" aria-label="Lock"><svg class="i"><use href="#i-lock"/></svg></button>
@@ -2447,7 +2448,7 @@ async function mixAudio(compId, from, to) {
     const comp = project.comps[cid]; if (!comp) return;
     const solo = comp.layers.some(c => c.sw.solo);
     for (const c of comp.layers) {
-      if (!c.sw.eye || (solo && !c.sw.solo)) continue;
+      if (c.sw.audio === false || (solo && !c.sw.solo)) continue;
       const a = Math.max(c.start, from), b = Math.min(c.start + c.dur, to); if (b <= a) continue;
       if (c.type === "comp") { if (!c.remap) await place(c.comp, offset + (a - from) / speedMul, speedMul * c.speed, (a - c.start) * c.speed + c.in, (b - c.start) * c.speed + c.in); continue; }
       if (!isAV(c) || c.remap || c.freeze !== undefined) continue;   // time-remapped sound is left silent for now
@@ -2804,18 +2805,19 @@ function syncMedia() {
   syncComp(cur, T, playing ? 1 : 0, live);
   for (const id in els) if (!live.has(id)) { const el = els[id]; if (!el.paused && !el._preroll) el.pause(); el._preroll = false; if (!live.has(id)) el.muted = true; }
 }
-function syncComp(compId, t, rate, live) {
+function syncComp(compId, t, rate, live, audioAllowed = true) {
   const comp = project.comps[compId]; if (!comp) return;
   const layers = comp.layers, solo = layers.some(c => c.sw.solo);
   for (const c of layers) {
-    const active = t >= c.start && t < c.start + c.dur && c.sw.eye && (!solo || c.sw.solo), local = fxLocal(c, t - c.start);
+    const eyeOn = c.sw.eye !== false, audioOn = audioAllowed && c.sw.audio !== false;
+    const active = t >= c.start && t < c.start + c.dur && (eyeOn || audioOn) && (!solo || c.sw.solo), local = fxLocal(c, t - c.start);
     if (c.type === "comp") {
-      if (active) { const target = srcTime(c, local), r = c.remap ? (srcTime(c, local + 0.05) - target) / 0.05 : c.speed; syncComp(c.comp, target, rate * r, live); }
+      if (active) { const target = srcTime(c, local), r = c.remap ? (srcTime(c, local + 0.05) - target) / 0.05 : c.speed; syncComp(c.comp, target, rate * r, live, audioOn); }
       continue;
     }
     const el = elFor(c); if (!el) continue;
     if (!active) {
-      if (c.sw.eye && t < c.start && c.start - t < 2 && !el.seeking) { if (!el.paused) el.pause(); const first = srcTime(c, 0); if (Math.abs(el.currentTime - first) > 0.05) el.currentTime = first; }
+      if (eyeOn && t < c.start && c.start - t < 2 && !el.seeking) { if (!el.paused) el.pause(); const first = srcTime(c, 0); if (Math.abs(el.currentTime - first) > 0.05) el.currentTime = first; }
       continue;
     }
     live.add(c.id);
@@ -2823,8 +2825,8 @@ function syncComp(compId, t, rate, live) {
     const fromCache = needsCache(c) && cachedFrame(c, local);
     const r = activeFx(c).some(i => i.type === "postime") ? 0 : rate * (c.remap ? (srcTime(c, local + 0.05) - target) / 0.05 : c.freeze !== undefined ? 0 : c.speed);
     if (rate > 0 && r >= 0.25 && r <= 4) {
-      el.playbackRate = r; el.muted = vol <= 0; el.volume = clamp(vol, 0, 1);
-      if (Math.abs(el.currentTime - target) > 0.3 && !el.seeking) el.currentTime = target;
+      el.playbackRate = r; el.muted = !audioOn || vol <= 0; el.volume = clamp(vol, 0, 1);
+      if (Math.abs(el.currentTime - target) > (playing ? 0.75 : 0.03) && !el.seeking) el.currentTime = target;
       if (el.paused) el.play().catch(() => {});
     } else {
       if (!el.paused) el.pause(); el.muted = true;
