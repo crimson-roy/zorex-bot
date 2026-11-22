@@ -55,6 +55,7 @@ function createAriDeveloperAccess(options = {}) {
     } catch { /* Missing or malformed origin keeps production authentication disabled. */ }
     const now = options.now || (() => Date.now());
     const sessions = options.sessions || new Map();
+    const sessionFile = options.sessionFile ? path.resolve(options.sessionFile) : null;
     let verifyIdToken = options.verifyIdToken;
     let verifierLoadError = null;
 
@@ -167,6 +168,65 @@ function createAriDeveloperAccess(options = {}) {
         return crypto.createHash("sha256").update(sessionId).digest("hex");
     }
 
+    function persistSessions() {
+        if (!sessionFile) return;
+        const directory = path.dirname(sessionFile);
+        fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+        const safeSessions = [];
+        for (const [key, session] of sessions) {
+            if (!/^[a-f0-9]{64}$/.test(key) || !session || typeof session.sub !== "string" ||
+                !session.sub || typeof session.email !== "string" || !Number.isSafeInteger(session.expiresAt)) continue;
+            safeSessions.push([key, {
+                sub: session.sub,
+                email: session.email,
+                name: typeof session.name === "string" ? session.name.slice(0, 120) : "",
+                expiresAt: session.expiresAt
+            }]);
+        }
+        const temporary = sessionFile + ".tmp-" + process.pid + "-" + crypto.randomBytes(8).toString("hex");
+        try {
+            fs.writeFileSync(temporary, JSON.stringify({ version: 1, sessions: safeSessions }), {
+                encoding: "utf8", mode: 0o600, flag: "wx"
+            });
+            fs.renameSync(temporary, sessionFile);
+            try { fs.chmodSync(sessionFile, 0o600); } catch { /* Windows ACLs replace POSIX mode bits. */ }
+        } catch (error) {
+            try { fs.rmSync(temporary, { force: true }); } catch { /* Ignore cleanup errors. */ }
+            throw new Error("Ari sessions could not be saved safely.");
+        }
+    }
+
+    function loadSessions() {
+        if (!sessionFile) return;
+        let parsed;
+        try {
+            parsed = JSON.parse(fs.readFileSync(sessionFile, "utf8"));
+        } catch (error) {
+            if (error.code === "ENOENT") return;
+            throw new Error("Ari sessions could not be read safely.");
+        }
+        if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.sessions)) {
+            throw new Error("Ari session storage has an unsupported format.");
+        }
+        for (const entry of parsed.sessions) {
+            if (!Array.isArray(entry) || entry.length !== 2) continue;
+            const [key, session] = entry;
+            if (!/^[a-f0-9]{64}$/.test(key) || !session || typeof session !== "object" ||
+                typeof session.sub !== "string" || !session.sub || typeof session.email !== "string" ||
+                !Number.isSafeInteger(session.expiresAt)) continue;
+            if (session.expiresAt <= now()) continue;
+            sessions.set(key, {
+                sub: session.sub,
+                email: session.email,
+                name: typeof session.name === "string" ? session.name.slice(0, 120) : "",
+                expiresAt: session.expiresAt
+            });
+        }
+        persistSessions();
+    }
+
+    loadSessions();
+
     function sessionFor(request) {
         const sessionId = parseCookies(request.headers.cookie)[SESSION_COOKIE];
         if (!sessionId || sessionId.length !== 64) return null;
@@ -175,6 +235,7 @@ function createAriDeveloperAccess(options = {}) {
         if (!session) return null;
         if (session.expiresAt <= now()) {
             sessions.delete(key);
+            persistSessions();
             return null;
         }
         return session;
@@ -238,7 +299,14 @@ function createAriDeveloperAccess(options = {}) {
             name: typeof claims.name === "string" ? claims.name.slice(0, 120) : "",
             expiresAt: now() + sessionTtlSeconds * 1000,
         };
-        sessions.set(hashSessionId(sessionId), session);
+        const sessionKey = hashSessionId(sessionId);
+        sessions.set(sessionKey, session);
+        try {
+            persistSessions();
+        } catch (error) {
+            sessions.delete(sessionKey);
+            throw Object.assign(error, { statusCode: 503 });
+        }
         appendCookie(response, `${SESSION_COOKIE}=${sessionId}; ${cookieOptions(sessionTtlSeconds, true)}`);
         const csrfToken = crypto.randomBytes(32).toString("base64url");
         setCsrfCookie(response, csrfToken, sessionTtlSeconds);
@@ -249,6 +317,7 @@ function createAriDeveloperAccess(options = {}) {
         assertOriginAndCsrf(request);
         const sessionId = parseCookies(request.headers.cookie)[SESSION_COOKIE];
         if (sessionId) sessions.delete(hashSessionId(sessionId));
+        persistSessions();
         clearCookie(response, SESSION_COOKIE, true);
         const csrfToken = crypto.randomBytes(32).toString("base64url");
         setCsrfCookie(response, csrfToken);
@@ -265,6 +334,7 @@ function createAriDeveloperAccess(options = {}) {
 
     function invalidateAll() {
         sessions.clear();
+        persistSessions();
     }
 
     return {

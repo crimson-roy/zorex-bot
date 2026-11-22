@@ -4,7 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/ari-favicon.png">
-  <title>Ari — Local Playground</title>
+  <title>Ari — Your workspace</title>
+  <meta name="theme-color" content="#171d19">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; }
@@ -143,46 +147,367 @@
     #sign-out { padding: 6px 10px; border: 1px solid #484848; border-radius: 14px; color: #ddd; background: #292929; font-size: 12px; }
     #sign-out:hover { background: #3b3b3b; }
     @media (max-width: 480px) { .auth-card { padding: 26px 20px; } #account-email { display: none; } }
+
+    :root {
+      color-scheme: dark;
+      --ari-bg:#171d19; --ari-sidebar:#141a16; --ari-panel:#1d2620; --ari-raised:#222d26;
+      --ari-border:#2d3931; --ari-strong:#405047; --ari-text:#edf3ee; --ari-muted:#9aa89f;
+      --ari-subtle:#748178; --ari-accent:#a7c8b4; --ari-accent-ink:#142019;
+      --ari-danger:#e5a6a0; --ari-serif:"Newsreader",Georgia,serif; --ari-sans:"Inter",system-ui,sans-serif;
+    }
+    html,body{min-width:320px;background:var(--ari-bg);color:var(--ari-text)}
+    body,button,input,select,textarea{font-family:var(--ari-sans)}
+    button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ari-accent);outline-offset:3px}
+    .app{background:var(--ari-bg)}
+    .sidebar{flex:0 0 268px;width:268px;padding:16px 12px 12px;border-color:var(--ari-border);background:var(--ari-sidebar)}
+    .sidebar-header{justify-content:flex-start;gap:10px;padding:7px 8px 18px;border:0}
+    .ari-brand{display:flex;align-items:center;gap:10px;min-width:0}
+    .ari-mark{display:grid;place-items:center;width:34px;height:34px;flex:0 0 auto;border-radius:12px;color:var(--ari-accent-ink);background:var(--ari-accent);font:600 22px var(--ari-serif)}
+    .ari-wordmark{color:var(--ari-text);font:500 25px var(--ari-serif);letter-spacing:-.04em}
+    .new-chat{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:4px 0 14px;padding:11px 12px;border:1px solid var(--ari-strong);border-radius:12px;color:var(--ari-text);background:var(--ari-panel);font-size:13px;font-weight:500}
+    .new-chat:hover{border-color:#66776d;background:var(--ari-raised)}
+    .sidebar-nav{display:grid;gap:4px;padding:0 0 17px;border-bottom:1px solid var(--ari-border)}
+    .sidebar-nav button{display:flex;align-items:center;gap:11px;min-height:40px;width:100%;padding:0 11px;border:0;border-radius:10px;color:#c2cec5;background:transparent;text-align:left;font-size:13px;font-weight:500}
+    .sidebar-nav button:hover,.sidebar-nav button.active{color:var(--ari-text);background:#253129}
+    .sidebar-nav svg{width:17px;height:17px;color:var(--ari-accent)}
+    .sidebar-nav .sidebar-nav-link{display:flex;align-items:center;gap:11px;min-height:40px;width:100%;padding:0 11px;border-radius:10px;color:#c2cec5;text-decoration:none;font-size:13px;font-weight:500}
+    .sidebar-nav .sidebar-nav-link:hover,.sidebar-nav .sidebar-nav-link:focus-visible{color:var(--ari-text);background:#253129}
+    .history-label{padding:19px 10px 8px;color:var(--ari-subtle);font-size:10px;font-weight:700;letter-spacing:.12em}
+    #chat-list{gap:3px;padding:3px 0 12px}
+    .history-row{gap:2px}
+    .history-row.pinned::before{color:var(--ari-accent)}
+    .history-select{padding:9px 11px;border-radius:9px;color:#c1ccc4;font-size:12px}
+    .history-select:hover,.history-select.active{color:var(--ari-text);background:#253129}
+    .history-empty{padding:10px 11px;color:var(--ari-subtle);font-size:12px;line-height:1.5}
+    .sidebar-footer{position:relative;margin-top:auto;padding-top:10px;border-top:1px solid var(--ari-border)}
+    #account-controls{display:block;margin:0}
+    #account-menu-toggle{display:flex;align-items:center;gap:10px;width:100%;padding:9px 8px;border:0;border-radius:11px;color:var(--ari-text);background:transparent;text-align:left}
+    #account-menu-toggle:hover,#account-menu-toggle[aria-expanded=true]{background:#253129}
+    .account-avatar{display:grid;place-items:center;width:34px;height:34px;flex:0 0 auto;border-radius:50%;color:var(--ari-accent-ink);background:var(--ari-accent);font-size:12px;font-weight:700}
+    .account-meta{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+    #account-name{overflow:hidden;color:var(--ari-text);font-size:12px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+    #account-email{overflow:hidden;color:var(--ari-muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+    #account-menu{position:absolute;z-index:30;right:0;bottom:calc(100% + 9px);left:0;display:flex;flex-direction:column;gap:3px;padding:6px;border:1px solid var(--ari-strong);border-radius:14px;background:#202a23;box-shadow:0 16px 38px #0008}
+    #account-menu[hidden]{display:none}
+    #account-menu button{display:flex;align-items:center;min-height:38px;padding:0 10px;border:0;border-radius:9px;color:#d9e2db;background:transparent;text-align:left;font-size:12px}
+    #account-menu button:hover{background:#2c3a30}
+    #account-menu .menu-separator{height:1px;margin:3px 2px;background:var(--ari-border)}
+    #account-menu #sign-out{margin-top:2px;border:0;border-radius:9px;color:var(--ari-danger);background:transparent;font-size:12px}
+    #account-menu #sign-out:hover{background:#3a2927}
+    .main{background:var(--ari-bg)}
+    .topbar{min-height:62px;padding:10px 24px;border-color:var(--ari-border);background:rgba(23,29,25,.94);backdrop-filter:blur(14px)}
+    .topbar h1{color:var(--ari-text);font-size:13px;font-weight:600}
+    #sidebar-toggle{width:36px;height:36px;border:1px solid transparent;border-radius:10px;color:var(--ari-muted);background:transparent}
+    #sidebar-toggle:hover{color:var(--ari-text);background:var(--ari-panel)}
+    #conversation{padding:34px clamp(18px,4vw,56px) 18px}
+    #empty-state{color:var(--ari-muted);font:400 clamp(25px,3vw,38px) var(--ari-serif)}
+    #messages{max-width:none;gap:25px;padding:0 0 12px}
+    .message{max-width:min(92%,1040px);padding:0;border:0;border-radius:0;color:#dce6de;line-height:1.72;font-size:15px}
+    .message.user{max-width:min(82%,780px);padding:12px 16px;border:1px solid #344238;border-radius:18px;color:var(--ari-text);background:#26332a}
+    .message.ari{max-width:1040px;color:#e1e9e3;font:400 19px/1.62 var(--ari-serif)}
+    .message small{color:var(--ari-muted);font:11px var(--ari-sans)}
+    #composer-wrap{width:100%;max-width:none;margin:0;padding:12px clamp(14px,3vw,38px) 20px}
+    #chat-form{max-width:1180px;margin:0 auto;gap:12px;padding:12px 14px;border:1px solid #3a493f;border-radius:23px;background:#202a23;box-shadow:0 12px 34px #0003}
+    #chat-form:focus-within{border-color:#708b79;box-shadow:0 0 0 3px rgba(167,200,180,.08),0 12px 34px #0003}
+    #attach-button{width:38px;height:38px;color:#bdcbbf}
+    #attach-button:hover,#attach-button:focus-visible{color:var(--ari-text);background:#314035}
+    #compose-center{gap:9px}
+    #message-input{min-height:38px;max-height:210px;padding:7px 3px 3px;color:var(--ari-text);font-size:14px}
+    #message-input::placeholder{color:#88968d}
+    #composer-bottom{gap:8px}
+    #think-toggle,#tier-select{color:#b9c7bd;font-size:11px}
+    #think-toggle:hover,#think-toggle[aria-pressed=true]{color:var(--ari-text);background:#344439}
+    #think-toggle[aria-pressed=true]{border-color:#63796a}
+    #tier-select:hover,#tier-select:focus{background:#344439}
+    #tier-select option{color:var(--ari-text);background:#202a23}
+    #send{width:38px;height:38px;color:var(--ari-accent-ink);background:var(--ari-accent)}
+    #send:hover{filter:brightness(1.07)}
+    #send svg{color:var(--ari-accent-ink)}
+    #attach-menu{width:190px;border-color:var(--ari-strong);border-radius:14px;background:#202a23}
+    .attach-option{min-height:40px;border-radius:9px;color:#dce6de;font-size:12px}
+    .attach-option:hover{background:#304035}
+    #attachment-chip{align-items:center;gap:10px;width:fit-content;max-width:min(100%,390px);padding:8px;border-color:#415246;border-radius:14px;background:#26332a}
+    #attachment-chip[hidden]{display:none}
+    #attachment-thumb{display:grid;place-items:center;width:54px;height:54px;flex:0 0 auto;overflow:hidden;border:1px solid #4a5a4e;border-radius:10px;color:var(--ari-accent-ink);background:var(--ari-accent);font-size:10px;font-weight:700}
+    #attachment-image-preview{display:block;width:100%;height:100%;object-fit:cover}
+    #attachment-image-preview[hidden]{display:none}
+    .attachment-info{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}
+    #attachment-name{max-width:260px;color:var(--ari-text);font-size:11px}
+    #attachment-size{color:var(--ari-muted);font-size:10px}
+    #remove-attachment{display:grid;place-items:center;width:28px;height:28px;font-size:18px}
+    #composer-disclaimer{margin-top:10px;color:var(--ari-subtle);font-size:10px}
+    #composer-notice{color:#e6b1ab;font-size:11px}
+    #workspace-page{flex:1;min-height:0;overflow-y:auto;padding:clamp(26px,5vw,64px);background:var(--ari-bg)}
+    #workspace-page[hidden]{display:none}
+    .workspace-page-inner{width:min(100%,1040px);margin:0 auto}
+    .page-kicker{margin:0 0 12px;color:var(--ari-accent);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+    .page-title{margin:0;color:var(--ari-text);font:400 clamp(34px,5vw,52px) var(--ari-serif);letter-spacing:-.035em}
+    .page-description{max-width:650px;margin:13px 0 30px;color:var(--ari-muted);font-size:13px;line-height:1.75}
+    .page-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .page-card{padding:20px;border:1px solid var(--ari-border);border-radius:17px;background:var(--ari-panel)}
+    .page-card h3{margin:0 0 8px;color:var(--ari-text);font-size:13px;font-weight:600}
+    .page-card p{margin:0;color:var(--ari-muted);font-size:12px;line-height:1.7}
+    .page-card-icon,.page-empty-icon{display:grid;place-items:center;width:42px;height:42px;margin-bottom:15px;border-radius:13px;color:var(--ari-accent);background:#2a392e}
+    .page-empty{display:grid;justify-items:center;padding:52px 18px;border:1px dashed #3b4b40;border-radius:18px;background:rgba(31,42,34,.55);text-align:center}
+    .page-empty-icon{width:52px;height:52px;border-radius:16px}
+    .page-empty h3{margin:0 0 8px;color:var(--ari-text);font:400 25px var(--ari-serif)}
+    .page-empty p{max-width:470px;margin:0;color:var(--ari-muted);font-size:12px;line-height:1.7}
+    .page-inline-note{margin-top:18px;color:var(--ari-subtle);font-size:11px;line-height:1.7}
+    .setting-row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:17px 0;border-bottom:1px solid var(--ari-border)}
+    .setting-row:last-child{border-bottom:0}
+    .setting-row strong{display:block;margin-bottom:4px;color:var(--ari-text);font-size:12px}
+    .setting-row span{display:block;color:var(--ari-muted);font-size:11px;line-height:1.55}
+    .setting-value{flex:0 0 auto;color:var(--ari-accent)!important;text-align:right}
+    .landing-screen,#auth-screen{min-height:100%;background:var(--ari-bg)}
+    .landing-screen{display:flex;flex-direction:column;padding:0 clamp(22px,6vw,88px)}
+    .landing-screen[hidden]{display:none}
+    .landing-header{display:flex;align-items:center;justify-content:space-between;min-height:82px;border-bottom:1px solid var(--ari-border)}
+    .landing-header .ari-wordmark{font-size:29px}
+    .landing-top-link{padding:9px 14px;border:1px solid var(--ari-strong);border-radius:999px;color:var(--ari-text);background:transparent;font-size:12px}
+    .landing-top-link:hover{background:var(--ari-panel)}
+    .landing-hero{display:grid;flex:1;align-content:center;width:min(100%,1060px);margin:0 auto;padding:70px 0 100px}
+    .landing-eyebrow{margin:0 0 22px;color:var(--ari-accent);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+    .landing-title{max-width:850px;margin:0;color:var(--ari-text);font:400 clamp(55px,9vw,108px)/.98 var(--ari-serif);letter-spacing:-.06em}
+    .landing-title em{color:var(--ari-accent);font-weight:400}
+    .landing-copy{max-width:570px;margin:28px 0 30px;color:#aab8ae;font-size:14px;line-height:1.85}
+    .landing-actions{display:flex;flex-wrap:wrap;align-items:center;gap:15px}
+    .landing-primary{display:inline-flex;align-items:center;gap:10px;padding:13px 18px;border:0;border-radius:999px;color:var(--ari-accent-ink);background:var(--ari-accent);font-size:12px;font-weight:700}
+    .landing-primary:hover{filter:brightness(1.07)}
+    .landing-secondary{padding:12px 4px;border:0;color:#aab8ae;background:transparent;font-size:12px}
+    .landing-footnote{margin-top:70px;color:var(--ari-subtle);font-size:10px}
+    #auth-screen{display:grid;min-height:100%;place-items:center;padding:24px}
+    #auth-screen[hidden]{display:none}
+    .auth-card{width:min(100%,440px);padding:30px;border:1px solid var(--ari-border);border-radius:22px;background:var(--ari-panel);box-shadow:0 20px 60px #0005;text-align:left}
+    .auth-back{margin:0 0 26px;padding:0;border:0;color:var(--ari-muted);background:transparent;font-size:11px}
+    .auth-heading{margin:20px 0 8px;color:var(--ari-text);font:400 38px var(--ari-serif);letter-spacing:-.035em}
+    .auth-description{margin:0 0 22px;color:var(--ari-muted);font-size:12px;line-height:1.7}
+    .auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:22px;padding:4px;border:1px solid var(--ari-border);border-radius:999px;background:#18211b}
+    .auth-tabs button{min-height:36px;border:0;border-radius:999px;color:var(--ari-muted);background:transparent;font-size:11px}
+    .auth-tabs button.active{color:var(--ari-accent-ink);background:var(--ari-accent)}
+    #google-sign-in{justify-content:flex-start;min-height:48px;margin-top:12px}
+    #auth-error{margin:12px 0 0;color:var(--ari-danger)!important;text-align:left}
+    .auth-legal{margin:20px 0 0;color:var(--ari-subtle);font-size:10px;line-height:1.6}
+    #sidebar-backdrop{display:none}
+    @media(max-width:760px){
+      .sidebar{flex-basis:268px;width:268px}
+      .topbar{min-height:56px;padding:8px 14px}
+      #conversation{padding:24px 16px 12px}
+      .message,.message.ari{max-width:96%}
+      .message.user{max-width:88%}
+      #workspace-page{padding:28px 18px}
+      .page-grid{grid-template-columns:1fr}
+      .landing-title{font-size:clamp(50px,13vw,78px)}
+      .landing-hero{padding:60px 0 80px}
+      .landing-screen{padding:0 22px}
+      #sidebar-backdrop{position:fixed;z-index:19;inset:0;display:block;border:0;background:rgba(5,10,7,.58);opacity:0;pointer-events:none;transition:opacity .18s ease}
+      .app.mobile-sidebar-open #sidebar-backdrop{opacity:1;pointer-events:auto}
+      .app .sidebar{z-index:20}
+      .app.sidebar-collapsed .sidebar{display:flex}
+    }
+    @media(max-width:480px){
+      #composer-wrap{padding:8px 10px max(10px,env(safe-area-inset-bottom))}
+      #chat-form{gap:5px;padding:9px;border-radius:21px}
+      #attach-button{width:35px;height:35px}
+      #tier-select{width:92px;max-width:92px;padding:0 16px 0 6px}
+      #think-toggle{padding:0 7px}
+      #composer-bottom{gap:2px}
+      .auth-card{padding:25px 21px}
+      .landing-header{min-height:68px}
+      .landing-footnote{margin-top:48px}
+      .setting-row{align-items:flex-start;flex-direction:column;gap:8px}
+      .setting-value{text-align:left}
+    }
+
+
+    .auth-tabs{position:relative;isolation:isolate}
+    .auth-tabs::before{content:"";position:absolute;z-index:0;inset:4px auto 4px 4px;width:calc(50% - 4px);border-radius:999px;background:var(--ari-accent);transform:translateX(0);transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+    .auth-tabs:has(#auth-signup-tab.active)::before{transform:translateX(100%)}
+    .auth-tabs button{position:relative;z-index:1;transition:color .18s ease}
+    .auth-tabs button.active{background:transparent}
+
+
+    /* Ari Upscale — integrated video workspace */
+    #workspace-page:has(.ari-upscale){padding:0;overflow:auto}
+    .ari-upscale{width:100%;max-width:none;min-height:100%;margin:0;padding:24px clamp(16px,2.4vw,34px) 30px}
+    .upscale-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding-bottom:18px;border-bottom:1px solid var(--ari-border)}
+    .upscale-kicker{margin:0 0 7px;color:var(--ari-accent);font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
+    .upscale-title{margin:0;color:var(--ari-text);font:400 clamp(29px,3vw,39px)/1.1 var(--ari-serif);letter-spacing:-.035em}
+    .upscale-lede{margin:8px 0 0;color:var(--ari-muted);font-size:12px;line-height:1.65}
+    .upscale-head-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .upscale-connection{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--ari-border);border-radius:999px;color:var(--ari-muted);font-size:10px;white-space:nowrap}
+    .upscale-connection i{width:7px;height:7px;border-radius:50%;background:#d8ad70;box-shadow:0 0 10px #d8ad7044}
+    .upscale-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:0 13px;border:1px solid var(--ari-strong);border-radius:10px;color:var(--ari-text);background:var(--ari-panel);font-size:11px;font-weight:600}
+    .upscale-button:hover{border-color:#718b79;background:var(--ari-raised)}
+    .upscale-button.primary{border-color:var(--ari-accent);color:var(--ari-accent-ink);background:var(--ari-accent)}
+    .upscale-button.primary:hover{filter:brightness(1.06)}
+    .upscale-button:disabled{opacity:.42;cursor:not-allowed}
+    .upscale-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0}
+    .upscale-project-meta{display:flex;align-items:center;gap:9px;min-width:0}
+    .upscale-project-symbol{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--ari-border);border-radius:9px;color:var(--ari-accent);background:var(--ari-panel);font-size:14px}
+    .upscale-project-name{min-width:0}
+    .upscale-project-name strong{display:block;max-width:240px;overflow:hidden;color:var(--ari-text);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+    .upscale-project-name span{display:block;color:var(--ari-subtle);font-size:9px}
+    .upscale-toolbar-actions{display:flex;align-items:center;gap:7px}
+    .upscale-editor-grid{display:grid;grid-template-columns:minmax(0,1fr) 286px;gap:13px;align-items:stretch}
+    .upscale-preview-card,.upscale-inspector,.upscale-queue{border:1px solid var(--ari-border);border-radius:15px;background:var(--ari-panel)}
+    .upscale-preview-card{min-width:0;overflow:hidden}
+    .upscale-preview-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;border-bottom:1px solid var(--ari-border)}
+    .upscale-preview-top strong{font-size:11px;font-weight:600}
+    .upscale-preview-top span{color:var(--ari-muted);font-size:9px}
+    .upscale-stage{display:grid;place-items:center;position:relative;min-height:245px;aspect-ratio:16/9;max-height:470px;background:radial-gradient(ellipse at 50% 45%,#2b392f 0%,#18221b 55%,#111713 100%);overflow:hidden}
+    .upscale-stage video{display:none;width:100%;height:100%;max-height:470px;object-fit:contain;background:#090d0a}
+    .upscale-stage.has-video video{display:block}
+    .upscale-stage.has-video .upscale-empty-state{display:none}
+    .upscale-empty-state{display:grid;justify-items:center;text-align:center;padding:24px}
+    .upscale-empty-icon{display:grid;place-items:center;width:48px;height:48px;margin-bottom:12px;border:1px solid #526b59;border-radius:15px;color:var(--ari-accent);background:#26372b;font-size:21px}
+    .upscale-empty-state strong{font:400 22px var(--ari-serif);color:var(--ari-text)}
+    .upscale-empty-state p{max-width:320px;margin:7px 0 14px;color:var(--ari-muted);font-size:10px;line-height:1.7}
+    .upscale-player{display:flex;align-items:center;gap:10px;padding:10px 13px;border-top:1px solid var(--ari-border)}
+    .upscale-play{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--ari-strong);border-radius:50%;color:var(--ari-text);background:var(--ari-raised)}
+    .upscale-timestamp{min-width:76px;color:var(--ari-muted);font-size:9px;font-variant-numeric:tabular-nums}
+    .upscale-seek{width:100%;min-width:30px;accent-color:var(--ari-accent)}
+    .upscale-timeline{padding:12px 13px 14px;border-top:1px solid var(--ari-border);background:#19221c}
+    .upscale-timeline-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:9px;color:var(--ari-muted);font-size:9px}
+    .upscale-timeline-track{position:relative;height:42px;border:1px solid #3d5243;border-radius:8px;background:linear-gradient(90deg,#26392d,#314738,#26392d);overflow:hidden}
+    .upscale-timeline-track::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 38px,#dce9dd13 39px 40px)}
+    .upscale-clip-label{position:absolute;inset:0 0 0 8px;display:flex;align-items:center;gap:8px;color:#e1eee4;font-size:9px;pointer-events:none}
+    .upscale-clip-tag{padding:4px 6px;border-radius:5px;background:#17271caa}
+    .upscale-playhead{position:absolute;top:0;bottom:0;left:0;width:2px;background:#e5f5e8;box-shadow:0 0 8px #e5f5e8aa;pointer-events:none}
+    .upscale-inspector{padding:13px;display:flex;flex-direction:column;gap:14px}
+    .upscale-inspector-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--ari-border)}
+    .upscale-inspector-head strong{font-size:12px}
+    .upscale-inspector-head span{color:var(--ari-subtle);font-size:9px}
+    .upscale-field label,.upscale-field-title{display:block;margin-bottom:6px;color:var(--ari-muted);font-size:9px;font-weight:600}
+    .upscale-select{width:100%;min-height:34px;padding:0 9px;border:1px solid var(--ari-strong);border-radius:8px;color:var(--ari-text);background:#19221c;font-size:10px}
+    .upscale-mode{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:4px;border:1px solid var(--ari-border);border-radius:10px;background:#172019}
+    .upscale-mode button{min-height:31px;border:0;border-radius:7px;color:var(--ari-muted);background:transparent;font-size:10px;font-weight:600}
+    .upscale-mode button.active{color:var(--ari-accent-ink);background:var(--ari-accent)}
+    .upscale-setting{padding:0 0 10px;border-bottom:1px solid #2b392f}
+    .upscale-setting:last-child{border-bottom:0;padding-bottom:0}
+    .upscale-setting-line{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;color:#d7e1d9;font-size:9px}
+    .upscale-setting-line output{color:var(--ari-accent);font-variant-numeric:tabular-nums}
+    .upscale-range{width:100%;margin:0;accent-color:var(--ari-accent)}
+    .upscale-setting:has(input:disabled){opacity:.42}
+    .upscale-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#d7e1d9;font-size:9px}
+    .upscale-switch{appearance:none;width:30px;height:17px;border-radius:20px;background:#46534a;position:relative;cursor:pointer;flex:0 0 auto}
+    .upscale-switch:checked{background:#7fa48b}
+    .upscale-switch::after{content:"";position:absolute;width:11px;height:11px;left:3px;top:3px;border-radius:50%;background:#f4f6f3;transition:left .15s}
+    .upscale-switch:checked::after{left:16px}
+    .upscale-output-note{padding:9px 10px;border:1px solid var(--ari-border);border-radius:9px;background:#19221c}
+    .upscale-output-note span{display:block;color:var(--ari-subtle);font-size:9px}
+    .upscale-output-note strong{display:block;margin-top:3px;color:var(--ari-text);font-size:12px}
+    .upscale-queue{margin-top:13px;padding:13px}
+    .upscale-queue-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .upscale-queue-head strong{font-size:11px}
+    .upscale-queue-head span{color:var(--ari-muted);font-size:9px}
+    .upscale-queue-empty{display:flex;align-items:center;gap:11px;padding:12px;border:1px dashed #3b4b40;border-radius:10px;color:var(--ari-muted);font-size:10px;line-height:1.6}
+    .upscale-queue-empty b{display:block;color:var(--ari-text);font-size:10px}
+    .upscale-queue-icon{display:grid;place-items:center;width:32px;height:32px;flex:0 0 auto;border-radius:9px;color:var(--ari-accent);background:#29392e}
+    .upscale-notice{min-height:16px;margin:9px 1px 0;color:#e1c694;font-size:10px}
+    .upscale-modal-backdrop{position:fixed;z-index:80;inset:0;display:grid;place-items:center;padding:20px;background:#050906bb;backdrop-filter:blur(8px)}
+    .upscale-modal-backdrop[hidden]{display:none}
+    .upscale-modal{width:min(100%,460px);padding:20px;border:1px solid var(--ari-strong);border-radius:18px;background:#1d2921;box-shadow:0 22px 70px #0009}
+    .upscale-modal h3{margin:0;color:var(--ari-text);font:400 25px var(--ari-serif)}
+    .upscale-modal p{margin:9px 0 15px;color:var(--ari-muted);font-size:11px;line-height:1.7}
+    .upscale-modal-actions{display:flex;justify-content:flex-end;gap:8px}
+    .upscale-file-input{display:none}
+    .upscale-drop-active{outline:2px dashed var(--ari-accent);outline-offset:-8px}
+    @media(max-width:1050px){.upscale-editor-grid{grid-template-columns:minmax(0,1fr) 260px}.ari-upscale{padding:20px 16px}}
+    @media(max-width:820px){.upscale-editor-grid{grid-template-columns:1fr}.upscale-inspector{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.upscale-inspector-head{grid-column:1/-1}.upscale-inspector .upscale-setting-group{grid-column:1/-1}}
+    @media(max-width:560px){.upscale-head{flex-direction:column}.upscale-head-actions{justify-content:flex-start}.upscale-toolbar{align-items:flex-start;flex-direction:column}.upscale-toolbar-actions{width:100%}.upscale-inspector{display:flex}.upscale-stage{min-height:190px}.upscale-timestamp{min-width:68px}}
+
   </style>
 </head>
 <body>
+  <section id="landing-screen" class="landing-screen" hidden>
+    <header class="landing-header">
+      <div class="ari-brand"><span class="ari-mark">a</span><span class="ari-wordmark">ari</span></div>
+      <button class="landing-top-link" id="landing-sign-in" type="button">Sign in</button>
+    </header>
+    <main class="landing-hero">
+      <p class="landing-eyebrow">A quieter kind of intelligence</p>
+      <h1 class="landing-title">Make room for <em>better thinking.</em></h1>
+      <p class="landing-copy">Ari brings your conversations, ideas and work into one calm, considered workspace. Start with a question and build from there.</p>
+      <div class="landing-actions">
+        <button class="landing-primary" id="landing-get-started" type="button">Get started <span aria-hidden="true">↗</span></button>
+        <button class="landing-secondary" id="landing-open-chat" type="button">I already have an account</button>
+      </div>
+      <p class="landing-footnote">Ari by Zorex AI · Thoughtful tools, one workspace.</p>
+    </main>
+  </section>
+
   <section id="auth-screen" aria-labelledby="auth-title" hidden>
     <div class="auth-card">
-      <h1 id="auth-title">Ari Developer Playground</h1>
-      <p>Sign in with your Google account to use Ari. When open registration is enabled, your Ari account is created automatically.</p>
+      <button class="auth-back" id="auth-back" type="button">← Back to Ari</button>
+      <div class="ari-brand"><span class="ari-mark">a</span><span class="ari-wordmark">ari</span></div>
+      <div class="auth-tabs" role="tablist" aria-label="Account access">
+        <button class="active" id="auth-login-tab" type="button" role="tab" aria-selected="true" data-auth-mode="login">Log in</button>
+        <button id="auth-signup-tab" type="button" role="tab" aria-selected="false" data-auth-mode="signup">Sign up</button>
+      </div>
+      <h1 id="auth-title" class="auth-heading">Welcome back.</h1>
+      <p id="auth-description" class="auth-description">Sign in with Google to continue to your Ari workspace.</p>
       <div id="google-sign-in"></div>
       <p id="auth-error" role="status" aria-live="polite"></p>
+      <p class="auth-legal">Email verification and additional sign-in methods will appear here after their providers are configured.</p>
     </div>
   </section>
   <div class="app" id="ari-app" hidden>
-    <aside class="sidebar" id="sidebar" aria-label="Chat history">
-      <div class="sidebar-header">
-        <strong>Chats</strong>
-        <button class="new-chat" id="new-chat" type="button">+ New chat</button>
-      </div>
-      <div class="history-label">Recent</div>
-      <nav id="chat-list" aria-label="Previous chats">
-        <div class="history-empty">No previous chats yet.</div>
+    <aside class="sidebar" id="sidebar" aria-label="Ari workspace navigation">
+      <div class="sidebar-header"><div class="ari-brand"><span class="ari-mark">a</span><span class="ari-wordmark">ari</span></div></div>
+      <button class="new-chat" id="new-chat" type="button"><span aria-hidden="true">＋</span> New chat</button>
+      <nav class="sidebar-nav" aria-label="Workspace">
+        <button type="button" id="nav-library" data-workspace-page="library">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8"/></svg>
+          Library
+        </button>
+        <button type="button" id="nav-projects" data-workspace-page="projects">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2h6.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>
+          Projects
+        </button>
+        <button type="button" id="nav-upscale" data-workspace-page="upscale" aria-label="Open video upscaling workspace">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m8 14 3-3 2 2 3-4"/><path d="M7 8h.01M17 16h.01"/></svg>
+          Upscale
+        </button>
+        <a class="sidebar-nav-link" id="nav-zcut" href="/zcut" aria-label="Open Z_Cut video editor">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>
+          Z_Cut
+        </a>
       </nav>
+      <div class="history-label">RECENT CHATS</div>
+      <nav id="chat-list" aria-label="Previous chats"><div class="history-empty">Your recent conversations will appear here.</div></nav>
+      <div class="sidebar-footer">
+        <div id="account-controls" hidden>
+          <button id="account-menu-toggle" type="button" aria-expanded="false" aria-haspopup="menu">
+            <span class="account-avatar" id="account-avatar">A</span>
+            <span class="account-meta"><span id="account-name">Your account</span><span id="account-email"></span></span>
+            <span aria-hidden="true" style="color:#9aa89f">⌃</span>
+          </button>
+          <div id="account-menu" role="menu" hidden>
+            <button type="button" role="menuitem" data-account-page="profile">Profile / About You</button>
+            <button type="button" role="menuitem" data-account-page="memory">Memory</button>
+            <button type="button" role="menuitem" data-account-page="settings">Settings</button>
+            <button type="button" role="menuitem" data-account-page="delete-account">Delete Account</button>
+            <div class="menu-separator"></div>
+            <button id="sign-out" type="button" role="menuitem">Sign out</button>
+          </div>
+        </div>
+      </div>
     </aside>
+    <button id="sidebar-backdrop" type="button" aria-label="Close navigation" tabindex="-1"></button>
 
     <section class="main">
       <header class="topbar">
         <button id="sidebar-toggle" type="button" aria-label="Collapse chat sidebar" title="Collapse chat sidebar" aria-expanded="true">
           <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M14 9l-3 3 3 3"/></svg>
         </button>
-        <h1>Ari</h1>
-        <div id="account-controls" hidden>
-          <span id="account-email"></span>
-          <button id="sign-out" type="button">Sign out</button>
-        </div>
+        <h1 id="view-title">New chat</h1>
       </header>
 
       <main id="conversation" aria-live="polite">
         <div id="empty-state">Type to get started with Ari</div>
         <div id="messages"></div>
       </main>
-
+      <main id="workspace-page" aria-live="polite" hidden></main>
       <div id="composer-wrap">
         <form id="chat-form" aria-label="Message Ari">
           <div class="attach-wrap">
@@ -199,9 +524,10 @@
           <input id="audio-input" type="file" accept="audio/*" aria-label="Choose audio">
           <input id="file-input" type="file" aria-label="Choose a file">
           <div id="compose-center">
-            <div id="attachment-chip" hidden>
-              <span id="attachment-name"></span>
-              <button id="remove-attachment" type="button" aria-label="Remove attached image">×</button>
+            <div id="attachment-chip" class="attachment-card" hidden>
+              <div id="attachment-thumb"><img id="attachment-image-preview" alt="Selected image preview" hidden><span id="attachment-kind">FILE</span></div>
+              <div class="attachment-info"><span id="attachment-name"></span><span id="attachment-size"></span></div>
+              <button id="remove-attachment" type="button" aria-label="Remove attachment">×</button>
             </div>
             <textarea id="message-input" placeholder="Message Ari..." rows="1" maxlength="2000" required aria-label="Message Ari"></textarea>
             <div id="composer-bottom">
@@ -230,6 +556,30 @@
 
     const STORAGE_KEY_PREFIX = "ari-playground-chats-v1:";
     const appElement = document.getElementById("ari-app");
+    const landingScreen = document.getElementById("landing-screen");
+    const landingSignIn = document.getElementById("landing-sign-in");
+    const landingGetStarted = document.getElementById("landing-get-started");
+    const landingOpenChat = document.getElementById("landing-open-chat");
+    const authBackButton = document.getElementById("auth-back");
+    const authTitle = document.getElementById("auth-title");
+    const authDescription = document.getElementById("auth-description");
+    const authTabs = [...document.querySelectorAll("[data-auth-mode]")];
+    const homepageOnly = window.location.pathname === "/homepage";
+    const workspacePage = document.getElementById("workspace-page");
+    const viewTitle = document.getElementById("view-title");
+    const composerWrap = document.getElementById("composer-wrap");
+    const accountMenuToggle = document.getElementById("account-menu-toggle");
+    const accountMenu = document.getElementById("account-menu");
+    const accountName = document.getElementById("account-name");
+    const accountAvatar = document.getElementById("account-avatar");
+    const sidebarBackdrop = document.getElementById("sidebar-backdrop");
+    const attachmentImagePreview = document.getElementById("attachment-image-preview");
+    const attachmentKind = document.getElementById("attachment-kind");
+    const attachmentSize = document.getElementById("attachment-size");
+    let authMode = "login";
+    let authConfigError = "";
+    let homepageHasSession = false;
+    let attachmentObjectUrl = "";
     const authScreen = document.getElementById("auth-screen");
     const authError = document.getElementById("auth-error");
     const googleSignIn = document.getElementById("google-sign-in");
@@ -262,6 +612,7 @@
     let storageKey = null;
     let chats = [];
     let currentChatId = null;
+    let chatSyncQueue = Promise.resolve();
     let thinkEnabled = false;
     let csrfToken = "";
     let authenticatedUser = null;
@@ -270,10 +621,42 @@
       return STORAGE_KEY_PREFIX + encodeURIComponent(String(sub));
     }
 
+    function showLanding() {
+      landingScreen.hidden = false;
+      authScreen.hidden = true;
+      appElement.hidden = true;
+      accountControls.hidden = true;
+      accountMenu.hidden = true;
+    }
+
+    function showLogin(mode = "login") {
+      landingScreen.hidden = true;
+      authScreen.hidden = false;
+      appElement.hidden = true;
+      accountControls.hidden = true;
+      setAuthMode(mode);
+      authError.textContent = authConfigError;
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode === "signup" ? "signup" : "login";
+      for (const tab of authTabs) {
+        const active = tab.dataset.authMode === authMode;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+      }
+      authTitle.textContent = authMode === "signup" ? "A good place to begin." : "Welcome back.";
+      authDescription.textContent = authMode === "signup"
+        ? "Create your Ari account with Google. New account access follows the site's registration settings."
+        : "Sign in with Google to continue to your Ari workspace.";
+    }
+
     function setAuthVisible(visible) {
-      authScreen.hidden = !visible;
-      appElement.hidden = visible;
-      accountControls.hidden = visible;
+      if (visible) { showLogin("login"); return; }
+      landingScreen.hidden = true;
+      authScreen.hidden = true;
+      appElement.hidden = false;
+      accountControls.hidden = false;
     }
 
     function clearAccountMemory() {
@@ -296,19 +679,38 @@
       accountEmail.textContent = "";
     }
 
-    function restoreAccount(user) {
+    async function restoreAccount(user) {
       authenticatedUser = user;
       storageKey = historyStorageKey(user.sub);
       chats = loadChats();
+
+      try {
+        const response = await fetch("/api/workspace/chats", {
+          credentials: "same-origin",
+          cache: "no-store"
+        });
+        if (response.ok) {
+          const data = await response.json();
+          chats = mergeChatLists(chats, Array.isArray(data.chats) ? data.chats : []);
+          saveChats({ sync: false });
+        }
+      } catch (_) {
+        // Keep the browser cache available when the account store is temporarily unreachable.
+      }
+
       currentChatId = null;
       const mostRecent = [...chats].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
       if (mostRecent) currentChatId = mostRecent.id;
       accountEmail.textContent = user.email || "";
+      accountName.textContent = user.name || (user.email ? user.email.split("@")[0] : "Your account");
+      accountAvatar.textContent = (user.name || user.email || "A").trim().charAt(0).toUpperCase();
       renderHistory();
       renderConversation(mostRecent || null);
       setAuthVisible(false);
+      openChatView();
       resizeComposer();
       input.focus();
+      saveChats();
     }
 
     async function fetchCsrf() {
@@ -341,7 +743,8 @@
           return;
         }
         csrfToken = result.csrfToken || csrfToken;
-        restoreAccount(result.user);
+        if (homepageOnly) { window.location.assign("/"); return; }
+        await restoreAccount(result.user);
       } catch (_) {
         authError.textContent = "Google sign-in could not be completed. Please try again.";
       }
@@ -368,7 +771,7 @@
     }
 
     async function initializeAuthentication() {
-      setAuthVisible(true);
+      showLanding();
       authError.textContent = "";
       try {
         const configResponse = await fetch("/api/auth/config", { credentials: "same-origin", cache: "no-store" });
@@ -376,14 +779,14 @@
         await fetchCsrf();
         const meResponse = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
         const me = await meResponse.json();
+        authConfigError = config.configured ? "" : (config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.");
         if (me.authenticated && me.user) {
-          restoreAccount(me.user);
+          homepageHasSession = true;
+          if (!homepageOnly) await restoreAccount(me.user);
+          else showLanding();
           return;
         }
-        if (!config.configured) {
-          authError.textContent = config.error || "Google sign-in is not configured yet. Please contact Ari's administrator.";
-          return;
-        }
+        if (!config.configured) return;
         loadGoogleIdentity(config.clientId);
       } catch (_) {
         authError.textContent = "Ari sign-in is temporarily unavailable. Refresh the page to try again.";
@@ -416,14 +819,50 @@
       }
     }
 
-    function saveChats() {
+    function mergeChatLists(localChats, serverChats) {
+      const merged = new Map();
+      for (const chat of localChats) {
+        if (chat && typeof chat.id === "string" && Array.isArray(chat.messages)) merged.set(chat.id, chat);
+      }
+      for (const chat of serverChats) {
+        if (!chat || typeof chat.id !== "string" || !Array.isArray(chat.messages)) continue;
+        const existing = merged.get(chat.id);
+        if (!existing || Number(chat.updatedAt || 0) >= Number(existing.updatedAt || 0)) merged.set(chat.id, chat);
+      }
+      return [...merged.values()]
+        .sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || Number(b.updatedAt || 0) - Number(a.updatedAt || 0))
+        .slice(0, 200);
+    }
+
+    function saveChats(options = {}) {
       if (!storageKey) return false;
       try {
         localStorage.setItem(storageKey, JSON.stringify(chats));
-        return true;
       } catch (error) {
         return false;
       }
+
+      const targetSub = authenticatedUser?.sub;
+      if (options.sync !== false && targetSub && csrfToken) {
+        const snapshot = JSON.parse(JSON.stringify(chats));
+        chatSyncQueue = chatSyncQueue.catch(() => undefined).then(async () => {
+          if (!authenticatedUser || authenticatedUser.sub !== targetSub) return;
+          const response = await fetch("/api/workspace/chats", {
+            method: "PUT",
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: csrfHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({ chats: snapshot })
+          });
+          if (!response.ok) throw new Error("HTTP " + response.status);
+        }).catch(() => {
+          if (authenticatedUser && authenticatedUser.sub === targetSub) {
+            composerNotice.textContent = "Your latest chats are saved on this device, but Ari couldn't sync them to your account yet.";
+            composerNotice.hidden = false;
+          }
+        });
+      }
+      return true;
     }
 
     function currentChat() {
@@ -513,9 +952,11 @@
         select.title = chat.title || "New chat";
         select.addEventListener("click", () => {
           currentChatId = chat.id;
+          openChatView();
           renderConversation(chat);
           renderHistory();
           sidebar.classList.remove("open");
+          app.classList.remove("mobile-sidebar-open");
           input.focus();
         });
 
@@ -606,6 +1047,7 @@
     document.addEventListener("click", event => {
       if (!event.target.closest(".history-actions")) hideHistoryActions();
       if (!event.target.closest(".attach-wrap")) setAttachMenuOpen(false);
+      if (!event.target.closest("#account-controls")) closeAccountMenu();
     });
     document.addEventListener("keydown", event => {
       if (event.key === "Escape") { hideHistoryActions(); setAttachMenuOpen(false); }
@@ -616,6 +1058,8 @@
       renderConversation(null);
       renderHistory();
       sidebar.classList.remove("open");
+      app.classList.remove("mobile-sidebar-open");
+      openChatView();
       input.value = "";
       resizeComposer();
       input.focus();
@@ -630,6 +1074,18 @@
       const file = activeAttachmentInput.files && activeAttachmentInput.files[0];
       attachmentChip.hidden = !file;
       attachmentName.textContent = file ? file.name : "";
+      attachmentSize.textContent = file ? formatFileSize(file.size) : "";
+      const isImage = Boolean(file && file.type.startsWith("image/"));
+      if (attachmentObjectUrl) URL.revokeObjectURL(attachmentObjectUrl);
+      attachmentObjectUrl = "";
+      attachmentImagePreview.hidden = !isImage;
+      attachmentKind.hidden = isImage;
+      if (isImage) {
+        attachmentObjectUrl = URL.createObjectURL(file);
+        attachmentImagePreview.src = attachmentObjectUrl;
+      } else if (file) {
+        attachmentKind.textContent = file.name.split(".").pop().slice(0, 5).toUpperCase() || "FILE";
+      }
     }
 
     function setAttachMenuOpen(open) {
@@ -774,7 +1230,7 @@
         if (!response.ok) {
           if (response.status === 401) {
             clearAccountMemory();
-            setAuthVisible(true);
+            showLogin("login");
           }
           throw new Error(data.error || "The local Ari server returned an error.");
         }
@@ -842,7 +1298,7 @@
         if (!response.ok) throw new Error("Ari could not sign out safely. Refresh the page and try again.");
         csrfToken = result.csrfToken || csrfToken;
         clearAccountMemory();
-        setAuthVisible(true);
+        showLanding();
         authError.textContent = "";
       } catch (error) {
         composerNotice.textContent = error.message;
@@ -855,6 +1311,7 @@
       if (window.matchMedia("(max-width: 680px)").matches) {
         const open = !sidebar.classList.contains("open");
         sidebar.classList.toggle("open", open);
+        app.classList.toggle("mobile-sidebar-open", open);
         sidebarToggle.setAttribute("aria-expanded", String(open));
         sidebarToggle.setAttribute("aria-label", open ? "Close chat sidebar" : "Open chat sidebar");
       } else {
@@ -864,6 +1321,404 @@
         sidebarToggle.setAttribute("aria-label", collapsed ? "Show chat sidebar" : "Collapse chat sidebar");
         sidebarToggle.title = collapsed ? "Show chat sidebar" : "Collapse chat sidebar";
       }
+    });
+
+
+    function formatFileSize(bytes) {
+      if (!Number.isFinite(bytes) || bytes < 0) return "";
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function closeAccountMenu() {
+      accountMenu.hidden = true;
+      accountMenuToggle.setAttribute("aria-expanded", "false");
+    }
+
+    function openChatView() {
+      workspacePage.hidden = true;
+      conversation.hidden = false;
+      composerWrap.hidden = false;
+      viewTitle.textContent = currentChat()?.title || "New chat";
+      document.querySelectorAll("[data-workspace-page]").forEach(button => button.classList.remove("active"));
+      closeAccountMenu();
+    }
+
+
+    let upscaleSelectedFile = null;
+    let upscaleObjectUrl = "";
+
+    function renderUpscaleWorkspace() {
+      viewTitle.textContent = "Upscale";
+      workspacePage.innerHTML = `
+        <div class="workspace-page-inner ari-upscale">
+          <header class="upscale-head">
+            <div>
+              <p class="upscale-kicker">Ari workspace · Media tools</p>
+              <h2 class="upscale-title">Upscale</h2>
+              <p class="upscale-lede">Restore detail, improve clarity and enlarge video in a focused editing workspace.</p>
+            </div>
+            <div class="upscale-head-actions">
+              <span class="upscale-connection" title="The video export service has not been connected to Ari yet."><i></i> GPU not connected</span>
+              <button class="upscale-button primary" id="upscale-export" type="button">Export video <span aria-hidden="true">↗</span></button>
+            </div>
+          </header>
+
+          <div class="upscale-toolbar">
+            <div class="upscale-project-meta">
+              <span class="upscale-project-symbol" aria-hidden="true">▧</span>
+              <div class="upscale-project-name"><strong id="upscale-project-name">Untitled video project</strong><span id="upscale-media-meta">No media imported · Local preview</span></div>
+            </div>
+            <div class="upscale-toolbar-actions">
+              <input id="upscale-file" class="upscale-file-input" type="file" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,.mkv,.avi">
+              <button class="upscale-button" id="upscale-import" type="button">＋ Import video</button>
+              <button class="upscale-button" id="upscale-clear" type="button" disabled>Clear</button>
+            </div>
+          </div>
+
+          <div class="upscale-editor-grid">
+            <section class="upscale-preview-card" aria-label="Video preview and timeline">
+              <div class="upscale-preview-top"><strong>Preview</strong><span id="upscale-preview-resolution">Waiting for media</span></div>
+              <div class="upscale-stage" id="upscale-stage">
+                <video id="upscale-video" playsinline preload="metadata"></video>
+                <div class="upscale-empty-state">
+                  <div class="upscale-empty-icon">▧</div>
+                  <strong>Bring a video into Ari</strong>
+                  <p>Import an MP4, MOV or WebM file to preview it, review its duration and prepare an upscale export.</p>
+                  <button class="upscale-button" id="upscale-empty-import" type="button">Choose video</button>
+                </div>
+              </div>
+              <div class="upscale-player">
+                <button class="upscale-play" id="upscale-play" type="button" aria-label="Play video" disabled>▶</button>
+                <span class="upscale-timestamp"><span id="upscale-current-time">00:00</span> / <span id="upscale-duration">00:00</span></span>
+                <input class="upscale-seek" id="upscale-seek" type="range" min="0" max="1000" value="0" aria-label="Seek video" disabled>
+                <span class="upscale-timestamp" id="upscale-fps">— FPS</span>
+              </div>
+              <div class="upscale-timeline">
+                <div class="upscale-timeline-head"><span>Timeline</span><span id="upscale-timeline-duration">00:00</span></div>
+                <div class="upscale-timeline-track" id="upscale-timeline-track">
+                  <div class="upscale-clip-label"><span class="upscale-clip-tag">VIDEO</span><span id="upscale-clip-name">No clip loaded</span></div>
+                  <div class="upscale-playhead" id="upscale-playhead"></div>
+                </div>
+              </div>
+            </section>
+
+            <aside class="upscale-inspector" aria-label="Upscale settings">
+              <div class="upscale-inspector-head"><strong>Enhancement settings</strong><span>OUTPUT</span></div>
+              <div>
+                <span class="upscale-field-title">Processing mode</span>
+                <div class="upscale-mode" role="group" aria-label="Processing mode">
+                  <button type="button" class="active" data-upscale-mode="auto" aria-pressed="true">Auto</button>
+                  <button type="button" data-upscale-mode="manual" aria-pressed="false">Manual</button>
+                </div>
+              </div>
+              <div class="upscale-field">
+                <label for="upscale-scale">Output scale</label>
+                <select class="upscale-select" id="upscale-scale">
+                  <option value="2">2× · Balanced</option>
+                  <option value="4">4× · Maximum detail</option>
+                </select>
+              </div>
+              <div class="upscale-output-note"><span>Estimated output resolution</span><strong id="upscale-output-size">Import a video to calculate</strong></div>
+              <div class="upscale-setting-group" id="upscale-manual-controls">
+                <div class="upscale-setting">
+                  <div class="upscale-setting-line"><label for="upscale-sharpen">Sharpening</label><output data-value-for="upscale-sharpen">35</output></div>
+                  <input class="upscale-range" id="upscale-sharpen" type="range" min="0" max="100" value="35" disabled>
+                </div>
+                <div class="upscale-setting">
+                  <div class="upscale-setting-line"><label for="upscale-denoise">Denoise</label><output data-value-for="upscale-denoise">40</output></div>
+                  <input class="upscale-range" id="upscale-denoise" type="range" min="0" max="100" value="40" disabled>
+                </div>
+                <div class="upscale-setting">
+                  <div class="upscale-setting-line"><label for="upscale-detail">Detail recovery</label><output data-value-for="upscale-detail">55</output></div>
+                  <input class="upscale-range" id="upscale-detail" type="range" min="0" max="100" value="55" disabled>
+                </div>
+                <div class="upscale-setting">
+                  <div class="upscale-setting-line"><label for="upscale-contrast">Contrast</label><output data-value-for="upscale-contrast">50</output></div>
+                  <input class="upscale-range" id="upscale-contrast" type="range" min="0" max="100" value="50" disabled>
+                </div>
+                <div class="upscale-setting">
+                  <div class="upscale-setting-line"><label for="upscale-saturation">Saturation</label><output data-value-for="upscale-saturation">50</output></div>
+                  <input class="upscale-range" id="upscale-saturation" type="range" min="0" max="100" value="50" disabled>
+                </div>
+                <div class="upscale-setting">
+                  <div class="upscale-toggle-row"><label for="upscale-face">Face refinement</label><input class="upscale-switch" id="upscale-face" type="checkbox" disabled></div>
+                </div>
+              </div>
+              <div class="upscale-field">
+                <label for="upscale-quality">Export quality</label>
+                <select class="upscale-select" id="upscale-quality">
+                  <option value="high">High quality</option>
+                  <option value="balanced" selected>Balanced</option>
+                  <option value="compact">Smaller file</option>
+                </select>
+              </div>
+            </aside>
+          </div>
+
+          <section class="upscale-queue" aria-label="Export queue">
+            <div class="upscale-queue-head"><strong>Export queue</strong><span id="upscale-queue-count">0 jobs</span></div>
+            <div class="upscale-queue-empty" id="upscale-queue-empty">
+              <span class="upscale-queue-icon">◷</span>
+              <span><b>No exports yet</b>Export jobs and their real processing progress will appear here when the video processing service is connected.</span>
+            </div>
+            <p class="upscale-notice" id="upscale-notice" role="status" aria-live="polite"></p>
+          </section>
+
+          <div class="upscale-modal-backdrop" id="upscale-export-modal" hidden>
+            <section class="upscale-modal" role="dialog" aria-modal="true" aria-labelledby="upscale-export-title">
+              <p class="upscale-kicker">Export setup</p>
+              <h3 id="upscale-export-title">Ready when your GPU is.</h3>
+              <p id="upscale-export-description">Your video and settings are ready to be submitted, but Ari does not have an active video processing connection yet. No export has been started.</p>
+              <div class="upscale-output-note"><span>Selected output</span><strong id="upscale-export-summary">No video selected</strong></div>
+              <div class="upscale-modal-actions" style="margin-top:16px">
+                <button class="upscale-button" id="upscale-export-close" type="button">Close</button>
+                <button class="upscale-button primary" id="upscale-export-queue" type="button" disabled>GPU connection required</button>
+              </div>
+            </section>
+          </div>
+        </div>`;
+      conversation.hidden = true;
+      workspacePage.hidden = false;
+      composerWrap.hidden = true;
+      document.querySelectorAll("[data-workspace-page]").forEach(button => button.classList.toggle("active", button.dataset.workspacePage === "upscale"));
+      closeAccountMenu();
+      sidebar.classList.remove("open");
+      app.classList.remove("mobile-sidebar-open");
+      initializeUpscaleControls();
+    }
+
+    function initializeUpscaleControls() {
+      const byId = id => workspacePage.querySelector("#" + id);
+      const fileInput = byId("upscale-file");
+      const video = byId("upscale-video");
+      const stage = byId("upscale-stage");
+      const seek = byId("upscale-seek");
+      const play = byId("upscale-play");
+      const notice = byId("upscale-notice");
+      const scale = byId("upscale-scale");
+      const modal = byId("upscale-export-modal");
+      const formatTime = seconds => {
+        if (!Number.isFinite(seconds) || seconds < 0) return "00:00";
+        const minutes = Math.floor(seconds / 60);
+        const wholeSeconds = Math.floor(seconds % 60);
+        return String(minutes).padStart(2, "0") + ":" + String(wholeSeconds).padStart(2, "0");
+      };
+      const activeFileName = () => upscaleSelectedFile ? upscaleSelectedFile.name : "No video selected";
+      const renderScale = () => {
+        if (!upscaleSelectedFile || !video.videoWidth || !video.videoHeight) {
+          byId("upscale-output-size").textContent = "Import a video to calculate";
+          return;
+        }
+        const multiplier = Number(scale.value);
+        byId("upscale-output-size").textContent =
+          (video.videoWidth * multiplier) + " × " + (video.videoHeight * multiplier) + " px";
+      };
+      const setNotice = message => { notice.textContent = message || ""; };
+      const loadFile = file => {
+        if (!file) return;
+        if (!file.type.startsWith("video/") && !/\.(mp4|mov|webm|mkv|avi)$/i.test(file.name)) {
+          setNotice("Please choose a supported video file.");
+          return;
+        }
+        if (upscaleObjectUrl) URL.revokeObjectURL(upscaleObjectUrl);
+        upscaleSelectedFile = file;
+        upscaleObjectUrl = URL.createObjectURL(file);
+        video.src = upscaleObjectUrl;
+        video.load();
+        stage.classList.add("has-video");
+        byId("upscale-project-name").textContent = file.name.replace(/\.[^.]+$/, "") || "Video project";
+        byId("upscale-clip-name").textContent = file.name;
+        byId("upscale-media-meta").textContent = "Local preview · " + (file.size / (1024 * 1024)).toFixed(1) + " MB";
+        byId("upscale-preview-resolution").textContent = "Reading video…";
+        byId("upscale-clear").disabled = false;
+        play.disabled = false;
+        seek.disabled = false;
+        setNotice("Video loaded for local preview. Export remains unavailable until the GPU connection is configured.");
+        video.onloadedmetadata = () => {
+          byId("upscale-duration").textContent = formatTime(video.duration);
+          byId("upscale-current-time").textContent = "00:00";
+          byId("upscale-timeline-duration").textContent = formatTime(video.duration);
+          byId("upscale-preview-resolution").textContent = video.videoWidth + " × " + video.videoHeight;
+          byId("upscale-fps").textContent = "Preview";
+          renderScale();
+        };
+        video.onerror = () => setNotice("This video could not be decoded by the browser preview.");
+      };
+      byId("upscale-import").addEventListener("click", () => fileInput.click());
+      byId("upscale-empty-import").addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", () => {
+        loadFile(fileInput.files && fileInput.files[0]);
+        fileInput.value = "";
+      });
+      byId("upscale-clear").addEventListener("click", () => {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+        if (upscaleObjectUrl) URL.revokeObjectURL(upscaleObjectUrl);
+        upscaleObjectUrl = "";
+        upscaleSelectedFile = null;
+        stage.classList.remove("has-video");
+        byId("upscale-project-name").textContent = "Untitled video project";
+        byId("upscale-clip-name").textContent = "No clip loaded";
+        byId("upscale-media-meta").textContent = "No media imported · Local preview";
+        byId("upscale-preview-resolution").textContent = "Waiting for media";
+        byId("upscale-current-time").textContent = "00:00";
+        byId("upscale-duration").textContent = "00:00";
+        byId("upscale-timeline-duration").textContent = "00:00";
+        byId("upscale-output-size").textContent = "Import a video to calculate";
+        byId("upscale-clear").disabled = true;
+        play.disabled = true;
+        seek.disabled = true;
+        seek.value = 0;
+        byId("upscale-playhead").style.left = "0%";
+        play.textContent = "▶";
+        renderScale();
+        setNotice("");
+      });
+      byId("upscale-play").addEventListener("click", () => {
+        if (!upscaleSelectedFile) return;
+        if (video.paused) video.play().catch(() => setNotice("Browser playback could not start."));
+        else video.pause();
+      });
+      video.addEventListener("play", () => { play.textContent = "Ⅱ"; play.setAttribute("aria-label", "Pause video"); });
+      video.addEventListener("pause", () => { play.textContent = "▶"; play.setAttribute("aria-label", "Play video"); });
+      video.addEventListener("timeupdate", () => {
+        const duration = video.duration || 0;
+        if (!duration) return;
+        seek.value = String(Math.round(video.currentTime / duration * 1000));
+        byId("upscale-current-time").textContent = formatTime(video.currentTime);
+        byId("upscale-playhead").style.left = (video.currentTime / duration * 100) + "%";
+      });
+      seek.addEventListener("input", () => {
+        if (video.duration) video.currentTime = Number(seek.value) / 1000 * video.duration;
+      });
+      scale.addEventListener("change", renderScale);
+      workspacePage.querySelectorAll("[data-upscale-mode]").forEach(button => {
+        button.addEventListener("click", () => {
+          workspacePage.querySelectorAll("[data-upscale-mode]").forEach(item => {
+            const active = item === button;
+            item.classList.toggle("active", active);
+            item.setAttribute("aria-pressed", String(active));
+          });
+          const manual = button.dataset.upscaleMode === "manual";
+          workspacePage.querySelectorAll("#upscale-manual-controls input").forEach(input => { input.disabled = !manual; });
+          setNotice(manual ? "Manual controls selected. Their processing mapping will be enabled with the GPU export pipeline." : "Auto mode selected. Ari will use the automatic enhancement preset when GPU export is connected.");
+        });
+      });
+      workspacePage.querySelectorAll(".upscale-range").forEach(input => {
+        input.addEventListener("input", () => {
+          const output = workspacePage.querySelector('[data-value-for="' + input.id + '"]');
+          if (output) output.textContent = input.value;
+        });
+      });
+      const openExport = () => {
+        if (!upscaleSelectedFile) {
+          setNotice("Import a video before preparing an export.");
+          fileInput.click();
+          return;
+        }
+        byId("upscale-export-summary").textContent = activeFileName() + " · " +
+          scale.value + "× · " + (workspacePage.querySelector("[data-upscale-mode].active")?.dataset.upscaleMode || "auto") +
+          " · " + byId("upscale-quality").selectedOptions[0].textContent;
+        modal.hidden = false;
+      };
+      byId("upscale-export").addEventListener("click", openExport);
+      byId("upscale-export-close").addEventListener("click", () => { modal.hidden = true; });
+      modal.addEventListener("click", event => { if (event.target === modal) modal.hidden = true; });
+      const dropTarget = byId("upscale-stage");
+      dropTarget.addEventListener("dragover", event => { event.preventDefault(); dropTarget.classList.add("upscale-drop-active"); });
+      dropTarget.addEventListener("dragleave", () => dropTarget.classList.remove("upscale-drop-active"));
+      dropTarget.addEventListener("drop", event => {
+        event.preventDefault();
+        dropTarget.classList.remove("upscale-drop-active");
+        loadFile(event.dataTransfer?.files?.[0]);
+      });
+      if (upscaleSelectedFile && upscaleObjectUrl) {
+        loadFile(upscaleSelectedFile);
+      }
+    }
+
+    function openWorkspacePage(page) {
+      if (page === "upscale") { renderUpscaleWorkspace(); return; }
+      const pages = {
+        library: {
+          title: "Library", kicker: "Your files",
+          description: "A home for the images, documents and other files you use with Ari. Account-level storage is being built separately so uploads can remain private to your account.",
+          body: '<div class="page-empty"><div class="page-empty-icon">▤</div><h3>Your Library is taking shape.</h3><p>Files you attach to conversations will have a dedicated home here once account-level storage is connected. For now, existing chat attachments remain part of their conversations.</p></div><p class="page-inline-note">Planned limits: a per-user storage quota and a 100 MB maximum file size, enforced by the server.</p>'
+        },
+        projects: {
+          title: "Projects", kicker: "Workspaces",
+          description: "Keep related conversations together. Each project will have its own context and conversations without duplicating them in your general recent-chat list.",
+          body: '<div class="page-empty"><div class="page-empty-icon">▱</div><h3>Make space for a project.</h3><p>Project workspaces are part of the conversation-management layer. Their layout is ready; project creation and chat assignment will be connected to the database before they become active.</p></div>'
+        },
+        profile: {
+          title: "Profile / About You", kicker: "Your account",
+          description: "Manage the identity Ari uses when it works with you.",
+          body: '<div class="page-card"><h3>Account details</h3><div class="setting-row"><div><strong>Display name</strong><span id="profile-display-name">Your account name</span></div><span class="setting-value">Google account</span></div><div class="setting-row"><div><strong>Email address</strong><span id="profile-email">Your verified email</span></div><span class="setting-value">Verified by Google</span></div><p class="page-inline-note">Editable profile details will be connected when the account database is added.</p></div>'
+        },
+        memory: {
+          title: "Memory", kicker: "What Ari remembers",
+          description: "Review the useful details Ari can carry between conversations. You stay in control of what is saved.",
+          body: '<div class="page-grid"><div class="page-card"><div class="page-card-icon">◇</div><h3>Review mode</h3><p>The planned default is Review: useful, non-sensitive details can be surfaced for your inspection and management.</p></div><div class="page-card"><div class="page-card-icon">⌁</div><h3>Private by design</h3><p>Passwords, credentials and sensitive personal information should not be saved as ordinary memories.</p></div></div><div class="page-empty" style="margin-top:16px"><h3>Your memory space is not connected yet.</h3><p>Nothing is being added to persistent memory from this page. Add, edit, review and delete controls will arrive with the account database.</p></div>'
+        },
+        settings: {
+          title: "Settings", kicker: "Make Ari yours",
+          description: "Your workspace preferences, privacy choices and account controls will live here.",
+          body: '<div class="page-card"><div class="setting-row"><div><strong>Appearance</strong><span>Workspace theme and contrast.</span></div><span class="setting-value">Charcoal · Seafoam</span></div><div class="setting-row"><div><strong>Chat layout</strong><span>Wide conversation area with a responsive composer.</span></div><span class="setting-value">Wide</span></div><div class="setting-row"><div><strong>Memory mode</strong><span>Review useful memories before they become part of your profile.</span></div><span class="setting-value">Review · planned</span></div><div class="setting-row"><div><strong>Privacy and data</strong><span>Manage sessions, saved files and account information.</span></div><span class="setting-value">In progress</span></div></div>'
+        },
+        "delete-account": {
+          title: "Delete Account", kicker: "Account controls",
+          description: "Account deletion will require verification before any account data is removed.",
+          body: '<div class="page-card"><h3>Delete your Ari account</h3><p>This action will eventually remove your profile, saved conversations, memory entries and stored files. A verification step and a clear final confirmation will be required.</p><p class="page-inline-note">The deletion endpoint is not connected yet. Nothing can be deleted from this screen.</p></div>'
+        }
+      };
+      const data = pages[page] || pages.settings;
+      viewTitle.textContent = data.title;
+      workspacePage.innerHTML = '<div class="workspace-page-inner"><p class="page-kicker">' + data.kicker + '</p><h2 class="page-title">' + data.title + '</h2><p class="page-description">' + data.description + '</p>' + data.body + '</div>';
+      conversation.hidden = true;
+      workspacePage.hidden = false;
+      composerWrap.hidden = true;
+      document.querySelectorAll("[data-workspace-page]").forEach(button => button.classList.toggle("active", button.dataset.workspacePage === page));
+      closeAccountMenu();
+      sidebar.classList.remove("open");
+      app.classList.remove("mobile-sidebar-open");
+      if (page === "profile" && authenticatedUser) {
+        const name = workspacePage.querySelector("#profile-display-name");
+        const email = workspacePage.querySelector("#profile-email");
+        if (name) name.textContent = authenticatedUser.name || "Name not provided";
+        if (email) email.textContent = authenticatedUser.email || "No email available";
+      }
+    }
+
+    function beginSignIn() {
+      if (homepageHasSession) { window.location.assign("/"); return; }
+      showLogin("login");
+    }
+
+    landingSignIn.addEventListener("click", beginSignIn);
+    landingGetStarted.addEventListener("click", beginSignIn);
+    landingOpenChat.addEventListener("click", beginSignIn);
+    authBackButton.addEventListener("click", showLanding);
+    for (const tab of authTabs) {
+      tab.addEventListener("click", () => { setAuthMode(tab.dataset.authMode); authError.textContent = authConfigError; });
+    }
+    document.querySelectorAll("[data-workspace-page]").forEach(button => {
+      button.addEventListener("click", () => openWorkspacePage(button.dataset.workspacePage));
+    });
+    document.querySelectorAll("[data-account-page]").forEach(button => {
+      button.addEventListener("click", () => openWorkspacePage(button.dataset.accountPage));
+    });
+    accountMenuToggle.addEventListener("click", () => {
+      const open = accountMenu.hidden;
+      accountMenu.hidden = !open;
+      accountMenuToggle.setAttribute("aria-expanded", String(open));
+    });
+    sidebarBackdrop.addEventListener("click", () => {
+      sidebar.classList.remove("open");
+      app.classList.remove("mobile-sidebar-open");
+      sidebarToggle.setAttribute("aria-expanded", "false");
     });
 
     renderHistory();
