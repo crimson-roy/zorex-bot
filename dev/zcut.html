@@ -72,7 +72,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .clip .h{position:absolute;top:0;bottom:0;width:14px;background:#fff;display:none;align-items:center;justify-content:center;cursor:ew-resize}
 .clip .h::after{content:"";width:2px;height:14px;border-radius:2px;background:#333}
 .clip.sel .h{display:flex}.clip .h.l{left:0}.clip .h.r{right:0}
-.kf{position:absolute;top:5px;width:13px;height:13px;margin-left:-6.5px;transform:rotate(45deg);background:var(--key);border:2px solid #fff3;border-radius:2px;touch-action:none;z-index:2;cursor:ew-resize}
+.kf{position:absolute;top:5px;width:13px;height:13px;margin-left:-6.5px;transform:rotate(45deg);background:var(--key);border:2px solid #fff3;border-radius:2px;touch-action:pan-x pan-y;z-index:2;cursor:ew-resize}
 .kf.ease{border-radius:50%;transform:none}.kf.ein{border-radius:50% 2px 2px 50%;transform:none}.kf.eout{border-radius:2px 50% 50% 2px;transform:none}.kf.hold{background:#ffd34d;border-radius:1px;transform:none}.kf.sel{border-color:#fff;box-shadow:0 0 0 2px var(--blade)}
 .blade{position:absolute;top:0;bottom:0;left:0;width:14px;margin-left:-7px;z-index:5;cursor:ew-resize;touch-action:none}
 .blade::after{content:"";position:absolute;top:0;bottom:0;left:6px;width:2px;background:var(--blade);box-shadow:0 0 0 1px #0006}
@@ -107,10 +107,13 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 @media (min-width:760px){.sheet.wide{width:min(680px,94vw)}}
 .graph{position:absolute;left:0;right:0;top:46px;bottom:0;z-index:4;background:#121418;touch-action:none;width:100%;height:calc(100% - 46px)}
 .graph[hidden],.gtools[hidden]{display:none}
-.gtools{position:absolute;right:10px;top:52px;z-index:6;display:flex;gap:4px;align-items:center;font-size:11px;color:var(--mute)}
-.gtools button{height:24px;padding:0 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel);font-size:11px;color:var(--mute)}
+.gtools{position:absolute;left:7px;right:7px;top:51px;z-index:6;display:flex;gap:4px;align-items:center;font-size:11px;color:var(--mute);overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.gtools::-webkit-scrollbar{display:none}
+.gtools button{flex:none;height:27px;padding:0 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel);font-size:11px;color:var(--mute)}
 .gtools button.on{color:var(--ink);border-color:var(--blade)}
-.gtools span{margin-left:6px;max-width:300px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.gtools .gsep{flex:none;width:1px;height:18px;background:var(--line);margin:0 2px}
+.gtools #glabel{margin-left:auto;max-width:180px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:10px}
+@media(max-width:759px){.gtools{top:48px;left:4px;right:4px;gap:3px}.gtools button{height:32px;padding:0 10px}.gtools #glabel{display:none}}
 @media (min-width:800px) and (max-width:1199px){
   .transport{gap:4px;padding:4px 6px}.transport .play{width:38px;height:38px}
   .trims{gap:2px;margin-right:4px}.trims .ib{width:28px;height:28px}.trims .sep{margin:6px 1px}
@@ -192,7 +195,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .tw{width:20px;height:22px;display:grid;place-items:center;color:var(--mute);flex:none}
 .tw svg.i{width:14px;height:14px;transition:transform .15s}.tw.open svg.i{transform:rotate(90deg)}
 .tw.nokeys{opacity:.45}
-.scroll.selmode,.scroll.selmode .clip{touch-action:none}
+.scroll.selmode,.scroll.selmode .clip{touch-action:pan-x pan-y}
 .selbar{display:none;position:absolute;right:8px;bottom:8px;z-index:6;padding:4px 10px;border-radius:999px;background:var(--blade);color:#fff;font-size:11px;font-weight:800;pointer-events:none}
 .selmode~.selbar{display:block}
 .clip .cbar{position:absolute;left:0;bottom:0;height:3px;background:#3ddc84;pointer-events:none;transition:width .2s}
@@ -368,7 +371,15 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
     <div class="area">
       <div class="scroll" id="scroll"><div class="strip" id="strip"></div></div>
       <canvas class="graph" id="graph" hidden></canvas>
-      <div class="gtools" id="gtools" hidden><button data-gm="value">Value</button><button data-gm="speed">Speed</button><button data-gcurves>Ease presets</button><span id="glabel"></span></div>
+      <div class="gtools" id="gtools" hidden>
+      <button data-gt="select" class="on">Select</button><button data-gt="move">Move</button><button data-gt="pan">Hand</button>
+      <button data-gmulti>Multi</button><span class="gsep"></span>
+      <button data-gm="value" class="on">Value</button><button data-gm="speed">Speed</button>
+      <span class="gsep"></span><button id="gZoomOut" aria-label="Zoom graph out">−</button><button id="gZoomIn" aria-label="Zoom graph in">+</button>
+      <button id="gFit">Fit All</button><button id="gFitSel">Fit Keys</button><button id="gYFit">Fit Y</button>
+      <button id="gYOut" aria-label="Zoom graph values out">Y−</button><button id="gYIn" aria-label="Zoom graph values in">Y+</button>
+      <button data-gcurves>Ease</button><span id="glabel"></span>
+    </div>
       <div class="tlzoom" aria-label="Timeline zoom"><button type="button" id="tlZoomOut" aria-label="Zoom timeline out">−</button><button type="button" id="tlZoomIn" aria-label="Zoom timeline in">+</button><button type="button" id="tlZoomFit" aria-label="Fit timeline">Fit</button></div><div class="blade" id="blade" data-tip="Playhead: drag to move"></div><div class="marq" id="marq"></div><div class="selbar">Select mode: tap or drag a box</div>
     </div>
   </section>
@@ -473,7 +484,10 @@ const localT = c => clamp(T - c.start, 0, c.dur);
 const segCurve = (a, b) => a.curve ? a.curve.slice() : (() => { const eo = easeOut(a), ei = easeIn(a, b); return [eo || 1 / 3, eo ? 0 : 1 / 3, ei ? 1 - ei : 2 / 3, ei ? 1 : 2 / 3]; })();
 const CURVES = {
   "Linear": [0.333, 0.333, 0.667, 0.667], "Easy Ease": [0.333, 0, 0.667, 1], "Ease In": [0.42, 0, 1, 1], "Ease Out": [0, 0, 0.58, 1], "Ease In-Out": [0.42, 0, 0.58, 1],
-  "Smooth": [0.25, 0.1, 0.25, 1], "Quad Out": [0.5, 1, 0.89, 1], "Cubic In-Out": [0.65, 0, 0.35, 1], "Quint Out": [0.22, 1, 0.36, 1],
+  "Smooth": [0.25, 0.1, 0.25, 1],
+  "Ease In Quad": [0.55, 0.085, 0.68, 0.53], "Ease Out Quad": [0.25, 0.46, 0.45, 0.94], "Ease In-Out Quad": [0.455, 0.03, 0.515, 0.955],
+  "Ease In Cubic": [0.55, 0.055, 0.675, 0.19], "Ease Out Cubic": [0.215, 0.61, 0.355, 1], "Ease In-Out Cubic": [0.645, 0.045, 0.355, 1],
+  "Quad Out": [0.5, 1, 0.89, 1], "Cubic In-Out": [0.65, 0, 0.35, 1], "Quint Out": [0.22, 1, 0.36, 1],
   "Expo In": [0.7, 0, 0.84, 0], "Expo Out": [0.16, 1, 0.3, 1], "Expo In-Out": [0.87, 0, 0.13, 1], "Circ In-Out": [0.85, 0, 0.15, 1],
   "Velocity Ramp (edit)": [0.95, 0, 0.05, 1], "Snap": [0.9, 0, 0.1, 1], "Slow Middle": [0.1, 0.9, 0.9, 0.1], "Fast Start": [0, 0.7, 0.3, 1],
   "Back In": [0.36, 0, 0.66, -0.56], "Back Out": [0.34, 1.56, 0.64, 1], "Back In-Out": [0.68, -0.6, 0.32, 1.6], "Anticipate": [0.5, -0.4, 0.6, 1], "Overshoot": [0.2, 1.4, 0.5, 1]
@@ -660,7 +674,7 @@ Object.assign(FX, {
   } },
   motiontile: { name: "Motion Tile", cat: "Stylize", p: [["tcx", "Tile Center X", -1080, 1080, 0, "px"], ["tcy", "Tile Center Y", -1920, 1920, 0, "px"], ["tw", "Tile Width", 1, 100, 100, "%"], ["th", "Tile Height", 1, 100, 100, "%"], ["ow", "Output Width", 100, 500, 300, "%"], ["oh", "Output Height", 100, 500, 300, "%"], ["mirror", "Mirror Edges", 0, 1, 1, ""], ["phase", "Phase", -360, 360, 0, "°"], ["hshift", "Horizontal Phase Shift", 0, 1, 0, ""]], post: fxMotionTile },
   xform: { name: "Transform (Skew)", cat: "Distort", p: [["skew", "Skew", -85, 85, 0, "°"], ["axis", "Skew Axis", -180, 180, 0, "°"], ["px", "Position X", -2000, 2000, 0, "px"], ["py", "Position Y", -2000, 2000, 0, "px"], ["scale", "Scale", 1, 500, 100, "%"], ["sw", "Scale Width", 1, 500, 100, "%"], ["rot", "Rotation", -720, 720, 0, "°"], ["edges", "Edges (0 auto · 1 clear · 2 mirror · 3 repeat)", 0, 3, 0, ""], ["shutter", "Shutter Angle (motion blur)", 0, 720, 180, "°"], ["opacity", "Opacity", 0, 100, 100, "%"]], post: fxTransform },
-  squish: { name: "Squish (Pudding Bounce)", cat: "Distort", p: [["amount", "Bounce Amount", 0, 100, 30, "%"], ["speed", "Bounces per Second", 0.5, 12, 3.5, ""], ["decay", "Auto Settle", 0, 10, 0, "s"], ["squish", "Squish (manual)", -80, 200, 0, "%"], ["skx", "Skew X", -60, 60, 0, "°"], ["sky", "Skew Y", -60, 60, 0, "°"], ["wobble", "Skew Wobble", 0, 30, 0, "°"], ["anchor", "Anchor (0 center · 1 bottom · 2 top)", 0, 2, 1, ""], ["beat", "Beat Mode (audio)", 0, 1, 0, ""]], pre: true },
+  squish: { name: "Squish (Pudding Bounce)", cat: "Distort", p: [["amount", "Bounce Amount", 0, 100, 30, "%"], ["speed", "Bounces per Second", 0.5, 12, 3.5, ""], ["decay", "Auto Settle", 0, 10, 0, "s"], ["squish", "Squish (manual)", -80, 200, 0, "%"], ["skx", "Skew X", -60, 60, 0, "°"], ["sky", "Skew Y", -60, 60, 0, "°"], ["wobble", "Skew Wobble", 0, 30, 0, "°"], ["anchor", "Anchor (0 center · 1 bottom · 2 top)", 0, 2, 1, ""], ["lock", "Lock Clip Edges", 0, 1, 1, ""], ["beat", "Beat Mode (audio)", 0, 1, 0, ""]], pre: true },
   pixelsort: { name: "Pixel Sort", cat: "Stylize", p: [["thr", "Brightness Threshold", 0, 255, 120, ""], ["dir", "Vertical", 0, 1, 0, ""], ["rev", "Reverse", 0, 1, 0, ""]], post: (cnv, v) => pixels(cnv, (d, w, h) => { const vert = v.dir >= 0.5, len = vert ? h : w, lines = vert ? w : h, idx = (ln, p) => (vert ? p * w + ln : ln * w + p) * 4, buf = []; for (let ln = 0; ln < lines; ln++) { let p = 0; while (p < len) { while (p < len && lumaOf(d, idx(ln, p)) < v.thr) p++; const s = p; while (p < len && lumaOf(d, idx(ln, p)) >= v.thr) p++; if (p - s > 1) { buf.length = 0; for (let q = s; q < p; q++) { const i = idx(ln, q); buf.push([lumaOf(d, i), d[i], d[i + 1], d[i + 2], d[i + 3]]); } buf.sort((a, b) => v.rev >= 0.5 ? b[0] - a[0] : a[0] - b[0]); for (let q = s; q < p; q++) { const i = idx(ln, q), e = buf[q - s]; d[i] = e[1]; d[i + 1] = e[2]; d[i + 2] = e[3]; d[i + 3] = e[4]; } } } } }) },
   stroke: { name: "Stroke / Outline", cat: "Perspective", p: [["width", "Width", 0, 60, 6, "px"], ["opacity", "Opacity", 0, 100, 100, "%"]], colors: [["color", "Color", "#ffffff"]], post: (cnv, v, f, c, l, inst) => { if (v.width <= 0) return; const src = tmpCopy(cnv, "fxt"), solid = solidCopy(src, colOf(inst, "color"), "fxt2"), W = v.width * f; withCtx(cnv, (x, w, h) => { x.clearRect(0, 0, w, h); x.globalAlpha = v.opacity / 100; for (let a = 0; a < 16; a++) x.drawImage(solid, Math.cos(a / 16 * 2 * Math.PI) * W, Math.sin(a / 16 * 2 * Math.PI) * W); x.globalAlpha = 1; x.drawImage(src, 0, 0); }); } },
   chroma: { name: "Chromatic Aberration (Lens)", cat: "Stylize", p: [["amount", "Amount", 0, 100, 20, ""], ["cx", "Center X", -1080, 1080, 0, "px"], ["cy", "Center Y", -1920, 1920, 0, "px"]], post: (cnv, v, f) => { if (v.amount <= 0) return; const src = tmpCopy(cnv, "fxt"), r = tinted(src, "#f00", "fxr"), g = tinted(src, "#0f0", "fxg"), b = tinted(src, "#00f", "fxb"), [cx, cy] = centerOf(cnv, v, f), k = v.amount / 1000; withCtx(cnv, (x, w, h) => { x.clearRect(0, 0, w, h); x.globalCompositeOperation = "lighter"; const put = (img, s) => { x.setTransform(s, 0, 0, s, cx * (1 - s), cy * (1 - s)); x.drawImage(img, 0, 0); }; put(r, 1 + k); put(g, 1); put(b, 1 - k); }); } },
@@ -1123,89 +1137,300 @@ function render() {
   updateClock(); renderDock(); renderTabs(); placeBlade(); paintCacheBars(); scheduleCache(); drawGraph();
 }
 // Graph Editor: value graph (drag keys up/down and sideways) or speed graph; ease handles set the influence
-function toggleGraph() { graphOn = !graphOn; render(); toast(graphOn ? "Graph Editor on (Shift+F3)" : "Graph Editor off"); }
+function toggleGraph() { graphOn = !graphOn; render(); if (graphOn) fitGraph(false); toast(graphOn ? "Graph Editor on (Shift+F3)" : "Graph Editor off"); }
 function graphProps() {
   const out = [];
   for (const [q, r] of selKeys) if (!out.some(o => o.id === r.id && o.k === r.k)) out.push({ id: r.id, k: r.k });
   if (!out.length) { const c = sel(); if (c) { const anim = allProps(c).filter(p => c.props[p[0]] && c.props[p[0]].keys.length).map(p => p[0]); const ks = activeProp && anim.includes(activeProp) ? [activeProp] : anim.slice(0, 1); for (const k of ks) out.push({ id: c.id, k }); } }
   return out.slice(0, 3).map(o => ({ ...o, c: findClip(o.id) })).filter(o => o.c && o.c.props[o.k] && o.c.props[o.k].keys.length);
 }
+const GRAPH_LEFT = 72;
 let gHits = [];
+function graphX(time) { return GRAPH_LEFT + (time - graphView.start) * graphView.pps; }
 function drawGraph() {
   const cvs = $("#graph"), gt = $("#gtools"); cvs.hidden = gt.hidden = !graphOn; if (!graphOn) return;
   const dpr = devicePixelRatio || 1, Wd = cvs.clientWidth, Hd = cvs.clientHeight; if (!Wd || !Hd) return;
-  if (cvs.width !== Math.round(Wd * dpr)) cvs.width = Math.round(Wd * dpr); if (cvs.height !== Math.round(Hd * dpr)) cvs.height = Math.round(Hd * dpr);
+  if (cvs.width !== Math.round(Wd * dpr)) cvs.width = Math.round(Wd * dpr);
+  if (cvs.height !== Math.round(Hd * dpr)) cvs.height = Math.round(Hd * dpr);
   const g2 = cvs.getContext("2d"); g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.clearRect(0, 0, Wd, Hd);
   gt.querySelectorAll("[data-gm]").forEach(b => b.classList.toggle("on", b.dataset.gm === graphMode));
+  gt.querySelectorAll("[data-gt]").forEach(b => b.classList.toggle("on", b.dataset.gt === graphTool));
+  const mb = gt.querySelector("[data-gmulti]"); if (mb) mb.classList.toggle("on", graphMulti);
   const props = graphProps(); gHits = [];
-  const X = (c, t) => PAD() + (c.start + t) * pps - scrollEl.scrollLeft;
-  g2.strokeStyle = "#22252c"; g2.lineWidth = 1; for (let y = 0.5; y < Hd; y += Hd / 6) { g2.beginPath(); g2.moveTo(0, y); g2.lineTo(Wd, y); g2.stroke(); }
-  if (!props.length) { $("#glabel").textContent = "Select a layer with keyframes, or select keyframes"; g2.fillStyle = "#5a6070"; g2.font = "600 12px Manrope, sans-serif"; g2.fillText("No animated property selected", 16, 24); return; }
+  const left = GRAPH_LEFT, right = Wd - 12, top = 43, bot = Hd - 25;
+  const visibleStart = graphView.start, visibleEnd = visibleStart + Math.max(1, right - left) / graphView.pps;
+  if (right <= left || bot <= top) return;
+
+  // Time ruler and graph grid.
+  const steps = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120];
+  const step = steps.find(v => v * graphView.pps >= 82) || 120;
+  g2.font = "10px ui-monospace, Menlo, monospace";
+  g2.textBaseline = "alphabetic";
+  g2.strokeStyle = "#242832"; g2.lineWidth = 1;
+  for (let t = Math.ceil(visibleStart / step) * step; t <= visibleEnd + 1e-5; t += step) {
+    const x = graphX(t);
+    g2.beginPath(); g2.moveTo(x + .5, top); g2.lineTo(x + .5, bot); g2.stroke();
+    g2.fillStyle = "#89909d"; g2.fillText(fmt(t), x + 3, bot + 16);
+  }
+  for (let i = 0; i <= 5; i++) {
+    const y = top + (bot - top) * i / 5;
+    g2.beginPath(); g2.moveTo(left, y + .5); g2.lineTo(right, y + .5); g2.stroke();
+  }
+  g2.strokeStyle = "#454b58"; g2.beginPath(); g2.moveTo(left, top); g2.lineTo(left, bot); g2.lineTo(right, bot); g2.stroke();
+
+  if (!props.length) {
+    $("#glabel").textContent = "Select a layer with keyframes";
+    g2.fillStyle = "#8d93a1"; g2.font = "600 12px Manrope, sans-serif";
+    g2.fillText("No animated property selected", left + 12, top + 26);
+    return;
+  }
   const colors = ["#ff5a3c", "#3fd0ff", "#ffd34d"];
-  $("#glabel").innerHTML = props.map((o, i) => `<b style="color:${colors[i]}">${PDEF[o.k][1]}</b>`).join(" · ");
-  const top = 18, bot = Hd - 14;
+  $("#glabel").textContent = props.map(o => PDEF[o.k][1]).join(" · ");
   props.forEach((o, ci) => {
     const c = o.c, ks = c.props[o.k].keys, k = o.k, col = colors[ci];
-    const t0 = Math.max(0, (scrollEl.scrollLeft - PAD()) / pps - c.start), t1 = Math.min(c.dur, t0 + Wd / pps);
-    const f = t => graphMode === "value" ? valueAt(c, k, t) : (valueAt(c, k, Math.min(c.dur, t + 0.004)) - valueAt(c, k, Math.max(0, t - 0.004))) / ((Math.min(c.dur, t + 0.004) - Math.max(0, t - 0.004)) || 1);
-    let lo = Infinity, hi = -Infinity; const N = Math.max(40, Math.round(Wd / 3));
-    const samples = []; for (let i = 0; i <= N; i++) { const t = (c.dur * i) / N, v = f(t); samples.push([t, v]); lo = Math.min(lo, v); hi = Math.max(hi, v); }
-    if (graphMode === "speed") { lo = Math.min(lo, 0); }
-    if (hi - lo < 1e-6) { hi += 1; lo -= 1; } const padv = (hi - lo) * 0.1; lo -= padv; hi += padv;
-    const Y = v => bot - (v - lo) / (hi - lo) * (bot - top), V = y => lo + (bot - y) / (bot - top) * (hi - lo);
-    if (graphMode === "speed" && k === "remap") { g2.strokeStyle = "#3a4152"; g2.setLineDash([4, 4]); g2.beginPath(); g2.moveTo(0, Y(1)); g2.lineTo(Wd, Y(1)); g2.stroke(); g2.setLineDash([]); g2.fillStyle = "#5a6070"; g2.fillText("1x", 6, Y(1) - 4); }
+    const localStart = Math.max(0, visibleStart - c.start), localEnd = Math.min(c.dur, visibleEnd - c.start);
+    if (localEnd < localStart) return;
+    const f = t => graphMode === "value"
+      ? valueAt(c, k, t)
+      : (valueAt(c, k, Math.min(c.dur, t + 0.004)) - valueAt(c, k, Math.max(0, t - 0.004))) /
+        ((Math.min(c.dur, t + 0.004) - Math.max(0, t - 0.004)) || 1);
+    let lo = Infinity, hi = -Infinity;
+    const N = Math.max(40, Math.round((right - left) / 2));
+    for (let i = 0; i <= N; i++) {
+      const t = localStart + (localEnd - localStart) * i / N, v = f(t);
+      lo = Math.min(lo, v); hi = Math.max(hi, v);
+    }
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) return;
+    if (graphMode === "speed" && lo > 0) lo = 0;
+    if (hi - lo < 1e-6) { hi += 1; lo -= 1; }
+    const originalSpan = hi - lo, center = (hi + lo) / 2 + graphView.yOffset * originalSpan;
+    const span = originalSpan / graphView.yZoom;
+    lo = center - span / 2; hi = center + span / 2;
+    const Y = v => bot - (v - lo) / (hi - lo) * (bot - top);
+    const V = y => lo + (bot - y) / (bot - top) * (hi - lo);
+
+    // Per-property legend and readable range labels.
+    g2.fillStyle = col; g2.font = "700 10px Manrope, sans-serif";
+    g2.fillText(PDEF[k][1], left + 8 + ci * 142, 15);
+    const fmt2 = v => graphMode === "value" ? fmtVal(v, PDEF[k]) : (k === "remap" ? v.toFixed(2) + "x" : v.toFixed(1) + PDEF[k][5] + "/s");
+    g2.fillStyle = "#8d93a1"; g2.font = "9px ui-monospace, Menlo, monospace";
+    g2.fillText(fmt2(hi), 5, top + 9 + ci * 12);
+    g2.fillText(fmt2(lo), 5, bot - 2 - ci * 12);
+    if (graphMode === "speed" && k === "remap") {
+      g2.strokeStyle = "#51596a"; g2.setLineDash([4, 4]); g2.beginPath();
+      g2.moveTo(left, Y(1)); g2.lineTo(right, Y(1)); g2.stroke(); g2.setLineDash([]);
+      g2.fillStyle = "#8d93a1"; g2.fillText("1x", left + 4, Y(1) - 4);
+    }
+
+    // Draw only the part of this property inside the independent graph viewport.
     g2.strokeStyle = col; g2.lineWidth = 2; g2.beginPath();
-    let first = true; for (let px = Math.max(0, X(c, 0)); px <= Math.min(Wd, X(c, c.dur)); px += 2) { const t = (px + scrollEl.scrollLeft - PAD()) / pps - c.start, v = f(clamp(t, 0, c.dur)); first ? g2.moveTo(px, Y(v)) : g2.lineTo(px, Y(v)); first = false; }
+    let first = true;
+    for (let px = Math.max(left, graphX(c.start + localStart)); px <= Math.min(right, graphX(c.start + localEnd)); px += 2) {
+      const t = clamp(graphView.start + (px - left) / graphView.pps - c.start, 0, c.dur), v = f(t);
+      if (first) { g2.moveTo(px, Y(v)); first = false; } else g2.lineTo(px, Y(v));
+    }
     g2.stroke();
+
     ks.forEach((q, i) => {
-      const x = X(c, q.t), y = graphMode === "value" ? Y(q.v) : Y(f(q.t)), isSel = selKeys.has(q);
-      // ease influence handles (horizontal, like After Effects)
-      const prev = ks[i - 1], next = ks[i + 1];
-      if (graphMode === "value" && next && q.ease !== "hold" && (selKeys.has(q) || selKeys.has(next) || q.curve || easeOut(q) || easeIn(q, next))) {
-        const cv4 = segCurve(q, next), dt = next.t - q.t, dv = next.v - q.v, nx = X(c, next.t), ny = Y(next.v);
-        const h1 = [X(c, q.t + cv4[0] * dt), Y(q.v + cv4[1] * dv)], h2 = [X(c, q.t + cv4[2] * dt), Y(q.v + cv4[3] * dv)];
-        g2.strokeStyle = "#8d93a1"; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(x, y); g2.lineTo(h1[0], h1[1]); g2.moveTo(nx, ny); g2.lineTo(h2[0], h2[1]); g2.stroke();
-        g2.fillStyle = "#ffd34d"; for (const hp of [h1, h2]) { g2.beginPath(); g2.arc(hp[0], hp[1], 4.5, 0, 7); g2.fill(); }
-        gHits.push({ kind: "h1", x: h1[0], y: h1[1], q, nxt: next, c, k, Y, V, X0: X(c, 0) }, { kind: "h2", x: h2[0], y: h2[1], q, nxt: next, c, k, Y, V, X0: X(c, 0) });
+      const absoluteTime = c.start + q.t, x = graphX(absoluteTime);
+      if (x < left - 14 || x > right + 14) return;
+      const y = graphMode === "value" ? Y(q.v) : Y(f(q.t)), isSel = selKeys.has(q);
+      const next = ks[i + 1];
+      // Bézier influence handles remain editable in Move mode.
+      if (graphMode === "value" && next && next.t >= localStart && q.t <= localEnd &&
+          q.ease !== "hold" && (isSel || selKeys.has(next) || q.curve || easeOut(q) || easeIn(q, next))) {
+        const cv4 = segCurve(q, next), dt = next.t - q.t, dv = next.v - q.v;
+        const nx = graphX(c.start + next.t), ny = Y(next.v);
+        const h1 = [graphX(c.start + q.t + cv4[0] * dt), Y(q.v + cv4[1] * dv)];
+        const h2 = [graphX(c.start + q.t + cv4[2] * dt), Y(q.v + cv4[3] * dv)];
+        g2.strokeStyle = "#8d93a1"; g2.lineWidth = 1; g2.beginPath();
+        g2.moveTo(x, y); g2.lineTo(h1[0], h1[1]); g2.moveTo(nx, ny); g2.lineTo(h2[0], h2[1]); g2.stroke();
+        g2.fillStyle = "#ffd34d";
+        for (const hp of [h1, h2]) { g2.beginPath(); g2.arc(hp[0], hp[1], 5, 0, Math.PI * 2); g2.fill(); }
+        gHits.push(
+          { kind: "h1", x: h1[0], y: h1[1], q, nxt: next, c, k, Y, V },
+          { kind: "h2", x: h2[0], y: h2[1], q, nxt: next, c, k, Y, V }
+        );
       }
-      g2.fillStyle = isSel ? "#fff" : col; g2.strokeStyle = "#000"; g2.lineWidth = 1; g2.fillRect(x - 4.5, y - 4.5, 9, 9); g2.strokeRect(x - 4.5, y - 4.5, 9, 9);
+      g2.fillStyle = isSel ? "#fff" : col; g2.strokeStyle = "#0b0c0f"; g2.lineWidth = 1.3;
+      g2.fillRect(x - 5.5, y - 5.5, 11, 11); g2.strokeRect(x - 5.5, y - 5.5, 11, 11);
       gHits.push({ kind: "key", x, y, q, c, k, Y, V });
     });
-    g2.fillStyle = col; g2.font = "700 10.5px ui-monospace, Menlo, monospace";
-    const fmt2 = v => graphMode === "value" ? fmtVal(v, PDEF[k]) : (k === "remap" ? v.toFixed(2) + "x" : v.toFixed(1) + PDEF[k][5] + "/s");
-    g2.fillText(fmt2(hi - padv), 6 + ci * 110, top - 4 + 12); g2.fillText(fmt2(lo + padv), 6 + ci * 110, bot - 2);
   });
+
+  // Selection marquee.
+  if (graphDrag && graphDrag.kind === "marquee") {
+    const x = Math.min(graphDrag.x0, graphDrag.x1), y = Math.min(graphDrag.y0, graphDrag.y1);
+    const w = Math.abs(graphDrag.x1 - graphDrag.x0), h = Math.abs(graphDrag.y1 - graphDrag.y0);
+    g2.fillStyle = "#ff5a3c22"; g2.strokeStyle = "#ff8069"; g2.setLineDash([4, 3]);
+    g2.fillRect(x, y, w, h); g2.strokeRect(x, y, w, h); g2.setLineDash([]);
+  }
+}
+function fitGraph(selectedOnly = false) {
+  const cvs = $("#graph"); if (!cvs) return;
+  const props = graphProps(), times = [];
+  if (selectedOnly && selKeys.size) {
+    for (const [q, r] of selKeys) { const c = findClip(r.id); if (c) times.push(c.start + q.t); }
+  } else {
+    for (const o of props) for (const q of o.c.props[o.k].keys) times.push(o.c.start + q.t);
+  }
+  if (!times.length) { graphView.start = 0; graphView.pps = 90; graphView.yZoom = 1; graphView.yOffset = 0; return drawGraph(); }
+  let a = Math.min(...times), b = Math.max(...times);
+  const pad = Math.max(0.18, (b - a) * 0.12);
+  a -= pad; b += pad;
+  graphView.start = a;
+  graphView.pps = clamp((cvs.clientWidth - GRAPH_LEFT - 18) / Math.max(0.2, b - a), 8, 600);
+  graphView.yZoom = 1; graphView.yOffset = 0;
+  drawGraph();
+}
+function zoomGraph(factor, clientX) {
+  const cvs = $("#graph"), rect = cvs.getBoundingClientRect();
+  const x = Number.isFinite(clientX) ? clientX - rect.left : rect.width / 2;
+  const time = graphView.start + (x - GRAPH_LEFT) / graphView.pps;
+  const next = clamp(graphView.pps * factor, 8, 600);
+  graphView.pps = next;
+  graphView.start = time - (x - GRAPH_LEFT) / next;
+  drawGraph();
 }
 {
   const cvs = $("#graph"); let gd = null;
+  const hitAt = (x, y) => gHits.filter(h => Math.hypot(h.x - x, h.y - y) < 12)
+    .sort((a, b) => (a.kind === "key") - (b.kind === "key"))[0];
+  const syncKeySelection = () => {
+    strip.querySelectorAll(".kf").forEach(el => { const q = keyFromEl(el); if (q) el.classList.toggle("sel", selKeys.has(q.key)); });
+    drawGraph();
+  };
   cvs.addEventListener("pointerdown", e => {
+    if (e.button === 2) return;
     const r = cvs.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
-    const hit = gHits.filter(h => Math.hypot(h.x - x, h.y - y) < 10).sort((a, b) => (a.kind === "key") - (b.kind === "key"))[0];
-    if (!hit) { if (selKeys.size) { selKeys.clear(); render(); } return; }
-    e.preventDefault(); cvs.setPointerCapture(e.pointerId);
-    if (hit.kind === "key") { if (e.shiftKey || e.ctrlKey || selectMode) { selKeys.has(hit.q) ? selKeys.delete(hit.q) : selKeys.set(hit.q, { id: hit.c.id, k: hit.k }); } else if (!selKeys.has(hit.q)) { selKeys.clear(); selKeys.set(hit.q, { id: hit.c.id, k: hit.k }); } }
-    gd = { hit, x0: e.clientX, y0: e.clientY, t0: hit.q.t, v0: hit.q.v, inf0: hit.q[hit.kind], moved: false }; render();
+    const hit = hitAt(x, y);
+    if (graphTool === "pan" || e.button === 1) {
+      gd = { kind: "pan", x0: x, y0: y, moved: false };
+      graphDrag = gd; cvs.setPointerCapture(e.pointerId); e.preventDefault(); return;
+    }
+    if (graphTool === "select") {
+      if (hit && hit.kind === "key") {
+        const toggle = e.shiftKey || e.ctrlKey || e.metaKey || graphMulti;
+        if (toggle) { selKeys.has(hit.q) ? selKeys.delete(hit.q) : selKeys.set(hit.q, { id: hit.c.id, k: hit.k }); }
+        else if (!selKeys.has(hit.q)) { selKeys.clear(); selKeys.set(hit.q, { id: hit.c.id, k: hit.k }); }
+        syncKeySelection(); return;
+      }
+      const add = e.shiftKey || e.ctrlKey || e.metaKey || graphMulti;
+      const base = new Map(selKeys);
+      if (!add) selKeys.clear();
+      gd = { kind: "marquee", x0: x, y0: y, x1: x, y1: y, add, base, moved: false };
+      graphDrag = gd; cvs.setPointerCapture(e.pointerId); e.preventDefault(); drawGraph(); return;
+    }
+    if (graphTool !== "move" || !hit) return;
+    if (hit.kind === "key") {
+      if (!selKeys.has(hit.q)) {
+        if (!graphMulti && !e.shiftKey && !e.ctrlKey && !e.metaKey) selKeys.clear();
+        selKeys.set(hit.q, { id: hit.c.id, k: hit.k });
+      }
+      const items = [...selKeys].map(([q, ref]) => {
+        const c = findClip(ref.id), h = gHits.find(v => v.kind === "key" && v.q === q);
+        return c && h ? { q, ref, c, h, t0: q.t, v0: q.v } : null;
+      }).filter(Boolean);
+      gd = { kind: "keys", hit, x0: x, y0: y, items, moved: false, committed: false };
+    } else {
+      gd = { kind: "handle", hit, x0: x, y0: y, moved: false, committed: false };
+    }
+    graphDrag = gd; cvs.setPointerCapture(e.pointerId); e.preventDefault(); drawGraph();
   });
   cvs.addEventListener("pointermove", e => {
-    if (!gd) return; const dx = e.clientX - gd.x0, dy = e.clientY - gd.y0;
-    if (!gd.moved && Math.hypot(dx, dy) < 3) return; if (!gd.moved) { gd.moved = true; commit(); }
-    const h = gd.hit, c = h.c;
-    if (h.kind === "key") {
-      if (Math.abs(dx) > 2 || e.altKey) h.q.t = +clamp(gd.t0 + dx / pps, 0, c.dur).toFixed(4);
-      if (graphMode === "value") { const r = $("#graph").getBoundingClientRect(); h.q.v = +h.V(h.Y(gd.v0) + dy).toFixed(3); }
-      c.props[h.k].keys.sort((a, b) => a.t - b.t);
-    } else {                                           // drag a curve handle anywhere: time sets the influence, value sets the overshoot
-      const r = $("#graph").getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, q = h.q, n = h.nxt, dt = n.t - q.t || 1e-6, dv = n.v - q.v;
-      const tt = (mx - h.X0) / pps, u = clamp((tt - q.t) / dt, 0, 1), w = Math.abs(dv) > 1e-9 ? (h.V(my) - q.v) / dv : (h.kind === "h1" ? 0 : 1);
-      const cur = segCurve(q, n); if (h.kind === "h1") { cur[0] = +u.toFixed(3); cur[1] = +clamp(w, -2, 3).toFixed(3); } else { cur[2] = +u.toFixed(3); cur[3] = +clamp(w, -2, 3).toFixed(3); }
-      q.curve = cur; if (q.ease === "ease") q.ease = "linear";
+    if (!gd) return;
+    const r = cvs.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    const dx = x - gd.x0, dy = y - gd.y0;
+    if (gd.kind === "pan") {
+      if (Math.abs(dx) + Math.abs(dy) < 1) return;
+      gd.moved = true;
+      graphView.start -= dx / graphView.pps;
+      graphView.yOffset = clamp(graphView.yOffset + dy / Math.max(120, cvs.clientHeight) * 1.5 / graphView.yZoom, -3, 3);
+      gd.x0 = x; gd.y0 = y; drawGraph(); return;
     }
-    render(); refreshHot(); refreshBar();
+    if (gd.kind === "marquee") {
+      if (!gd.moved && Math.hypot(dx, dy) > 3) gd.moved = true;
+      gd.x1 = x; gd.y1 = y; drawGraph(); return;
+    }
+    if (!gd.moved && Math.hypot(dx, dy) < 3) return;
+    if (!gd.moved) { gd.moved = true; commit(); }
+    if (gd.kind === "keys") {
+      const dt = dx / graphView.pps;
+      for (const it of gd.items) {
+        it.q.t = +clamp(it.t0 + dt, 0, it.c.dur).toFixed(4);
+        if (graphMode === "value") it.q.v = +it.h.V(it.h.Y(it.v0) + dy).toFixed(3);
+      }
+      const groups = new Map();
+      for (const it of gd.items) {
+        const id = it.c.id + "|" + it.ref.k;
+        if (!groups.has(id)) groups.set(id, { c: it.c, k: it.ref.k });
+      }
+      for (const { c, k } of groups.values()) c.props[k].keys.sort((a, b) => a.t - b.t);
+      render(); return;
+    }
+    if (gd.kind === "handle") {
+      const h = gd.hit, q = h.q, n = h.nxt, dt = n.t - q.t || 1e-6, dv = n.v - q.v;
+      const tt = graphView.start + (x - GRAPH_LEFT) / graphView.pps - h.c.start;
+      const u = clamp((tt - q.t) / dt, 0, 1);
+      const w = Math.abs(dv) > 1e-9 ? (h.V(y) - q.v) / dv : (h.kind === "h1" ? 0 : 1);
+      const cur = segCurve(q, n);
+      if (h.kind === "h1") { cur[0] = +u.toFixed(3); cur[1] = +clamp(w, -2, 3).toFixed(3); }
+      else { cur[2] = +u.toFixed(3); cur[3] = +clamp(w, -2, 3).toFixed(3); }
+      q.curve = cur; if (q.ease === "ease") q.ease = "linear";
+      render(); refreshHot(); refreshBar();
+    }
   });
-  const end = () => { gd = null; };
-  cvs.addEventListener("pointerup", end); cvs.addEventListener("pointercancel", end);
-  $("#gtools").addEventListener("click", e => { if (e.target.closest("[data-gcurves]")) return openCurves(); const b = e.target.closest("[data-gm]"); if (b) { graphMode = b.dataset.gm; drawGraph(); } });
-  cvs.addEventListener("wheel", e => { scrollEl.scrollLeft += e.deltaY || e.deltaX; e.preventDefault(); }, { passive: false });
+  const endDrag = () => {
+    if (!gd) return;
+    const G = gd; gd = null; graphDrag = null;
+    if (G.kind === "marquee") {
+      if (!G.moved) { if (!G.add) selKeys.clear(); }
+      else {
+        if (!G.add) selKeys.clear();
+        for (const h of gHits) if (h.kind === "key" &&
+          h.x >= Math.min(G.x0, G.x1) && h.x <= Math.max(G.x0, G.x1) &&
+          h.y >= Math.min(G.y0, G.y1) && h.y <= Math.max(G.y0, G.y1)) {
+          selKeys.set(h.q, { id: h.c.id, k: h.k });
+        }
+      }
+      syncKeySelection(); return;
+    }
+    if (G.kind === "keys" || G.kind === "handle") { if (G.moved) render(); else drawGraph(); return; }
+    drawGraph();
+  };
+  cvs.addEventListener("pointerup", endDrag); cvs.addEventListener("pointercancel", endDrag);
+  $("#gtools").addEventListener("click", e => {
+    const tool = e.target.closest("[data-gt]"); if (tool) { graphTool = tool.dataset.gt; drawGraph(); return; }
+    if (e.target.closest("[data-gmulti]")) { graphMulti = !graphMulti; drawGraph(); return; }
+    if (e.target.closest("[data-gcurves]")) return openCurves();
+    const mode = e.target.closest("[data-gm]"); if (mode) { graphMode = mode.dataset.gm; drawGraph(); return; }
+    if (e.target.closest("#gZoomIn")) return zoomGraph(1.35);
+    if (e.target.closest("#gZoomOut")) return zoomGraph(1 / 1.35);
+    if (e.target.closest("#gFit")) return fitGraph(false);
+    if (e.target.closest("#gFitSel")) return fitGraph(true);
+    if (e.target.closest("#gYFit")) { graphView.yZoom = 1; graphView.yOffset = 0; return drawGraph(); }
+    if (e.target.closest("#gYIn")) { graphView.yZoom = clamp(graphView.yZoom * 1.3, 0.4, 12); return drawGraph(); }
+    if (e.target.closest("#gYOut")) { graphView.yZoom = clamp(graphView.yZoom / 1.3, 0.4, 12); return drawGraph(); }
+  });
+  cvs.addEventListener("wheel", e => {
+    if (e.ctrlKey || e.metaKey) { e.preventDefault(); return zoomGraph(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX); }
+    if (e.altKey) { e.preventDefault(); graphView.yZoom = clamp(graphView.yZoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), 0.4, 12); return drawGraph(); }
+    e.preventDefault(); graphView.start += (e.deltaX || e.deltaY) / graphView.pps; drawGraph();
+  }, { passive: false });
+  let pinch = null;
+  cvs.addEventListener("touchstart", e => {
+    if (e.touches.length === 2) {
+      const a = e.touches[0], b = e.touches[1];
+      pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), cx: (a.clientX + b.clientX) / 2 };
+    }
+  }, { passive: true });
+  cvs.addEventListener("touchmove", e => {
+    if (!pinch || e.touches.length !== 2) return;
+    const a = e.touches[0], b = e.touches[1], d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), cx = (a.clientX + b.clientX) / 2;
+    if (d > 0 && pinch.d > 0) zoomGraph(d / pinch.d, cx);
+    pinch = { d, cx }; e.preventDefault();
+  }, { passive: false });
+  cvs.addEventListener("touchend", e => { if (e.touches.length < 2) pinch = null; }, { passive: true });
 }
 function waRange() { const d = duration(), w = project.comps[cur].wa; return w ? { a: clamp(w.a, 0, d), b: clamp(w.b, 0, d) } : { a: 0, b: d }; }
 function setWorkArea(end) {
@@ -1245,7 +1470,10 @@ $("#tc").addEventListener("click", () => {
 scrollEl.addEventListener("scroll", () => { layersEl.scrollTop = scrollEl.scrollTop; });
 
 // ---------- contextual tool dock (changes with what you select) ----------
-let menu = null, activeProp = null, keyMenu = null, graphOn = false, graphMode = "value";       // bottom-bar sub-menu and the property shown in the slider bar
+let menu = null, activeProp = null, keyMenu = null, graphOn = false, graphMode = "value";
+let graphTool = "select", graphMulti = false;
+const graphView = { start: 0, pps: 90, yZoom: 1, yOffset: 0 };
+let graphDrag = null;
 const PROP_ICON = { ax: "transform", ay: "transform", x: "transform", y: "transform", z: "3d", scale: "transform", rot: "reset", rx: "3d", ry: "3d", opacity: "eye", bright: "fx", contrast: "fx", sat: "fx", blur: "fx", glow: "fx", vol: "vol", remap: "remap" };
 const SHORTNAME = { ax: "Anchor X", ay: "Anchor Y", x: "Position X", y: "Position Y", z: "Position Z", scale: "Scale", rot: "Rotation", rx: "X Rotation", ry: "Y Rotation", opacity: "Opacity", bright: "Brightness", contrast: "Contrast", sat: "Saturation", blur: "Blur", glow: "Glow", vol: "Volume", remap: "Time remap" };
 const keyHere = (c, k) => { const p = c.props[k]; return !!(p && p.keys.some(q => near(q.t, localT(c)))); };
@@ -1547,17 +1775,23 @@ strip.addEventListener("pointerdown", e => {
     if (playing) setPlaying(false);
     seek(timeAtX(e.clientX), false); g = { type: "ruler" }; strip.setPointerCapture(e.pointerId); e.preventDefault(); return;
   }
-  const kf = e.target.closest(".kf"), clipEl = e.target.closest(".clip");
+  const kf = e.target.closest(".kf"), clipEl = e.target.closest(".clip"), mouse = e.pointerType === "mouse";
   if (kf) {
     const q = keyFromEl(kf); if (!q) return;
     const toggle = e.ctrlKey || e.metaKey || e.shiftKey || selectMode;
+    if (!mouse) {
+      if (toggle) { selKeys.has(q.key) ? selKeys.delete(q.key) : selKeys.set(q.key, { id: q.c.id, k: q.k }); }
+      else if (!selKeys.has(q.key)) { selKeys.clear(); selKeys.set(q.key, { id: q.c.id, k: q.k }); }
+      kf.classList.toggle("sel", selKeys.has(q.key));
+      drawGraph(); return;
+    }
     if (toggle) { selKeys.has(q.key) ? selKeys.delete(q.key) : selKeys.set(q.key, { id: q.c.id, k: q.k }); e.preventDefault(); return render(); }
     if (!selKeys.has(q.key)) { selKeys.clear(); selKeys.set(q.key, { id: q.c.id, k: q.k }); }
     g = { type: "key", x0: e.clientX, moved: false, items: [...selKeys].map(([key, r]) => ({ key, r, c: findClip(r.id), t0: key.t })).filter(x => x.c) };
     strip.setPointerCapture(e.pointerId); e.preventDefault(); render(); return;
   }
-  const mouse = e.pointerType === "mouse", addKey = e.ctrlKey || e.metaKey || e.shiftKey;
-  if (!clipEl) { const box = mouse || selectMode; g = { type: "bg", x0: e.clientX, y0: e.clientY, box, add: addKey || selectMode, base: new Set(multi.size ? multi : selected ? [selected] : []), baseKeys: new Map(selKeys) }; if (box) { strip.setPointerCapture(e.pointerId); e.preventDefault(); } return; }
+  const addKey = e.ctrlKey || e.metaKey || e.shiftKey;
+  if (!clipEl) { const box = mouse || (selectMode && e.pointerType !== "touch"); g = { type: "bg", x0: e.clientX, y0: e.clientY, box, add: addKey || selectMode, base: new Set(multi.size ? multi : selected ? [selected] : []), baseKeys: new Map(selKeys) }; if (box) { strip.setPointerCapture(e.pointerId); e.preventDefault(); } return; }
   const c = findClip(clipEl.dataset.id), h = e.target.dataset.h;
   if (mouse && addKey) { if (selected) multi.add(selected); multi.has(c.id) ? multi.delete(c.id) : multi.add(c.id); selected = null; selKeys.clear(); if (multi.size === 1) { selected = [...multi][0]; multi.clear(); } render(); return; }
   if (c.sw.lock) { selected = c.id; selKeys.clear(); render(); return toast("This layer is locked"); }
@@ -2621,9 +2855,22 @@ function drawLayer(g2, c, local, W, H, depth = 0) {
   g2.translate(W / 2 + x, H / 2 + y);
   if (velFx) { g2.rotate(velFx.a); g2.scale(velFx.st, 1 / Math.sqrt(velFx.st)); g2.rotate(-velFx.a); }
   g2.rotate((v("rot") + rotFx) * Math.PI / 180);
-  if (sqFx) { const mm = media[c.media], hh = mm && mm.w ? mm.h * Math.min(W / mm.w, H / mm.h) : 0, ay = sqFx.anchor === 1 ? hh / 2 * s : sqFx.anchor === 2 ? -hh / 2 * s : 0; g2.translate(0, ay); g2.transform(1, Math.tan(sqFx.sky * Math.PI / 180), Math.tan(sqFx.skx * Math.PI / 180), 1, 0, 0); g2.scale(sqFx.sx, sqFx.sy); g2.translate(0, -ay); }
   g2.scale(s * sx, s * sy);
-  g2.translate(-v("ax"), -v("ay"));                   // anchor point: the pivot for scale and rotation
+  const layerAx = v("ax"), layerAy = v("ay");
+  g2.translate(-layerAx, -layerAy);                   // anchor point: the pivot for scale and rotation
+  if (sqFx) {
+    const mm = media[c.media], sw = mm && mm.w || W, sh = mm && mm.h || H;
+    const fit = Math.min(W / sw, H / sh), bw = sw * fit, bh = sh * fit;
+    if (sqFx.lock >= 0.5) {
+      // Freeze the clip's transformed rectangle before applying the pudding deformation.
+      g2.beginPath(); g2.rect(-bw / 2 - layerAx, -bh / 2 - layerAy, bw, bh); g2.clip();
+    }
+    const pivotY = sqFx.anchor === 1 ? bh / 2 : sqFx.anchor === 2 ? -bh / 2 : 0;
+    g2.translate(0, pivotY);
+    g2.transform(1, Math.tan(sqFx.sky * Math.PI / 180), Math.tan(sqFx.skx * Math.PI / 180), 1, 0, 0);
+    g2.scale(sqFx.sx, sqFx.sy);
+    g2.translate(0, -pivotY);
+  }
   g2.globalAlpha *= clamp(v("opacity") / 100, 0, 1) * alphaFx;
   g2.filter = `brightness(${v("bright")}%) contrast(${v("contrast")}%) saturate(${v("sat")}%)` + (v("blur") > 0 ? ` blur(${(v("blur") * cvScale).toFixed(2)}px)` : "") + cssFx + fxExtraFilter;
   if (c.type === "text") {
