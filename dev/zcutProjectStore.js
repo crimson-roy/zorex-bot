@@ -74,7 +74,9 @@ function createZcutProjectStore(options = {}) {
                     type: ["video", "audio", "image"].includes(item.type) ? item.type : "video",
                     duration: Number.isFinite(item.duration) ? Math.max(0, Math.min(item.duration, 86400)) : 0,
                     width: Number.isFinite(item.width) ? Math.max(0, Math.min(item.width, 16384)) : 0,
-                    height: Number.isFinite(item.height) ? Math.max(0, Math.min(item.height, 16384)) : 0
+                    height: Number.isFinite(item.height) ? Math.max(0, Math.min(item.height, 16384)) : 0,
+                    size: Number.isSafeInteger(item.size) && item.size >= 0 ? Math.min(item.size, 1024 * 1024 * 1024 * 1024) : 0,
+                    lastModified: Number.isSafeInteger(item.lastModified) && item.lastModified >= 0 ? item.lastModified : 0
                 };
             }).filter(Boolean) : []
         };
