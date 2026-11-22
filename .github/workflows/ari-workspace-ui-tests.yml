@@ -7,6 +7,9 @@ on:
       - "dev/ari-chat-server.js"
       - "dev/zcut.html"
       - "dev/zcutBridge.js"
+      - "dev/zcutProjectStore.js"
+      - "test/zcutProjectStore.test.js"
+      - "docs/ZCUT_PROJECT_PERSISTENCE.md"
       - "tools/zcut.js"
       - "test/zcutBridge.test.js"
       - "dev/ariDeveloperAccess.js"
@@ -57,12 +60,22 @@ jobs:
           if (!match) throw new Error("Ari page has no inline script.");
           new Function(match[1]);
           NODE
-      - name: Check Z_Cut bridge and CLI syntax
+      - name: Check Z_Cut editor and project store syntax
         run: |
           node --check dev/zcutBridge.js
+          node --check dev/zcutProjectStore.js
           node --check tools/zcut.js
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const html = fs.readFileSync("dev/zcut.html", "utf8");
+          const match = html.match(/<script>([\s\S]*?)<\/script>/i);
+          if (!match) throw new Error("Z_Cut page has no inline script.");
+          new Function(match[1]);
+          NODE
       - name: Test Z_Cut routes and bridge
         run: node test/zcutBridge.test.js
+      - name: Test account-scoped Z_Cut project storage
+        run: node test/zcutProjectStore.test.js
       - name: Test persistent sessions and auth
         run: node test/ariDeveloperAccess.test.js
       - name: Test account-scoped conversation storage
