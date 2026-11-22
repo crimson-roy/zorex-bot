@@ -11,6 +11,7 @@ const { createAriGpuClient, AriGpuClientError, REMOTE_TIERS } = require("./ariGp
 const { createAriDeveloperAccess, createAriDeveloperUsage } = require("./ariDeveloperAccess");
 const { respondAriSelfKnowledge } = require("./ariSelfKnowledge");
 const { createAriWorkspaceStore } = require("./ariWorkspaceStore");
+const { createZcutProjectStore } = require("./zcutProjectStore");
 const { createZcutBridge } = require("./zcutBridge");
 
 const wordNet = new WordNetDictionary();
@@ -396,6 +397,10 @@ function createServer(options = {}) {
         dataDir,
         ...(options.now ? { now: options.now } : {})
     });
+    const zcutProjects = options.zcutProjectStore || createZcutProjectStore({
+        dataDir,
+        ...(options.now ? { now: options.now } : {})
+    });
     const zcut = options.zcutBridge || createZcutBridge();
     const server = http.createServer(async (request, response) => {
         const url = new URL(request.url, "http://" + HOST);
@@ -514,6 +519,76 @@ function createServer(options = {}) {
                         ? error.message
                         : "Ari could not save your conversations right now."
                 });
+            }
+            return;
+        }
+
+        if (url.pathname === "/api/workspace/zcut-projects" && request.method === "GET") {
+            const session = auth.requireSession(request);
+            if (!session) {
+                sendAuthJson(response, 401, { error: "Sign in to view your saved Z_Cut projects." });
+                return;
+            }
+            try {
+                sendJson(response, 200, { projects: await zcutProjects.listProjects(session.sub) });
+            } catch (error) {
+                sendJson(response, 500, { error: "Z_Cut projects could not be loaded." });
+            }
+            return;
+        }
+
+        if (url.pathname === "/api/workspace/zcut-projects" && request.method === "PUT") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to sync Z_Cut projects." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                const body = await readJsonBody(request, 2 * 1024 * 1024 + 64 * 1024);
+                const saved = await zcutProjects.saveProject(session.sub, body?.project);
+                sendJson(response, 200, { saved });
+            } catch (error) {
+                const status = Number.isInteger(error.statusCode) ? error.statusCode : 500;
+                sendJson(response, status, {
+                    error: status === 400 || status === 413
+                        ? error.message
+                        : "Z_Cut could not sync this project right now."
+                });
+            }
+            return;
+        }
+
+        const zcutProjectMatch = /^\\/api\\/workspace\\/zcut-projects\\/([A-Za-z0-9_-]{8,100})$/.exec(url.pathname);
+        if (zcutProjectMatch && request.method === "GET") {
+            const session = auth.requireSession(request);
+            if (!session) {
+                sendAuthJson(response, 401, { error: "Sign in to open your saved Z_Cut projects." });
+                return;
+            }
+            try {
+                const project = await zcutProjects.getProject(session.sub, zcutProjectMatch[1]);
+                if (!project) sendJson(response, 404, { error: "That Z_Cut project was not found." });
+                else sendJson(response, 200, { project });
+            } catch (error) {
+                sendJson(response, 500, { error: "Z_Cut project could not be opened." });
+            }
+            return;
+        }
+
+        if (zcutProjectMatch && request.method === "DELETE") {
+            try {
+                const session = auth.requireSession(request);
+                if (!session) {
+                    sendAuthJson(response, 401, { error: "Sign in to delete Z_Cut projects." });
+                    return;
+                }
+                auth.assertOriginAndCsrf(request);
+                await zcutProjects.deleteProject(session.sub, zcutProjectMatch[1]);
+                sendJson(response, 200, { ok: true });
+            } catch (error) {
+                const status = Number.isInteger(error.statusCode) ? error.statusCode : 500;
+                sendJson(response, status, { error: status === 400 ? error.message : "Z_Cut project could not be deleted." });
             }
             return;
         }
