@@ -1497,6 +1497,32 @@ scrollEl.addEventListener("scroll", () => { placeBlade(); if (graphOn) drawGraph
 function seek(t, follow = true) { T = clamp(t, 0, duration()); placeBlade(follow); updateClock(); refreshSheetValues(); refreshHot(); refreshBar(); refreshEC(); }
 function zoom(f) { pps = clamp(pps * f, 8, 400); render(); seek(T); }
 $("#zin").onclick = () => zoom(1.5); $("#zout").onclick = () => zoom(1 / 1.5);
+
+function zoomTimeline(factor, clientX) {
+  const rect=scrollEl.getBoundingClientRect(), anchor=Number.isFinite(clientX)?clientX:rect.left+rect.width/2;
+  const time=Math.max(0,(scrollEl.scrollLeft+anchor-rect.left-PAD())/pps);
+  pps=clamp(pps*factor,8,400);render();
+  scrollEl.scrollLeft=Math.max(0,PAD()+time*pps-(anchor-rect.left));placeBlade();if(graphOn)drawGraph();
+}
+function fitTimeline() {
+  const total=Math.max(duration()+5,15), available=Math.max(120,scrollEl.clientWidth-PAD()-36);
+  pps=clamp(available/total,8,400);render();scrollEl.scrollLeft=0;placeBlade();
+}
+$("#tlZoomIn").addEventListener("click",()=>zoomTimeline(1.35));
+$("#tlZoomOut").addEventListener("click",()=>zoomTimeline(1/1.35));
+$("#tlZoomFit").addEventListener("click",fitTimeline);
+let zcutPinch=null;
+scrollEl.addEventListener("touchstart",e=>{
+  if(e.touches.length===2){const a=e.touches[0],b=e.touches[1];zcutPinch={distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),center:(a.clientX+b.clientX)/2};}
+},{passive:true});
+scrollEl.addEventListener("touchmove",e=>{
+  if(!zcutPinch||e.touches.length!==2)return;
+  const a=e.touches[0],b=e.touches[1],distance=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),center=(a.clientX+b.clientX)/2;
+  if(distance>0&&zcutPinch.distance>0){const factor=distance/zcutPinch.distance;if(Math.abs(factor-1)>.025)zoomTimeline(factor,center);}
+  zcutPinch={distance,center};e.preventDefault();
+},{passive:false});
+scrollEl.addEventListener("touchend",e=>{if(e.touches.length<2)zcutPinch=null;},{passive:true});
+
 scrollEl.addEventListener("wheel", e => {
   if (e.ctrlKey || e.metaKey) { e.preventDefault(); return zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15); }
   if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && !e.shiftKey && e.target.closest(".ruler,.row,.lane")) { e.preventDefault(); scrollEl.scrollLeft += e.deltaY; }
@@ -3047,6 +3073,17 @@ $("#zrelinkFiles").addEventListener("change",async e=>{
 });
 window.addEventListener("beforeunload",e=>{if(zcutDirty){e.preventDefault();e.returnValue="";}});
 setInterval(()=>{if(zcutDirty)saveZcutNow(false);},60000);
+
+async function zcutBootRecovery(){
+  const items=await zcutLocalList();if(!items.length)return;
+  const latest=items[0],hasCurrent=Object.values(project.comps).some(c=>c.layers&&c.layers.length);
+  if(!hasCurrent&&confirm("A saved Z_Cut project was found on this device: "+(latest.name||"Untitled project")+". Recover it?")){
+    try{await loadZcutProject(latest);zcutStatus("Recovered local autosave");toast("Recovered your last saved project");}
+    catch(error){toast(error.message||"Recovery failed");}
+  }else if(!hasCurrent)zcutStatus("Recovery available in Projects");
+}
+setTimeout(zcutBootRecovery,1200);
+
 
 setCanvas(); render(); requestAnimationFrame(loop); setTimeout(startBridge, 0);
 }
