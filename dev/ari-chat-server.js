@@ -559,7 +559,7 @@ function createServer(options = {}) {
             return;
         }
 
-        const zcutProjectMatch = url.pathname.match(/^\\/api\\/workspace\\/zcut-projects\\/([A-Za-z0-9_-]{8,100})$/);
+        const zcutProjectMatch = url.pathname.match(/^\/api\/workspace\/zcut-projects\/([A-Za-z0-9_-]{8,100})$/);
         if (zcutProjectMatch && request.method === "GET") {
             const session = auth.requireSession(request);
             if (!session) {
