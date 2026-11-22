@@ -250,6 +250,18 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .ailrow{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-weight:600}
 .aildot{width:10px;height:10px;border-radius:50%;background:#666}.aildot[data-st=linked]{background:#3ddc84}.aildot[data-st=working]{background:#ffb02e}.aildot[data-st=retrying]{background:#ff5a3c}
 a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
+.ztool{height:32px;padding:0 9px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);font-size:11px;font-weight:800;white-space:nowrap}
+.ztool.primary{background:var(--blade);border-color:var(--blade);color:#fff}
+.zsave-state{max-width:94px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute);font-size:10px}
+.tlzoom{position:absolute;right:8px;bottom:7px;z-index:9;display:flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:9px;background:#17191eef}
+.tlzoom button{width:30px;height:28px;border-radius:6px;background:var(--panel2);font-size:16px;font-weight:800}
+.zleave{position:fixed;inset:0;z-index:1000;display:none;place-items:center;padding:18px;background:#000b}
+.zleave.on{display:grid}.zleave-card{width:min(360px,100%);padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 18px 60px #0009}
+.zleave-card h3{margin:0 0 8px;font-size:16px}.zleave-card p{margin:0 0 16px;color:var(--mute);font-size:12px}
+.zleave-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}
+.zleave-actions button{padding:9px 11px;border-radius:8px;background:var(--panel2);font-size:11px;font-weight:800}
+.zleave-actions .save{background:var(--blade);color:white}
+@media(max-width:520px){.top{gap:4px;padding:6px}.top input{min-width:40px;font-size:11px;padding:0 6px}.ztool{height:30px;padding:0 6px;font-size:10px}.zsave-state{display:none}.logo{font-size:15px;margin-right:0}}
 </style>
 </head>
 <body>
@@ -316,7 +328,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
     <input id="pname" value="Project 1" aria-label="Project name" maxlength="40">
     <button class="ib" id="undo" aria-label="Undo" disabled><svg class="i"><use href="#i-undo"/></svg></button>
     <button class="ib" id="redo" aria-label="Redo" disabled><svg class="i"><use href="#i-redo"/></svg></button>
-    <button class="export" id="export">Export</button>
+    <button class="ztool" id="zprojects" type="button">Projects</button><button class="ztool primary" id="zsave" type="button">Save</button><span class="zsave-state" id="zsaveState" aria-live="polite">Not saved</span><button class="ztool" id="zback" type="button">← Ari</button><button class="export" id="export">Export</button>
   </header>
 
   <aside class="proj" id="proj" aria-label="Project and effects"><header><button class="ptab on" data-ptab="project">Project</button><button class="ptab" data-ptab="fx">Effects</button><button class="ptab" data-ptab="ec">Controls</button><span></span><button class="ib" data-act="import" data-tip="Import files"><svg class="i"><use href="#i-import"/></svg></button></header><div class="plist" id="plist"></div><div class="plist" id="fxlist" hidden></div><div class="plist" id="eclist" hidden></div></aside>
@@ -357,7 +369,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
       <div class="scroll" id="scroll"><div class="strip" id="strip"></div></div>
       <canvas class="graph" id="graph" hidden></canvas>
       <div class="gtools" id="gtools" hidden><button data-gm="value">Value</button><button data-gm="speed">Speed</button><button data-gcurves>Ease presets</button><span id="glabel"></span></div>
-      <div class="blade" id="blade" data-tip="Playhead: drag to move"></div><div class="marq" id="marq"></div><div class="selbar">Select mode: tap or drag a box</div>
+      <div class="tlzoom" aria-label="Timeline zoom"><button type="button" id="tlZoomOut" aria-label="Zoom timeline out">−</button><button type="button" id="tlZoomIn" aria-label="Zoom timeline in">+</button><button type="button" id="tlZoomFit" aria-label="Fit timeline">Fit</button></div><div class="blade" id="blade" data-tip="Playhead: drag to move"></div><div class="marq" id="marq"></div><div class="selbar">Select mode: tap or drag a box</div>
     </div>
   </section>
 
@@ -372,7 +384,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
 <div class="toast" id="toast" role="status"></div>
 <div class="tip" id="tip"></div>
 <input type="file" id="file" accept="video/*,image/*,audio/*" multiple hidden>
-<input type="file" id="sfile" accept=".js,.jsx,.json,.txt,.zcs" hidden>
+<input type="file" id="sfile" accept=".js,.jsx,.json,.txt,.zcs" hidden><input type="file" id="zprojectFile" accept=".zcut,.json,application/json" hidden><input type="file" id="zrelinkFiles" accept="video/*,image/*,audio/*" multiple hidden>
 
 <script>
 {
@@ -433,9 +445,9 @@ const srcDur = c => c.type === "comp" ? compDur(c.comp) : (media[c.media] ? medi
 
 // ---------- undo ----------
 const snapshot = () => JSON.stringify({ project, cur });
-function commit() { undoStack.push(snapshot()); if (undoStack.length > 100) undoStack.shift(); redoStack = []; syncUndo(); }
+function commit() { undoStack.push(snapshot()); if (undoStack.length > 100) undoStack.shift(); redoStack = []; syncUndo(); markProjectDirty(); }
 function syncUndo() { $("#undo").disabled = !undoStack.length; $("#redo").disabled = !redoStack.length; }
-function restore(json) { const o = JSON.parse(json); project = o.project; cur = project.comps[o.cur] ? o.cur : "main"; tabs = tabs.filter(id => project.comps[id]); if (!tabs.includes(cur)) tabs.push(cur); if (selected && !findClip(selected)) selected = null; multi.clear(); selKeys.clear(); render(); refreshSheet(); }
+function restore(json) { const o = JSON.parse(json); project = o.project; cur = project.comps[o.cur] ? o.cur : "main"; tabs = tabs.filter(id => project.comps[id]); if (!tabs.includes(cur)) tabs.push(cur); if (selected && !findClip(selected)) selected = null; multi.clear(); selKeys.clear(); render(); refreshSheet(); markProjectDirty(); }
 $("#undo").onclick = () => { if (!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); syncUndo(); };
 $("#redo").onclick = () => { if (!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); syncUndo(); };
 
@@ -841,12 +853,12 @@ function makeThumb(url) {
   });
 }
 const newLayer = o => ({ id: uid(), start: 0, in: 0, dur: 3, speed: 1, props: {}, sw: { eye: true, solo: false, lock: false, mb: false, td: false }, ...o });
-async function addMedia(f) {
+async function addMedia(f, forcedId = null) {
   const type = f.type.startsWith("image/") ? "image" : f.type.startsWith("audio/") ? "audio" : f.type.startsWith("video/") ? "video" : null;
   if (!type) { toast("Skipped " + f.name); return; }
   const url = URL.createObjectURL(f), meta = await loadMeta(f, url);
   if (!meta) { toast("Could not read " + f.name); return; }
-  const id = uid();
+  const id = forcedId || uid();
   media[id] = { name: f.name, type, url, fps: 0, dur: meta.dur, w: meta.w, h: meta.h, img: meta.img || null, thumb: type === "image" ? url : type === "video" ? await makeThumb(url) : null };
   if (type === "video") detectFps(id);
   return id;
