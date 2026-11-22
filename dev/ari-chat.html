@@ -170,6 +170,8 @@
     .sidebar-nav button{display:flex;align-items:center;gap:11px;min-height:40px;width:100%;padding:0 11px;border:0;border-radius:10px;color:#c2cec5;background:transparent;text-align:left;font-size:13px;font-weight:500}
     .sidebar-nav button:hover,.sidebar-nav button.active{color:var(--ari-text);background:#253129}
     .sidebar-nav svg{width:17px;height:17px;color:var(--ari-accent)}
+    .sidebar-nav .sidebar-nav-link{display:flex;align-items:center;gap:11px;min-height:40px;width:100%;padding:0 11px;border-radius:10px;color:#c2cec5;text-decoration:none;font-size:13px;font-weight:500}
+    .sidebar-nav .sidebar-nav-link:hover,.sidebar-nav .sidebar-nav-link:focus-visible{color:var(--ari-text);background:#253129}
     .history-label{padding:19px 10px 8px;color:var(--ari-subtle);font-size:10px;font-weight:700;letter-spacing:.12em}
     #chat-list{gap:3px;padding:3px 0 12px}
     .history-row{gap:2px}
@@ -466,6 +468,10 @@
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m8 14 3-3 2 2 3-4"/><path d="M7 8h.01M17 16h.01"/></svg>
           Upscale
         </button>
+        <a class="sidebar-nav-link" id="nav-zcut" href="/zcut" aria-label="Open Z_Cut video editor">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>
+          Z_Cut
+        </a>
       </nav>
       <div class="history-label">RECENT CHATS</div>
       <nav id="chat-list" aria-label="Previous chats"><div class="history-empty">Your recent conversations will appear here.</div></nav>
