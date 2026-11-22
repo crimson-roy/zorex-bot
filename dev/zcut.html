@@ -2997,7 +2997,7 @@ async function exportZcut(includeMedia=false){
   await zcutSaveFile(filename,new Blob([JSON.stringify(item)],{type:"application/vnd.zorex.zcut+json"}));
 }
 async function loadZcutProject(item,fromFile=false){
-  if(zcutDirty&&!confirm("You have unsaved changes. Replace the current project?"))return false;
+  if(zcutDirty){if(!confirm("Save your current project before opening another one?"))return false;const saved=await saveZcutNow(false);if(!saved)return false;}
   if(!item||!item.project||!item.project.comps)throw new Error("Invalid Z_Cut project.");
   project=JSON.parse(JSON.stringify(item.project));cur=project.comps[item.currentComp]?item.currentComp:"main";
   tabs=[cur];T=project.comps[cur].T||0;selected=null;multi.clear();selKeys.clear();
@@ -3036,8 +3036,21 @@ async function openZcutLibrary(){
   const localHtml=local.map(p=>'<div class="qitem"><div><b>'+esc(p.name)+'</b><br><small>On this device · '+new Date(p.updatedAt).toLocaleString()+'</small></div><button class="btn" data-zopenlocal="'+esc(p.id)+'">Open</button></div>').join("")||'<p class="note">No local recovery copies yet.</p>';
   const cloudHtml=cloud.map(p=>'<div class="qitem"><div><b>'+esc(p.name)+'</b><br><small>Cloud · '+new Date(p.updatedAt).toLocaleString()+'</small></div><button class="btn" data-zopencloud="'+esc(p.id)+'">Open</button></div>').join("")||'<p class="note">'+(zcutAccount?"No cloud projects yet.":"Sign in to Ari to sync projects between devices.")+'</p>';
   sheetKind="zcutlibrary";sheet.classList.add("wide");
-  sheet.innerHTML='<header><h3>Your Z_Cut projects</h3><button class="ib" data-close aria-label="Close">×</button></header><div class="chips"><button class="btn main" data-znew>New project</button><button class="btn" data-zimport>Import .zcut</button><button class="btn" data-zexport>Export .zcut</button><button class="btn" data-zexportmedia>Export with media</button><button class="btn" data-zrelink>Relink media ('+zcutMissingMedia().length+')</button></div><h4>On this device</h4>'+localHtml+'<h4>Zorex account</h4>'+cloudHtml+'<p class="note">Cloud sync stores project data and media references only. Original footage stays on your device unless you export a portable .zcut package with media.</p>';
+  sheet.innerHTML='<header><h3>Your Z_Cut projects</h3><button class="ib" data-close aria-label="Close">×</button></header><div class="chips"><button class="btn main" data-znew>New project</button><button class="btn" data-zimport>Import .zcut</button><button class="btn" data-zexport>Export .zcut</button><button class="btn" data-zexportmedia>Export with media</button><button class="btn" data-zrelink>Relink media ('+zcutMissingMedia().length+')</button><button class="btn" data-zfolder>Choose media folder</button></div><h4>On this device</h4>'+localHtml+'<h4>Zorex account</h4>'+cloudHtml+'<p class="note">Cloud sync stores project data and media references only. Original footage stays on your device unless you export a portable .zcut package with media.</p>';
   sheet.classList.add("on");
+}
+
+async function zcutRelinkFolder(){
+  if(!window.showDirectoryPicker){toast("Folder access is not supported here. Use Relink media instead.");return;}
+  try{
+    const dir=await window.showDirectoryPicker({mode:"read"}),missing=zcutMissingMedia(),wanted=new Map(missing.map(m=>[m.name.toLowerCase(),m]));let linked=0;
+    for await(const [name,handle] of dir.entries()){
+      if(handle.kind!=="file")continue;const target=wanted.get(name.toLowerCase());if(!target)continue;
+      const file=await handle.getFile();const id=await addMedia(file,target.id);if(id){wanted.delete(name.toLowerCase());linked++;}
+    }
+    renderProject();render();zcutStatus(zcutMissingMedia().length?"Media needs relinking":"All media relinked");
+    toast(linked+" media file(s) relinked from folder"+(zcutMissingMedia().length?" · "+zcutMissingMedia().length+" still missing":""));
+  }catch(error){if(error&&error.name!=="AbortError")toast(error.message||"Could not access that folder");}
 }
 async function zcutLibraryClick(e){
   const b=e.target.closest("button");if(!b)return;
@@ -3053,6 +3066,7 @@ async function zcutLibraryClick(e){
   if(b.hasAttribute("data-zexport")){await exportZcut(false);return;}
   if(b.hasAttribute("data-zexportmedia")){await exportZcut(true);return;}
   if(b.hasAttribute("data-zrelink")){$("#zrelinkFiles").click();return;}
+  if(b.hasAttribute("data-zfolder")){await zcutRelinkFolder();return;}
   if(b.dataset.zopenlocal){const p=await zcutLocalGet(b.dataset.zopenlocal);if(p)await loadZcutProject(p);else toast("Local project not found");return;}
   if(b.dataset.zopencloud){
     try{const r=await fetch("/api/workspace/zcut-projects/"+encodeURIComponent(b.dataset.zopencloud),{credentials:"same-origin"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Cloud project unavailable");await loadZcutProject(d.project);}
