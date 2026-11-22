@@ -250,6 +250,18 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .ailrow{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-weight:600}
 .aildot{width:10px;height:10px;border-radius:50%;background:#666}.aildot[data-st=linked]{background:#3ddc84}.aildot[data-st=working]{background:#ffb02e}.aildot[data-st=retrying]{background:#ff5a3c}
 a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
+.ztool{height:32px;padding:0 9px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);font-size:11px;font-weight:800;white-space:nowrap}
+.ztool.primary{background:var(--blade);border-color:var(--blade);color:#fff}
+.zsave-state{max-width:94px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute);font-size:10px}
+.tlzoom{position:absolute;right:8px;bottom:7px;z-index:9;display:flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:9px;background:#17191eef}
+.tlzoom button{width:30px;height:28px;border-radius:6px;background:var(--panel2);font-size:16px;font-weight:800}
+.zleave{position:fixed;inset:0;z-index:1000;display:none;place-items:center;padding:18px;background:#000b}
+.zleave.on{display:grid}.zleave-card{width:min(360px,100%);padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 18px 60px #0009}
+.zleave-card h3{margin:0 0 8px;font-size:16px}.zleave-card p{margin:0 0 16px;color:var(--mute);font-size:12px}
+.zleave-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}
+.zleave-actions button{padding:9px 11px;border-radius:8px;background:var(--panel2);font-size:11px;font-weight:800}
+.zleave-actions .save{background:var(--blade);color:white}
+@media(max-width:520px){.top{gap:4px;padding:6px}.top input{min-width:40px;font-size:11px;padding:0 6px}.ztool{height:30px;padding:0 6px;font-size:10px}.zsave-state{display:none}.logo{font-size:15px;margin-right:0}}
 </style>
 </head>
 <body>
@@ -316,7 +328,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
     <input id="pname" value="Project 1" aria-label="Project name" maxlength="40">
     <button class="ib" id="undo" aria-label="Undo" disabled><svg class="i"><use href="#i-undo"/></svg></button>
     <button class="ib" id="redo" aria-label="Redo" disabled><svg class="i"><use href="#i-redo"/></svg></button>
-    <button class="export" id="export">Export</button>
+    <button class="ztool" id="zprojects" type="button">Projects</button><button class="ztool primary" id="zsave" type="button">Save</button><span class="zsave-state" id="zsaveState" aria-live="polite">Not saved</span><button class="ztool" id="zback" type="button">← Ari</button><button class="export" id="export">Export</button>
   </header>
 
   <aside class="proj" id="proj" aria-label="Project and effects"><header><button class="ptab on" data-ptab="project">Project</button><button class="ptab" data-ptab="fx">Effects</button><button class="ptab" data-ptab="ec">Controls</button><span></span><button class="ib" data-act="import" data-tip="Import files"><svg class="i"><use href="#i-import"/></svg></button></header><div class="plist" id="plist"></div><div class="plist" id="fxlist" hidden></div><div class="plist" id="eclist" hidden></div></aside>
@@ -357,7 +369,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
       <div class="scroll" id="scroll"><div class="strip" id="strip"></div></div>
       <canvas class="graph" id="graph" hidden></canvas>
       <div class="gtools" id="gtools" hidden><button data-gm="value">Value</button><button data-gm="speed">Speed</button><button data-gcurves>Ease presets</button><span id="glabel"></span></div>
-      <div class="blade" id="blade" data-tip="Playhead: drag to move"></div><div class="marq" id="marq"></div><div class="selbar">Select mode: tap or drag a box</div>
+      <div class="tlzoom" aria-label="Timeline zoom"><button type="button" id="tlZoomOut" aria-label="Zoom timeline out">−</button><button type="button" id="tlZoomIn" aria-label="Zoom timeline in">+</button><button type="button" id="tlZoomFit" aria-label="Fit timeline">Fit</button></div><div class="blade" id="blade" data-tip="Playhead: drag to move"></div><div class="marq" id="marq"></div><div class="selbar">Select mode: tap or drag a box</div>
     </div>
   </section>
 
@@ -372,7 +384,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
 <div class="toast" id="toast" role="status"></div>
 <div class="tip" id="tip"></div>
 <input type="file" id="file" accept="video/*,image/*,audio/*" multiple hidden>
-<input type="file" id="sfile" accept=".js,.jsx,.json,.txt,.zcs" hidden>
+<input type="file" id="sfile" accept=".js,.jsx,.json,.txt,.zcs" hidden><input type="file" id="zprojectFile" accept=".zcut,.json,application/json" hidden><input type="file" id="zrelinkFiles" accept="video/*,image/*,audio/*" multiple hidden>
 
 <script>
 {
@@ -433,9 +445,9 @@ const srcDur = c => c.type === "comp" ? compDur(c.comp) : (media[c.media] ? medi
 
 // ---------- undo ----------
 const snapshot = () => JSON.stringify({ project, cur });
-function commit() { undoStack.push(snapshot()); if (undoStack.length > 100) undoStack.shift(); redoStack = []; syncUndo(); }
+function commit() { undoStack.push(snapshot()); if (undoStack.length > 100) undoStack.shift(); redoStack = []; syncUndo(); markProjectDirty(); }
 function syncUndo() { $("#undo").disabled = !undoStack.length; $("#redo").disabled = !redoStack.length; }
-function restore(json) { const o = JSON.parse(json); project = o.project; cur = project.comps[o.cur] ? o.cur : "main"; tabs = tabs.filter(id => project.comps[id]); if (!tabs.includes(cur)) tabs.push(cur); if (selected && !findClip(selected)) selected = null; multi.clear(); selKeys.clear(); render(); refreshSheet(); }
+function restore(json) { const o = JSON.parse(json); project = o.project; cur = project.comps[o.cur] ? o.cur : "main"; tabs = tabs.filter(id => project.comps[id]); if (!tabs.includes(cur)) tabs.push(cur); if (selected && !findClip(selected)) selected = null; multi.clear(); selKeys.clear(); render(); refreshSheet(); markProjectDirty(); }
 $("#undo").onclick = () => { if (!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); syncUndo(); };
 $("#redo").onclick = () => { if (!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); syncUndo(); };
 
@@ -841,12 +853,12 @@ function makeThumb(url) {
   });
 }
 const newLayer = o => ({ id: uid(), start: 0, in: 0, dur: 3, speed: 1, props: {}, sw: { eye: true, solo: false, lock: false, mb: false, td: false }, ...o });
-async function addMedia(f) {
+async function addMedia(f, forcedId = null) {
   const type = f.type.startsWith("image/") ? "image" : f.type.startsWith("audio/") ? "audio" : f.type.startsWith("video/") ? "video" : null;
   if (!type) { toast("Skipped " + f.name); return; }
   const url = URL.createObjectURL(f), meta = await loadMeta(f, url);
   if (!meta) { toast("Could not read " + f.name); return; }
-  const id = uid();
+  const id = forcedId || uid();
   media[id] = { name: f.name, type, url, fps: 0, dur: meta.dur, w: meta.w, h: meta.h, img: meta.img || null, thumb: type === "image" ? url : type === "video" ? await makeThumb(url) : null };
   if (type === "video") detectFps(id);
   return id;
@@ -867,6 +879,7 @@ async function importFiles(files) {
   for (const f of files) { const id = await addMedia(f); if (id) ids.push(id); }
   if (!ids.length) return;
   renderProject();
+  markProjectDirty();
   toast(ids.length + (ids.length > 1 ? " files" : " file") + " added to Project");
   if (!matchMedia("(min-width:800px)").matches) openProjectSheet(); else $("#app").classList.remove("noproj");
   setCanvasSoon();
@@ -1485,6 +1498,32 @@ scrollEl.addEventListener("scroll", () => { placeBlade(); if (graphOn) drawGraph
 function seek(t, follow = true) { T = clamp(t, 0, duration()); placeBlade(follow); updateClock(); refreshSheetValues(); refreshHot(); refreshBar(); refreshEC(); }
 function zoom(f) { pps = clamp(pps * f, 8, 400); render(); seek(T); }
 $("#zin").onclick = () => zoom(1.5); $("#zout").onclick = () => zoom(1 / 1.5);
+
+function zoomTimeline(factor, clientX) {
+  const rect=scrollEl.getBoundingClientRect(), anchor=Number.isFinite(clientX)?clientX:rect.left+rect.width/2;
+  const time=Math.max(0,(scrollEl.scrollLeft+anchor-rect.left-PAD())/pps);
+  pps=clamp(pps*factor,8,400);render();
+  scrollEl.scrollLeft=Math.max(0,PAD()+time*pps-(anchor-rect.left));placeBlade();if(graphOn)drawGraph();
+}
+function fitTimeline() {
+  const total=Math.max(duration()+5,15), available=Math.max(120,scrollEl.clientWidth-PAD()-36);
+  pps=clamp(available/total,8,400);render();scrollEl.scrollLeft=0;placeBlade();
+}
+$("#tlZoomIn").addEventListener("click",()=>zoomTimeline(1.35));
+$("#tlZoomOut").addEventListener("click",()=>zoomTimeline(1/1.35));
+$("#tlZoomFit").addEventListener("click",fitTimeline);
+let zcutPinch=null;
+scrollEl.addEventListener("touchstart",e=>{
+  if(e.touches.length===2){const a=e.touches[0],b=e.touches[1];zcutPinch={distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),center:(a.clientX+b.clientX)/2};}
+},{passive:true});
+scrollEl.addEventListener("touchmove",e=>{
+  if(!zcutPinch||e.touches.length!==2)return;
+  const a=e.touches[0],b=e.touches[1],distance=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),center=(a.clientX+b.clientX)/2;
+  if(distance>0&&zcutPinch.distance>0){const factor=distance/zcutPinch.distance;if(Math.abs(factor-1)>.025)zoomTimeline(factor,center);}
+  zcutPinch={distance,center};e.preventDefault();
+},{passive:false});
+scrollEl.addEventListener("touchend",e=>{if(e.touches.length<2)zcutPinch=null;},{passive:true});
+
 scrollEl.addEventListener("wheel", e => {
   if (e.ctrlKey || e.metaKey) { e.preventDefault(); return zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15); }
   if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && !e.shiftKey && e.target.closest(".ruler,.row,.lane")) { e.preventDefault(); scrollEl.scrollLeft += e.deltaY; }
@@ -2856,6 +2895,210 @@ addEventListener("message", async e => {
   let reply; try { reply = { zcutReply: d.id ?? true, ok: true, result: ZCut.run(d.zcut, d.args || {}) }; } catch (err) { reply = { zcutReply: d.id ?? true, ok: false, error: err.message }; }
   try { e.source && e.source.postMessage(JSON.parse(JSON.stringify(reply)), "*"); } catch {}
 });
+
+
+/* Z_Cut project persistence, account sync, media relinking and navigation */
+let zcutProjectId = "zcut_" + Date.now().toString(36) + "_" + uid();
+let zcutMediaManifest = [], zcutDirty = false, zcutSaving = false, zcutSaveTimer = 0;
+let zcutCsrf = null, zcutAccountChecked = false, zcutAccount = false;
+const ZCUT_DB = "zcut-projects-v1", ZCUT_STORE = "projects";
+function zcutStatus(message) { const el=$("#zsaveState"); if(el) el.textContent=message; }
+function markProjectDirty() { zcutDirty=true; zcutStatus("Unsaved changes"); clearTimeout(zcutSaveTimer); zcutSaveTimer=setTimeout(()=>saveZcutNow(false),2200); }
+function zcutMediaList() {
+  const map=new Map((zcutMediaManifest||[]).map(m=>[m.id,m]));
+  for(const [id,m] of Object.entries(media)) map.set(id,{id,name:m.name,type:m.type,duration:m.dur||0,width:m.w||0,height:m.h||0});
+  return [...map.values()];
+}
+function captureZcutProject() {
+  return {id:zcutProjectId,name:($("#pname").value||"Untitled project").trim().slice(0,80)||"Untitled project",
+    currentComp:cur,updatedAt:Date.now(),project:JSON.parse(JSON.stringify(project)),media:zcutMediaList()};
+}
+function zcutOpenDb() {
+  return new Promise((resolve,reject)=>{
+    if(!("indexedDB" in window))return reject(new Error("IndexedDB unavailable"));
+    const req=indexedDB.open(ZCUT_DB,1);
+    req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(ZCUT_STORE))req.result.createObjectStore(ZCUT_STORE,{keyPath:"id"});};
+    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error("Local storage unavailable"));
+  });
+}
+async function zcutDb(mode,action,value) {
+  const db=await zcutOpenDb();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(ZCUT_STORE,mode),store=tx.objectStore(ZCUT_STORE);
+    const req=action==="put"?store.put(value):action==="get"?store.get(value):action==="all"?store.getAll():store.delete(value);
+    req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error("Local storage failed"));
+    tx.oncomplete=()=>db.close();tx.onerror=()=>{db.close();reject(tx.error||new Error("Local storage failed"));};
+  });
+}
+function zcutLocalKey(id){return "zcut-project-v1:"+id;}
+async function zcutLocalSave(item){
+  try{await zcutDb("readwrite","put",item);return "indexeddb";}
+  catch{
+    try{localStorage.setItem(zcutLocalKey(item.id),JSON.stringify(item));const ids=JSON.parse(localStorage.getItem("zcut-project-index-v1")||"[]").filter(id=>id!==item.id);ids.unshift(item.id);localStorage.setItem("zcut-project-index-v1",JSON.stringify(ids.slice(0,12)));return "local";}
+    catch{throw new Error("This browser could not store a recovery copy. Export a .zcut file.");}
+  }
+}
+async function zcutLocalList(){
+  try{const all=await zcutDb("readonly","all");if(all&&all.length)return all.sort((a,b)=>b.updatedAt-a.updatedAt);}catch{}
+  try{return JSON.parse(localStorage.getItem("zcut-project-index-v1")||"[]").map(id=>JSON.parse(localStorage.getItem(zcutLocalKey(id))||"null")).filter(Boolean).sort((a,b)=>b.updatedAt-a.updatedAt);}catch{return [];}
+}
+async function zcutLocalGet(id){try{const p=await zcutDb("readonly","get",id);if(p)return p;}catch{}try{return JSON.parse(localStorage.getItem(zcutLocalKey(id))||"null");}catch{return null;}}
+async function zcutGetCsrf(){
+  if(zcutCsrf)return zcutCsrf;
+  const r=await fetch("/api/auth/csrf",{credentials:"same-origin",cache:"no-store"});if(!r.ok)throw new Error("Account verification unavailable");
+  zcutCsrf=(await r.json()).csrfToken;return zcutCsrf;
+}
+async function zcutCheckAccount(){
+  if(zcutAccountChecked)return zcutAccount;
+  zcutAccountChecked=true;
+  try{const r=await fetch("/api/auth/me",{credentials:"same-origin",cache:"no-store"});const d=await r.json();zcutAccount=!!(r.ok&&d.authenticated);}catch{zcutAccount=false;}
+  return zcutAccount;
+}
+async function zcutCloudSave(item){
+  if(!await zcutCheckAccount())return "local only";
+  const csrf=await zcutGetCsrf();
+  const r=await fetch("/api/workspace/zcut-projects",{method:"PUT",credentials:"same-origin",headers:{"Content-Type":"application/json","X-Ari-CSRF":csrf},body:JSON.stringify({project:item})});
+  if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||"Cloud sync failed ("+r.status+")");}
+  return "cloud synced";
+}
+async function saveZcutNow(showToast=true){
+  if(zcutSaving)return null;clearTimeout(zcutSaveTimer);zcutSaving=true;zcutStatus("Saving…");
+  try{
+    const item=captureZcutProject();await zcutLocalSave(item);
+    let cloud="local only";try{cloud=await zcutCloudSave(item);}catch(error){console.warn("[Z_Cut] Cloud sync:",error.message);}
+    zcutDirty=false;zcutMediaManifest=item.media;zcutStatus(cloud==="cloud synced"?"Saved · cloud synced":"Saved on device");
+    if(showToast)toast(cloud==="cloud synced"?"Project saved and synced":"Project saved on this device");
+    return {ok:true,cloud};
+  }catch(error){zcutStatus("Save failed");if(showToast)toast(error.message||"Project save failed");return null;}
+  finally{zcutSaving=false;}
+}
+function zcutMissingMedia(){return zcutMediaList().filter(m=>!media[m.id]);}
+function zcutDownloadBlob(filename,blob){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+async function zcutSaveFile(filename,blob){
+  if(window.showSaveFilePicker){
+    try{const handle=await window.showSaveFilePicker({suggestedName:filename,types:[{description:"Z_Cut project",accept:{"application/json":[".zcut"]}}]});const w=await handle.createWritable();await w.write(blob);await w.close();toast("Project file saved");return;}
+    catch(error){if(error&&error.name==="AbortError")return;}
+  }
+  zcutDownloadBlob(filename,blob);toast("Project downloaded");
+}
+function zcutB64(buffer){const bytes=new Uint8Array(buffer);let binary="";for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+0x8000,bytes.length)));return btoa(binary);}
+function zcutFromB64(value){const binary=atob(value),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes;}
+async function exportZcut(includeMedia=false){
+  const item=captureZcutProject();
+  if(includeMedia){
+    const embedded=[];let total=0;
+    for(const m of item.media){const live=media[m.id];if(!live||!live.url)continue;const blob=await(await fetch(live.url)).blob();total+=blob.size;
+      if(total>250*1024*1024){toast("Portable package limit is 250 MB. Export without media instead.");return;}
+      embedded.push({id:m.id,name:m.name,type:blob.type||"application/octet-stream",data:zcutB64(await blob.arrayBuffer())});
+    }
+    item.embeddedMedia=embedded;
+  }
+  const filename=(item.name.replace(/[^a-z0-9_-]+/gi,"_")||"Project")+".zcut";
+  await zcutSaveFile(filename,new Blob([JSON.stringify(item)],{type:"application/vnd.zorex.zcut+json"}));
+}
+async function loadZcutProject(item,fromFile=false){
+  if(zcutDirty){if(!confirm("Save your current project before opening another one?"))return false;const saved=await saveZcutNow(false);if(!saved)return false;}
+  if(!item||!item.project||!item.project.comps)throw new Error("Invalid Z_Cut project.");
+  project=JSON.parse(JSON.stringify(item.project));cur=project.comps[item.currentComp]?item.currentComp:"main";
+  tabs=[cur];T=project.comps[cur].T||0;selected=null;multi.clear();selKeys.clear();
+  for(const key of Object.keys(media)){try{URL.revokeObjectURL(media[key].url);}catch{}delete media[key];}
+  zcutMediaManifest=Array.isArray(item.media)?item.media:[];
+  zcutProjectId=fromFile?"zcut_"+Date.now().toString(36)+"_"+uid():item.id;
+  $("#pname").value=item.name||"Untitled project";setCanvas();renderProject();renderTabs();render();seek(T);
+  zcutDirty=false;zcutStatus(zcutMissingMedia().length?"Media needs relinking":"Project loaded");closeSheet();return true;
+}
+async function importZcutFile(file){
+  try{
+    const item=JSON.parse(await file.text());if(!item||!item.project||!item.project.comps)throw new Error("That file is not a valid Z_Cut project.");
+    if(!await loadZcutProject(item,true))return;
+    for(const embedded of item.embeddedMedia||[]){
+      try{const blob=new Blob([zcutFromB64(embedded.data)],{type:embedded.type||"application/octet-stream"});await addMedia(new File([blob],embedded.name,{type:embedded.type||"application/octet-stream"}),embedded.id);}catch{}
+    }
+    zcutMediaManifest=item.media||[];renderProject();render();await saveZcutNow(false);
+    toast("Project imported"+(item.embeddedMedia&&item.embeddedMedia.length?" with media":" · relink missing footage"));
+  }catch(error){toast(error.message||"Could not open this project file");}
+}
+function zcutLeave(){
+  if(!zcutDirty){location.assign("/");return;}
+  const overlay=document.createElement("div");overlay.className="zleave on";
+  overlay.innerHTML='<div class="zleave-card"><h3>Unsaved changes</h3><p>Save your latest edits before returning to Ari?</p><div class="zleave-actions"><button data-leave="cancel">Cancel</button><button data-leave="discard">Leave without saving</button><button class="save" data-leave="save">Save & leave</button></div></div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener("click",async e=>{
+    const action=e.target.closest("[data-leave]")?.dataset.leave;if(!action)return;
+    if(action==="cancel"){overlay.remove();return;}
+    if(action==="discard"){overlay.remove();location.assign("/");return;}
+    const saved=await saveZcutNow(true);if(saved){overlay.remove();location.assign("/");}else toast("Save failed. Choose Leave without saving or Cancel.");
+  });
+}
+async function openZcutLibrary(){
+  const local=await zcutLocalList();let cloud=[];
+  if(await zcutCheckAccount()){try{const r=await fetch("/api/workspace/zcut-projects",{credentials:"same-origin"});if(r.ok)cloud=(await r.json()).projects||[];}catch{}}
+  const localHtml=local.map(p=>'<div class="qitem"><div><b>'+esc(p.name)+'</b><br><small>On this device · '+new Date(p.updatedAt).toLocaleString()+'</small></div><button class="btn" data-zopenlocal="'+esc(p.id)+'">Open</button></div>').join("")||'<p class="note">No local recovery copies yet.</p>';
+  const cloudHtml=cloud.map(p=>'<div class="qitem"><div><b>'+esc(p.name)+'</b><br><small>Cloud · '+new Date(p.updatedAt).toLocaleString()+'</small></div><button class="btn" data-zopencloud="'+esc(p.id)+'">Open</button></div>').join("")||'<p class="note">'+(zcutAccount?"No cloud projects yet.":"Sign in to Ari to sync projects between devices.")+'</p>';
+  sheetKind="zcutlibrary";sheet.classList.add("wide");
+  sheet.innerHTML='<header><h3>Your Z_Cut projects</h3><button class="ib" data-close aria-label="Close">×</button></header><div class="chips"><button class="btn main" data-znew>New project</button><button class="btn" data-zimport>Import .zcut</button><button class="btn" data-zexport>Export .zcut</button><button class="btn" data-zexportmedia>Export with media</button><button class="btn" data-zrelink>Relink media ('+zcutMissingMedia().length+')</button><button class="btn" data-zfolder>Choose media folder</button></div><h4>On this device</h4>'+localHtml+'<h4>Zorex account</h4>'+cloudHtml+'<p class="note">Cloud sync stores project data and media references only. Original footage stays on your device unless you export a portable .zcut package with media.</p>';
+  sheet.classList.add("on");
+}
+
+async function zcutRelinkFolder(){
+  if(!window.showDirectoryPicker){toast("Folder access is not supported here. Use Relink media instead.");return;}
+  try{
+    const dir=await window.showDirectoryPicker({mode:"read"}),missing=zcutMissingMedia(),wanted=new Map(missing.map(m=>[m.name.toLowerCase(),m]));let linked=0;
+    for await(const [name,handle] of dir.entries()){
+      if(handle.kind!=="file")continue;const target=wanted.get(name.toLowerCase());if(!target)continue;
+      const file=await handle.getFile();const id=await addMedia(file,target.id);if(id){wanted.delete(name.toLowerCase());linked++;}
+    }
+    renderProject();render();zcutStatus(zcutMissingMedia().length?"Media needs relinking":"All media relinked");
+    toast(linked+" media file(s) relinked from folder"+(zcutMissingMedia().length?" · "+zcutMissingMedia().length+" still missing":""));
+  }catch(error){if(error&&error.name!=="AbortError")toast(error.message||"Could not access that folder");}
+}
+async function zcutLibraryClick(e){
+  const b=e.target.closest("button");if(!b)return;
+  if(b.hasAttribute("data-close"))return closeSheet();
+  if(b.hasAttribute("data-znew")){
+    if(zcutDirty){if(!confirm("Save the current project before starting a new one?"))return;const saved=await saveZcutNow(false);if(!saved)return;}
+    project={comps:{main:{id:"main",name:"Main comp",layers:[],T:0}},n:0};cur="main";tabs=["main"];T=0;selected=null;
+    zcutProjectId="zcut_"+Date.now().toString(36)+"_"+uid();zcutMediaManifest=[];
+    for(const k of Object.keys(media)){try{URL.revokeObjectURL(media[k].url);}catch{}delete media[k];}
+    $("#pname").value="Project "+new Date().toLocaleDateString();setCanvas();renderProject();renderTabs();render();zcutDirty=false;closeSheet();return;
+  }
+  if(b.hasAttribute("data-zimport")){$("#zprojectFile").click();return;}
+  if(b.hasAttribute("data-zexport")){await exportZcut(false);return;}
+  if(b.hasAttribute("data-zexportmedia")){await exportZcut(true);return;}
+  if(b.hasAttribute("data-zrelink")){$("#zrelinkFiles").click();return;}
+  if(b.hasAttribute("data-zfolder")){await zcutRelinkFolder();return;}
+  if(b.dataset.zopenlocal){const p=await zcutLocalGet(b.dataset.zopenlocal);if(p)await loadZcutProject(p);else toast("Local project not found");return;}
+  if(b.dataset.zopencloud){
+    try{const r=await fetch("/api/workspace/zcut-projects/"+encodeURIComponent(b.dataset.zopencloud),{credentials:"same-origin"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Cloud project unavailable");await loadZcutProject(d.project);}
+    catch(error){toast(error.message||"Could not open cloud project");}return;
+  }
+}
+$("#zprojects").addEventListener("click",openZcutLibrary);
+$("#zsave").addEventListener("click",()=>saveZcutNow(true));
+$("#zback").addEventListener("click",zcutLeave);
+$("#pname").addEventListener("input",markProjectDirty);
+$("#sheet").addEventListener("click",zcutLibraryClick);
+$("#zprojectFile").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];if(f)importZcutFile(f);e.target.value="";});
+$("#zrelinkFiles").addEventListener("change",async e=>{
+  const picked=[...(e.target.files||[])],missing=zcutMissingMedia(),used=new Set();let linked=0;
+  for(const f of picked){let target=missing.find(m=>!used.has(m.id)&&m.name.toLowerCase()===f.name.toLowerCase());if(!target&&missing.length===1&&!used.has(missing[0].id))target=missing[0];if(!target)continue;
+    const id=await addMedia(f,target.id);if(id){used.add(target.id);linked++;}}
+  renderProject();render();zcutStatus(zcutMissingMedia().length?"Media needs relinking":"All media relinked");
+  toast(linked+" media file(s) relinked"+(zcutMissingMedia().length?" · "+zcutMissingMedia().length+" still missing":""));e.target.value="";
+});
+window.addEventListener("beforeunload",e=>{if(zcutDirty){e.preventDefault();e.returnValue="";}});
+setInterval(()=>{if(zcutDirty)saveZcutNow(false);},60000);
+
+async function zcutBootRecovery(){
+  const items=await zcutLocalList();if(!items.length)return;
+  const latest=items[0],hasCurrent=Object.values(project.comps).some(c=>c.layers&&c.layers.length);
+  if(!hasCurrent&&confirm("A saved Z_Cut project was found on this device: "+(latest.name||"Untitled project")+". Recover it?")){
+    try{await loadZcutProject(latest);zcutStatus("Recovered local autosave");toast("Recovered your last saved project");}
+    catch(error){toast(error.message||"Recovery failed");}
+  }else if(!hasCurrent)zcutStatus("Recovery available in Projects");
+}
+setTimeout(zcutBootRecovery,1200);
+
 
 setCanvas(); render(); requestAnimationFrame(loop); setTimeout(startBridge, 0);
 }
