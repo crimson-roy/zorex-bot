@@ -879,6 +879,7 @@ async function importFiles(files) {
   for (const f of files) { const id = await addMedia(f); if (id) ids.push(id); }
   if (!ids.length) return;
   renderProject();
+  markProjectDirty();
   toast(ids.length + (ids.length > 1 ? " files" : " file") + " added to Project");
   if (!matchMedia("(min-width:800px)").matches) openProjectSheet(); else $("#app").classList.remove("noproj");
   setCanvasSoon();
@@ -3026,7 +3027,7 @@ function zcutLeave(){
     const action=e.target.closest("[data-leave]")?.dataset.leave;if(!action)return;
     if(action==="cancel"){overlay.remove();return;}
     if(action==="discard"){overlay.remove();location.assign("/");return;}
-    const saved=await saveZcutNow(true);if(saved)location.assign("/");else toast("Save failed. You can still leave without saving.");overlay.remove();
+    const saved=await saveZcutNow(true);if(saved){overlay.remove();location.assign("/");}else toast("Save failed. Choose Leave without saving or Cancel.");
   });
 }
 async function openZcutLibrary(){
@@ -3042,8 +3043,8 @@ async function zcutLibraryClick(e){
   const b=e.target.closest("button");if(!b)return;
   if(b.hasAttribute("data-close"))return closeSheet();
   if(b.hasAttribute("data-znew")){
-    if(zcutDirty&&!confirm("Start a new project? Save the current project first?"))return;
-    await saveZcutNow(false);project={comps:{main:{id:"main",name:"Main comp",layers:[],T:0}},n:0};cur="main";tabs=["main"];T=0;selected=null;
+    if(zcutDirty){if(!confirm("Save the current project before starting a new one?"))return;const saved=await saveZcutNow(false);if(!saved)return;}
+    project={comps:{main:{id:"main",name:"Main comp",layers:[],T:0}},n:0};cur="main";tabs=["main"];T=0;selected=null;
     zcutProjectId="zcut_"+Date.now().toString(36)+"_"+uid();zcutMediaManifest=[];
     for(const k of Object.keys(media)){try{URL.revokeObjectURL(media[k].url);}catch{}delete media[k];}
     $("#pname").value="Project "+new Date().toLocaleDateString();setCanvas();renderProject();renderTabs();render();zcutDirty=false;closeSheet();return;
