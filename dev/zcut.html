@@ -859,7 +859,7 @@ async function addMedia(f, forcedId = null) {
   const url = URL.createObjectURL(f), meta = await loadMeta(f, url);
   if (!meta) { toast("Could not read " + f.name); return; }
   const id = forcedId || uid();
-  media[id] = { name: f.name, type, url, fps: 0, dur: meta.dur, w: meta.w, h: meta.h, img: meta.img || null, thumb: type === "image" ? url : type === "video" ? await makeThumb(url) : null };
+  media[id] = { name: f.name, type, url, fps: 0, dur: meta.dur, w: meta.w, h: meta.h, size: Number(f.size)||0, lastModified: Number(f.lastModified)||0, img: meta.img || null, thumb: type === "image" ? url : type === "video" ? await makeThumb(url) : null };
   if (type === "video") detectFps(id);
   return id;
 }
@@ -1525,7 +1525,7 @@ scrollEl.addEventListener("touchmove",e=>{
 scrollEl.addEventListener("touchend",e=>{if(e.touches.length<2)zcutPinch=null;},{passive:true});
 
 scrollEl.addEventListener("wheel", e => {
-  if (e.ctrlKey || e.metaKey) { e.preventDefault(); return zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15); }
+  if (e.ctrlKey || e.metaKey) { e.preventDefault(); return zoomTimeline(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX); }
   if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && !e.shiftKey && e.target.closest(".ruler,.row,.lane")) { e.preventDefault(); scrollEl.scrollLeft += e.deltaY; }
 }, { passive: false });
 const blade = $("#blade");
@@ -2899,14 +2899,14 @@ addEventListener("message", async e => {
 
 /* Z_Cut project persistence, account sync, media relinking and navigation */
 let zcutProjectId = "zcut_" + Date.now().toString(36) + "_" + uid();
-let zcutMediaManifest = [], zcutDirty = false, zcutSaving = false, zcutSaveTimer = 0;
+let zcutMediaManifest = [], zcutDirty = false, zcutSaving = false, zcutSaveTimer = 0, zcutRevision = 0;
 let zcutCsrf = null, zcutAccountChecked = false, zcutAccount = false;
 const ZCUT_DB = "zcut-projects-v1", ZCUT_STORE = "projects";
 function zcutStatus(message) { const el=$("#zsaveState"); if(el) el.textContent=message; }
-function markProjectDirty() { zcutDirty=true; zcutStatus("Unsaved changes"); clearTimeout(zcutSaveTimer); zcutSaveTimer=setTimeout(()=>saveZcutNow(false),2200); }
+function markProjectDirty() { zcutDirty=true; zcutRevision++; zcutStatus("Unsaved changes"); clearTimeout(zcutSaveTimer); zcutSaveTimer=setTimeout(()=>saveZcutNow(false),2200); }
 function zcutMediaList() {
   const map=new Map((zcutMediaManifest||[]).map(m=>[m.id,m]));
-  for(const [id,m] of Object.entries(media)) map.set(id,{id,name:m.name,type:m.type,duration:m.dur||0,width:m.w||0,height:m.h||0});
+  for(const [id,m] of Object.entries(media)) map.set(id,{id,name:m.name,type:m.type,duration:m.dur||0,width:m.w||0,height:m.h||0,size:m.size||0,lastModified:m.lastModified||0});
   return [...map.values()];
 }
 function captureZcutProject() {
@@ -2962,15 +2962,29 @@ async function zcutCloudSave(item){
   return "cloud synced";
 }
 async function saveZcutNow(showToast=true){
-  if(zcutSaving)return null;clearTimeout(zcutSaveTimer);zcutSaving=true;zcutStatus("Saving…");
+  if(zcutSaving){
+    if(zcutDirty){clearTimeout(zcutSaveTimer);zcutSaveTimer=setTimeout(()=>saveZcutNow(false),1200);}
+    return null;
+  }
+  clearTimeout(zcutSaveTimer);zcutSaving=true;zcutStatus("Saving…");
+  const revision=zcutRevision;
   try{
     const item=captureZcutProject();await zcutLocalSave(item);
     let cloud="local only";try{cloud=await zcutCloudSave(item);}catch(error){console.warn("[Z_Cut] Cloud sync:",error.message);}
-    zcutDirty=false;zcutMediaManifest=item.media;zcutStatus(cloud==="cloud synced"?"Saved · cloud synced":"Saved on device");
-    if(showToast)toast(cloud==="cloud synced"?"Project saved and synced":"Project saved on this device");
+    zcutMediaManifest=item.media;
+    if(zcutRevision===revision){
+      zcutDirty=false;zcutStatus(cloud==="cloud synced"?"Saved · cloud synced":"Saved on device");
+      if(showToast)toast(cloud==="cloud synced"?"Project saved and synced":"Project saved on this device");
+    }else{
+      zcutDirty=true;zcutStatus("New edits waiting to save");
+      clearTimeout(zcutSaveTimer);zcutSaveTimer=setTimeout(()=>saveZcutNow(false),800);
+    }
     return {ok:true,cloud};
-  }catch(error){zcutStatus("Save failed");if(showToast)toast(error.message||"Project save failed");return null;}
-  finally{zcutSaving=false;}
+  }catch(error){
+    zcutStatus("Save failed");if(showToast)toast(error.message||"Project save failed");
+    if(zcutDirty){clearTimeout(zcutSaveTimer);zcutSaveTimer=setTimeout(()=>saveZcutNow(false),10000);}
+    return null;
+  }finally{zcutSaving=false;}
 }
 function zcutMissingMedia(){return zcutMediaList().filter(m=>!media[m.id]);}
 function zcutDownloadBlob(filename,blob){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
@@ -3043,10 +3057,18 @@ async function openZcutLibrary(){
 async function zcutRelinkFolder(){
   if(!window.showDirectoryPicker){toast("Folder access is not supported here. Use Relink media instead.");return;}
   try{
-    const dir=await window.showDirectoryPicker({mode:"read"}),missing=zcutMissingMedia(),wanted=new Map(missing.map(m=>[m.name.toLowerCase(),m]));let linked=0;
+    const dir=await window.showDirectoryPicker({mode:"read"}),missing=zcutMissingMedia();
+    const wanted=new Map();for(const item of missing){const key=item.name.toLowerCase();if(!wanted.has(key))wanted.set(key,[]);wanted.get(key).push(item);}
+    let linked=0;
     for await(const [name,handle] of dir.entries()){
-      if(handle.kind!=="file")continue;const target=wanted.get(name.toLowerCase());if(!target)continue;
-      const file=await handle.getFile();const id=await addMedia(file,target.id);if(id){wanted.delete(name.toLowerCase());linked++;}
+      if(handle.kind!=="file")continue;
+      const candidates=wanted.get(name.toLowerCase());if(!candidates||!candidates.length)continue;
+      const file=await handle.getFile();
+      let index=candidates.findIndex(item=>item.size&&file.size&&item.size===file.size);
+      if(index<0&&candidates.length===1)index=0;
+      if(index<0)continue;
+      const [target]=candidates.splice(index,1),id=await addMedia(file,target.id);
+      if(id)linked++;
     }
     renderProject();render();zcutStatus(zcutMissingMedia().length?"Media needs relinking":"All media relinked");
     toast(linked+" media file(s) relinked from folder"+(zcutMissingMedia().length?" · "+zcutMissingMedia().length+" still missing":""));
@@ -3081,12 +3103,19 @@ $("#sheet").addEventListener("click",zcutLibraryClick);
 $("#zprojectFile").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];if(f)importZcutFile(f);e.target.value="";});
 $("#zrelinkFiles").addEventListener("change",async e=>{
   const picked=[...(e.target.files||[])],missing=zcutMissingMedia(),used=new Set();let linked=0;
-  for(const f of picked){let target=missing.find(m=>!used.has(m.id)&&m.name.toLowerCase()===f.name.toLowerCase());if(!target&&missing.length===1&&!used.has(missing[0].id))target=missing[0];if(!target)continue;
-    const id=await addMedia(f,target.id);if(id){used.add(target.id);linked++;}}
+  for(const f of picked){
+    const candidates=missing.filter(m=>!used.has(m.id)&&m.name.toLowerCase()===f.name.toLowerCase());
+    let target=candidates.find(m=>m.size&&f.size&&m.size===f.size);
+    if(!target&&candidates.length===1)target=candidates[0];
+    if(!target&&missing.length===1&&!used.has(missing[0].id))target=missing[0];
+    if(!target)continue;
+    const id=await addMedia(f,target.id);if(id){used.add(target.id);linked++;}
+  }
   renderProject();render();zcutStatus(zcutMissingMedia().length?"Media needs relinking":"All media relinked");
   toast(linked+" media file(s) relinked"+(zcutMissingMedia().length?" · "+zcutMissingMedia().length+" still missing":""));e.target.value="";
 });
 window.addEventListener("beforeunload",e=>{if(zcutDirty){e.preventDefault();e.returnValue="";}});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&zcutDirty)saveZcutNow(false);});
 setInterval(()=>{if(zcutDirty)saveZcutNow(false);},60000);
 
 async function zcutBootRecovery(){
