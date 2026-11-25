@@ -50,6 +50,7 @@ const {
     formatActionBeats
 } = require("../lib/chloeStyle");
 const chloePriorityStore = require("../lib/chloePriorityStore");
+const chloeVoice = require("../lib/chloeVoice");
 
 // PERSISTENCE
 const dataPath =
@@ -746,6 +747,11 @@ async function handleMessage(
     const isExplicitSummon =
         !!summonMatch;
 
+    // "Chloe send me voice note" -> she answers with a voice note.
+    // Works even when .chaton is off, like an explicit .chloe summon.
+    const wantsVoiceNote =
+        chloeVoice.isVoiceRequest(text);
+
 
     let shouldReply =
         false;
@@ -762,6 +768,12 @@ async function handleMessage(
 
         effectiveText =
             summonMatch[1].trim();
+
+    } else if (
+        wantsVoiceNote
+    ) {
+
+        shouldReply = true;
 
     } else if (
         active
@@ -844,7 +856,11 @@ async function handleMessage(
                 userId,
                 relationshipAliases,
                 chatId
-            );
+            ) + (wantsVoiceNote
+                ? "\n\nVOICE NOTE: The user asked you to send a voice note. Your reply will be spoken aloud in your voice, " +
+                  "so write only what you would say: one to three short, natural spoken sentences, no emojis, no *action beats*, " +
+                  "no lists or links. Don't mention that it's a voice note unless it fits naturally."
+                : "");
 
 
         const rawReply =
@@ -946,18 +962,33 @@ async function handleMessage(
 
 
         // ----------------------------------------------------
-        // SEND TEXT RESPONSE
+        // SEND VOICE NOTE (when asked) OR TEXT RESPONSE
         // ----------------------------------------------------
 
-        await sock.sendMessage(
-            chatId,
-            {
-                text: reply
-            },
-            {
-                quoted: msg
+        let voiceSent = false;
+
+        if (wantsVoiceNote) {
+            try {
+                const voiceResult = await chloeVoice.sendChloeVoiceNote(sock, chatId, reply, msg);
+                voiceSent = !!voiceResult?.sent;
+                console.log("[CHLOE VOICE]", voiceSent ? "Voice note sent." : `Skipped: ${voiceResult?.skipped}`);
+            } catch (voiceErr) {
+                // Never leave the user without an answer: fall back to text.
+                console.error("[CHLOE VOICE] Failed, sending text instead:", voiceErr.message);
             }
-        );
+        }
+
+        if (!voiceSent) {
+            await sock.sendMessage(
+                chatId,
+                {
+                    text: reply
+                },
+                {
+                    quoted: msg
+                }
+            );
+        }
 
 
         // ----------------------------------------------------
