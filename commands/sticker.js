@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const sharp = require('sharp');
+const { sendSoundSticker } = require('../lib/soundSticker');
 
 const TEMP_DIR = path.join(os.tmpdir(), 'zorex-sticker-tools');
 
@@ -812,7 +813,8 @@ async function imageToSticker(
 
 async function videoToSticker(
     media,
-    mainText = ''
+    mainText = '',
+    { size = 512, quality = 60, fps = 15 } = {}
 ) {
     const input =
         tempPath(
@@ -853,17 +855,23 @@ async function videoToSticker(
             );
         }
 
+        // The text overlay is drawn at 512px, then the result is resized.
+        const base =
+            `[0:v]fps=${fps},scale=512:512:force_original_aspect_ratio=increase,crop=512:512`;
+        const resize =
+            size === 512 ? '' : `,scale=${size}:${size}`;
+
         args.push(
             '-t', '10',
             '-filter_complex',
             overlay
-                ? '[0:v]fps=15,scale=512:512:force_original_aspect_ratio=increase,crop=512:512[base];[base][1:v]overlay=0:0:shortest=1[out]'
-                : '[0:v]fps=15,scale=512:512:force_original_aspect_ratio=increase,crop=512:512[out]',
+                ? `${base}[base];[base][1:v]overlay=0:0${resize}[out]`
+                : `${base}${resize}[out]`,
             '-map', '[out]',
             '-an',
             '-vcodec', 'libwebp',
             '-lossless', '0',
-            '-q:v', '60',
+            '-q:v', String(quality),
             '-preset', 'default',
             '-loop', '0',
             '-vsync', '0',
@@ -882,6 +890,82 @@ async function videoToSticker(
             overlayPath
         );
     }
+}
+
+// Sound stickers must stay small to animate, so step down until the file fits.
+const SOUND_STICKER_MAX_BYTES = 1000000;
+const SOUND_STICKER_LADDER = [
+    { size: 512, quality: 60, fps: 15 },
+    { size: 384, quality: 60, fps: 15 },
+    { size: 320, quality: 45, fps: 12 },
+    { size: 256, quality: 45, fps: 10 },
+    { size: 256, quality: 20, fps: 8 }
+];
+
+async function videoToSoundStickerImage(media, mainText, author) {
+    for (const preset of SOUND_STICKER_LADDER) {
+        const webp = addStickerMetadata(
+            await videoToSticker(media, mainText, preset),
+            DEFAULT_STICKER_PACK,
+            author
+        );
+
+        if (webp.length <= SOUND_STICKER_MAX_BYTES) {
+            return { webp, size: preset.size };
+        }
+    }
+
+    throw new Error('Video is too detailed to fit in a sound sticker.');
+}
+
+// Returns null when the video has no audio track.
+async function videoToStickerAudio(media) {
+    const input =
+        tempPath(extensionForMime(media.mimeType, '.mp4'), 'sound-in');
+    const stereo = tempPath('.ogg', 'sound-stereo');
+    const output = tempPath('.ogg', 'sound-out');
+
+    fs.writeFileSync(input, media.buffer);
+
+    try {
+        // Two passes: single-pass mono is reported to fail on some phones.
+        try {
+            await runFFmpeg([
+                '-y', '-i', input,
+                '-map', '0:a:0', '-vn', '-t', '10',
+                '-c:a', 'libopus', '-b:a', '64k',
+                '-loglevel', 'error', stereo
+            ]);
+        } catch (err) {
+            if (/matches no streams/i.test(err.message)) return null;
+            throw err;
+        }
+
+        await runFFmpeg([
+            '-y', '-i', stereo,
+            '-ac', '1', '-c:a', 'libopus', '-b:a', '32k',
+            '-loglevel', 'error', output
+        ]);
+
+        const opus = fs.readFileSync(output);
+
+        return { opus, seconds: oggOpusSeconds(opus) };
+
+    } finally {
+        cleanup(input, stereo, output);
+    }
+}
+
+// Duration from the last Ogg page's granule position (Opus runs at 48 kHz).
+function oggOpusSeconds(buffer) {
+    const page = buffer.lastIndexOf('OggS');
+
+    if (page < 0 || page + 14 > buffer.length) return 1;
+
+    return Math.max(
+        1,
+        Math.round(Number(buffer.readBigUInt64LE(page + 6)) / 48000)
+    );
 }
 
 async function stickerToImage(buffer) {
@@ -1059,6 +1143,9 @@ async function stickerCommands(sock, msg, text) {
             .split(/\s+/)[0]
             .toLowerCase();
 
+    const isSoundStickerCommand =
+        command === '.sv';
+
     const isStickerCommand =
         command === '.sticker' ||
         command === '.s';
@@ -1067,7 +1154,7 @@ async function stickerCommands(sock, msg, text) {
         mainText,
         captionText
     } =
-        isStickerCommand
+        isStickerCommand || isSoundStickerCommand
             ? parseStickerText(text)
             : {
                 mainText: '',
@@ -1091,6 +1178,17 @@ async function stickerCommands(sock, msg, text) {
         );
     }
 
+    if (isSoundStickerCommand && media?.kind !== 'video') {
+        return sock.sendMessage(
+            chatId,
+            {
+                text:
+                    '⚠️ Reply to a video with *.sv* to make a sticker with sound. For a normal sticker use *.s*.'
+            },
+            { quoted: msg }
+        );
+    }
+
     if (!media) {
         const help =
             isStickerCommand
@@ -1107,6 +1205,38 @@ async function stickerCommands(sock, msg, text) {
     }
 
     try {
+        if (isSoundStickerCommand) {
+            const author =
+                captionText || DEFAULT_STICKER_AUTHOR;
+
+            const audio =
+                await videoToStickerAudio(media);
+
+            const { webp, size } =
+                await videoToSoundStickerImage(media, mainText, author);
+
+            if (!audio) {
+                await sock.sendMessage(
+                    chatId,
+                    { sticker: webp },
+                    { quoted: msg }
+                );
+
+                return sock.sendMessage(
+                    chatId,
+                    { text: 'ℹ️ That video has no sound, so I made a normal sticker.' },
+                    { quoted: msg }
+                );
+            }
+
+            return await sendSoundSticker(sock, chatId, {
+                webp,
+                size,
+                opus: audio.opus,
+                seconds: audio.seconds
+            });
+        }
+
         if (isStickerCommand) {
 
             if (

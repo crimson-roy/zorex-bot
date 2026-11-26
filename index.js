@@ -1,4 +1,5 @@
 require("dotenv").config();
+require("./lib/quietSignalLogs"); // keep Signal session keys out of logs
 // Prevent bot from crashing on unexpected errors
 process.on("uncaughtException", (err) => {
     console.error("💥 UNCAUGHT EXCEPTION:", err);
@@ -221,6 +222,7 @@ const { execute: playCommand } = require("./commands/play");
 const { execute: ytCommand } = require("./commands/yt");
 const { execute: spawnCommand } = require("./commands/spawn");
 const { execute: claimCommand } = require("./commands/claim");
+const { handleZhdDelivery } = require("./lib/zhdDelivery"); // Z_HD compressor delivery
 const { execute: cardToggleCommand } = require("./commands/cardoff");
 const { giveCommand } = require("./commands/give");
 const { addCardCommand } = require("./commands/addcard");
@@ -666,6 +668,9 @@ startJobResignationProcessor(sock);
         ) {
             return;
         }
+
+        // Z_HD compressor: "Z_HD XXXX-XXXX-XXXX-XXXX" -> send back the compressed video.
+        if (await handleZhdDelivery(sock, msg)) return;
 
         // Chloe gets first look at every live, non-history message — before any
         // prefix-command routing. handleMessage decides internally whether she
@@ -2422,7 +2427,9 @@ else if (text.startsWith(".mem")) {
     text.startsWith(".s ") ||
     text === ".toimage" ||
     text === ".toimg" ||
-    text === ".tovid"
+    text === ".tovid" ||
+    text === ".sv" ||
+    text.startsWith(".sv ")
 ) {
 
     await stickerCommands(sock, msg, text);
