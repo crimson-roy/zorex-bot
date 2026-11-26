@@ -165,7 +165,7 @@ const { slidesCommand } = require("./commands/slides");
 const { teachCommand } = require("./commands/teach");
 const { deleteCommand } = require("./commands/delete");
 const { antilinkCommand, setWarningsCommand, resetWarningsCommand, checkAntilink } = require("./commands/antilink");
-const { hidetagCommand } = require("./commands/hidetag");
+const { hidetagCommand, hidetextCommand } = require("./commands/hidetag");
 
 // Group-wide @everyone tag — doesn't require the bot to be an admin.
 const { tagAllCommand } = require("./commands/tagall");
@@ -700,7 +700,12 @@ if (!sharedWorldRoute?.suppressChloe) {
             context?.mentionedJid || [];
 
         console.log("Mentioned:", mentioned);
-        console.log("Context:", context);
+        // .hidetext content must not reach the logs.
+        const isHideText = /^\s*\.hidetext(\s|$)/i.test(
+            normalizeCommandText(msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.imageMessage?.caption || msg.message?.videoMessage?.caption || msg.message?.documentMessage?.caption || "")
+        );
+
+        if (!isHideText) console.log("Context:", context);
 
     // Simple plain-text reply when someone tags Lord Crimson.
     const reply = "hey don't tag crescent when she isn't here it's quite annoying";
@@ -720,9 +725,9 @@ if (!sharedWorldRoute?.suppressChloe) {
 
     const text = normalizeCommandText(rawText);
 
-    console.log("Message:", rawText);
+    console.log("Message:", isHideText ? ".hidetext [hidden]" : rawText);
 
-    if (text !== rawText) {
+    if (text !== rawText && !isHideText) {
         console.log("Normalized command:", text);
     }
 
@@ -1964,6 +1969,10 @@ ${board}
 } else if (text.startsWith(".resetwarnings")) {
 
     await resetWarningsCommand(sock, msg, text);
+
+} else if (text === ".hidetext" || /^\.hidetext\s/.test(text)) {
+
+    await hidetextCommand(sock, msg, text);
 
 } else if (text.startsWith(".hidetag")) {
 

@@ -1,10 +1,13 @@
 // commands/hidetag.js
 //
-// .hidetag <message> — deletes the admin's own command message, then
-// reposts <message> tagging every group member WITHOUT any visible
-// "@number" text in the body (the mentions array alone is what notifies
-// everyone — no @ tokens are added to the text). Combined with deleting
-// the original command message, this hides who actually sent it.
+// .hidetag <message>  — deletes the admin's own command message, then reposts
+//                       <message> as a silent tag. Also works as the caption
+//                       of an image, which is reposted with the message.
+// .hidetext <message> — the same, but the text comes back as view-once.
+//
+// Tag rule for both: if the admin tagged specific people, only they are
+// tagged; otherwise every group member is. Tagging all adds no visible
+// "@number" text (the mentions array alone notifies).
 //
 // Admins and bot owners only — same permission model as .d/.antilink.
 
@@ -35,18 +38,19 @@ function isOwner(userId) {
 
 }
 
-async function hidetagCommand(sock, msg, text) {
+function reply(sock, msg, text) {
+    return sock.sendMessage(msg.key.remoteJid, { text }, { quoted: msg });
+}
+
+// Checks group, sender and bot permissions. Returns the group metadata, or
+// null after telling the user what is wrong.
+async function authorize(sock, msg, name) {
 
     const groupJid = msg.key.remoteJid;
 
     if (!groupJid.endsWith("@g.us")) {
-
-        return await sock.sendMessage(
-            groupJid,
-            { text: "❌ This command only works in groups." },
-            { quoted: msg }
-        );
-
+        await reply(sock, msg, "❌ This command only works in groups.");
+        return null;
     }
 
     const sender = msg.key.participant || msg.key.remoteJid;
@@ -54,19 +58,11 @@ async function hidetagCommand(sock, msg, text) {
     let metadata;
 
     try {
-
         metadata = await sock.groupMetadata(groupJid);
-
     } catch (err) {
-
-        console.error("[.hidetag] failed to fetch group metadata:", err.message);
-
-        return await sock.sendMessage(
-            groupJid,
-            { text: "❌ Couldn't fetch group info — try again." },
-            { quoted: msg }
-        );
-
+        console.error(`[${name}] failed to fetch group metadata:`, err.message);
+        await reply(sock, msg, "❌ Couldn't fetch group info — try again.");
+        return null;
     }
 
     const senderIsAdmin =
@@ -76,43 +72,28 @@ async function hidetagCommand(sock, msg, text) {
             (p.admin === "admin" || p.admin === "superadmin")
         );
 
-    const allowed = senderIsAdmin || isOwner(sender);
-
-    if (!allowed) {
-
-        return await sock.sendMessage(
-            groupJid,
-            { text: "❌ You are not an admin." },
-            { quoted: msg }
-        );
-
+    if (!senderIsAdmin && !isOwner(sender)) {
+        await reply(sock, msg, "❌ You are not an admin.");
+        return null;
     }
 
-    const message = text.replace(/^\.hidetag/i, "").trim();
+    return metadata;
 
-    if (!message) {
+}
 
-        return await sock.sendMessage(
-            groupJid,
-            { text: "Usage: .hidetag <message>" },
-            { quoted: msg }
-        );
+// Deleting the admin's command requires the bot itself to be a group admin —
+// same requirement .d/.kick already enforce. Returns true once deleted; the
+// caller must not send anything if this fails, or the sender is exposed.
+async function deleteOriginal(sock, msg, metadata, name) {
 
-    }
+    const groupJid = msg.key.remoteJid;
 
-    // Deleting the admin's own command message requires the bot itself to
-    // be a group admin — same requirement .d/.kick already enforce.
     const botLid = sock.user.lid.split(":")[0] + "@lid";
     const botAdmin = metadata.participants.find(p => p.id === botLid)?.admin;
 
     if (!botAdmin) {
-
-        return await sock.sendMessage(
-            groupJid,
-            { text: "❌ I need to be an admin before I can hide who sent this." },
-            { quoted: msg }
-        );
-
+        await reply(sock, msg, "❌ I need to be an admin before I can hide who sent this.");
+        return false;
     }
 
     try {
@@ -128,25 +109,121 @@ async function hidetagCommand(sock, msg, text) {
 
     } catch (err) {
 
-        console.error("[.hidetag] failed to delete original message:", err.message);
-        // Not fatal on its own, but the whole point is hiding the sender —
-        // bail out here rather than posting the message with the original
-        // (undeleted) one still visible above it.
-        return await sock.sendMessage(
-            groupJid,
-            { text: "❌ Couldn't delete your message, so nothing was sent." },
-            { quoted: msg }
-        );
+        console.error(`[${name}] failed to delete original message:`, err.message);
+        await reply(sock, msg, "❌ Couldn't delete your message, so nothing was sent.");
+        return false;
 
     }
 
-    const participants = metadata.participants.map(p => p.id);
+    return true;
 
-    await sock.sendMessage(groupJid, {
-        text: message,
-        mentions: participants
+}
+
+function pickMentions(msg, metadata) {
+
+    const context =
+        msg.message?.extendedTextMessage?.contextInfo ||
+        msg.message?.imageMessage?.contextInfo;
+
+    const tagged = context?.mentionedJid || [];
+
+    return tagged.length
+        ? [...tagged]
+        : metadata.participants.map(p => p.id);
+
+}
+
+// The command may be typed in any case or small caps, so strip the first word
+// from the already-normalized text rather than matching the raw spelling.
+function commandBody(text) {
+    return text.trimStart().replace(/^\S+/, "").trim();
+}
+
+async function hidetagCommand(sock, msg, text) {
+
+    const metadata = await authorize(sock, msg, ".hidetag");
+
+    if (!metadata) return;
+
+    const groupJid = msg.key.remoteJid;
+    const message = commandBody(text);
+    const image = msg.message?.imageMessage;
+
+    if (!message && !image) {
+        return await reply(sock, msg, "Usage: .hidetag <message>");
+    }
+
+    let imageBuffer = null;
+
+    if (image) {
+
+        // Download before deleting, so a failed download loses nothing.
+        try {
+            const { downloadMediaMessage } =
+                await import("@whiskeysockets/baileys");
+
+            imageBuffer = await downloadMediaMessage(msg, "buffer", {});
+        } catch (err) {
+            console.error("[.hidetag] failed to download image:", err.message);
+            return await reply(sock, msg, "❌ Couldn't download your image, so nothing was changed.");
+        }
+
+    }
+
+    if (!(await deleteOriginal(sock, msg, metadata, ".hidetag"))) return;
+
+    const mentions = pickMentions(msg, metadata);
+
+    await sock.sendMessage(
+        groupJid,
+        imageBuffer
+            ? { image: imageBuffer, caption: message, mentions }
+            : { text: message, mentions }
+    );
+
+}
+
+async function hidetextCommand(sock, msg, text) {
+
+    const metadata = await authorize(sock, msg, ".hidetext");
+
+    if (!metadata) return;
+
+    const groupJid = msg.key.remoteJid;
+    const message = commandBody(text);
+
+    // Text only: never delete media that would not be sent back.
+    if (!message || msg.message?.imageMessage || msg.message?.videoMessage || msg.message?.documentMessage) {
+        return await reply(sock, msg, "Usage: .hidetext <message>");
+    }
+
+    if (!(await deleteOriginal(sock, msg, metadata, ".hidetext"))) return;
+
+    // Built by hand: sendMessage({ viewOnce, mentions }) in Baileys rc14 puts
+    // the mentions on the view-once wrapper, where they are lost.
+    const { generateWAMessageFromContent } =
+        await import("@whiskeysockets/baileys");
+
+    const waMessage = generateWAMessageFromContent(
+        groupJid,
+        {
+            viewOnceMessageV2: {
+                message: {
+                    extendedTextMessage: {
+                        text: message,
+                        viewOnce: true,
+                        contextInfo: { mentionedJid: pickMentions(msg, metadata) }
+                    }
+                }
+            }
+        },
+        { userJid: sock.user.id }
+    );
+
+    await sock.relayMessage(groupJid, waMessage.message, {
+        messageId: waMessage.key.id
     });
 
 }
 
-module.exports = { hidetagCommand };
+module.exports = { hidetagCommand, hidetextCommand };
