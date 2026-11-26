@@ -252,7 +252,7 @@ function fittedFontSize(
 function parseStickerText(text) {
     const body =
         String(text || '')
-            .replace(/^\.(?:sticker|s)\b/i, '')
+            .replace(/^\.(?:sticker|sv|s)\b/i, '')
             .trim();
 
     if (!body) {
@@ -919,7 +919,8 @@ async function videoToSoundStickerImage(media, mainText, author) {
 }
 
 // Returns null when the video has no audio track.
-async function videoToStickerAudio(media) {
+// The track is cut or padded to the animation's length so both loop together.
+async function videoToStickerAudio(media, duration) {
     const input =
         tempPath(extensionForMime(media.mimeType, '.mp4'), 'sound-in');
     const stereo = tempPath('.ogg', 'sound-stereo');
@@ -932,7 +933,10 @@ async function videoToStickerAudio(media) {
         try {
             await runFFmpeg([
                 '-y', '-i', input,
-                '-map', '0:a:0', '-vn', '-t', '10',
+                '-map', '0:a:0', '-vn',
+                // Keep the video's own timing: audio that starts later stays later.
+                '-af', 'aresample=async=1:first_pts=0,apad',
+                '-t', String(duration),
                 '-c:a', 'libopus', '-b:a', '64k',
                 '-loglevel', 'error', stereo
             ]);
@@ -954,6 +958,16 @@ async function videoToStickerAudio(media) {
     } finally {
         cleanup(input, stereo, output);
     }
+}
+
+// Total playing time of an animated WebP, in seconds.
+function animatedWebpSeconds(webp) {
+    const total =
+        parseWebpChunks(webp)
+            .filter(chunk => chunk.type === 'ANMF')
+            .reduce((ms, chunk) => ms + chunk.data.readUIntLE(12, 3), 0);
+
+    return total > 0 ? Math.min(total / 1000, 10) : 10;
 }
 
 // Duration from the last Ogg page's granule position (Opus runs at 48 kHz).
@@ -1209,11 +1223,11 @@ async function stickerCommands(sock, msg, text) {
             const author =
                 captionText || DEFAULT_STICKER_AUTHOR;
 
-            const audio =
-                await videoToStickerAudio(media);
-
             const { webp, size } =
                 await videoToSoundStickerImage(media, mainText, author);
+
+            const audio =
+                await videoToStickerAudio(media, animatedWebpSeconds(webp));
 
             if (!audio) {
                 await sock.sendMessage(
